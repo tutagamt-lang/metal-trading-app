@@ -151,7 +151,7 @@ if len(df) >= 2:
     st.markdown("---")
 
     # 4. Macro Metal & Currency Matrix
-    st.header("4. Global LME, MCX & Currency Matrix (Live Reference)")8
+    st.header("4. Global LME, MCX & Currency Matrix (Live Reference)")
     
     col_lme, col_mcx, col_fx = st.columns(3)
     
