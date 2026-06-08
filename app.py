@@ -12,14 +12,31 @@ st.title("📊 Automated Metal Stock & OI Analyzer (Fully Automated)")
 st.sidebar.header("Stock Selection")
 ticker_input = st.sidebar.selectbox("மெட்டல் ஸ்டாக்கைத் தேர்ந்தெடுக்கவும்:", ["TATASTEEL.NS", "HINDALCO.NS", "JSWSTEEL.NS", "VEDL.NS"])
 
-# Fetching Data using yfinance
+# Fetching Data with Error Handling
 @st.cache_data(ttl=60)
 def get_stock_data(ticker):
-    stock = yf.Ticker(ticker)
-    df = stock.history(period="1d", interval="15m")
-    return df, stock.info
+    try:
+        stock = yf.Ticker(ticker)
+        df = stock.history(period="1d", interval="15m")
+        if df.empty or len(df) < 2:
+            raise ValueError("No live data")
+        return df, "Live Yahoo Data"
+    except Exception as e:
+        # Fallback Mock Data generation if rate limited or market closed
+        st.sidebar.warning("⚠️ Yahoo Live Data தற்போது பிஸியாக உள்ளது. தற்காலிக மாற்றுத் தரவு (Mock Data) காட்டப்படுகிறது.")
+        np.random.seed(42)
+        base_price = {"TATASTEEL.NS": 170.0, "HINDALCO.NS": 650.0, "JSWSTEEL.NS": 900.0, "VEDL.NS": 450.0}[ticker]
+        
+        times = pd.date_range(start="09:15", end="15:30", freq="15min")
+        mock_df = pd.DataFrame(index=times)
+        mock_df['Open'] = base_price + np.random.uniform(-2, 2, len(times))
+        mock_df['High'] = mock_df['Open'] + np.random.uniform(0, 3, len(times))
+        mock_df['Low'] = mock_df['Open'] - np.random.uniform(0, 3, len(times))
+        mock_df['Close'] = (mock_df['High'] + mock_df['Low']) / 2
+        mock_df['Volume'] = np.random.randint(50000, 200000, len(times))
+        return mock_df, "Simulated Data Feed"
 
-df, stock_info = get_stock_data(ticker_input)
+df, data_status = get_stock_data(ticker_input)
 
 if len(df) >= 2:
     # Simulating 9:15 and 9:30 Data Points
@@ -171,6 +188,3 @@ if len(df) >= 2:
         st.subheader("Currency & Dollar Index")
         st.metric("US Dollar Index (DXY)", "104.20", "-0.35%")
         st.metric("USD / INR", "₹95.39", "-₹0.31 (Rupee Strong)")
-
-else:
-    st.error("சந்தை தரவைச் சேகரிப்பதில் பிழை ஏற்பட்டுள்ளது. சிறிது நேரம் கழித்து முயற்சிக்கவும்.")
