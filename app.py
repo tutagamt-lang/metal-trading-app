@@ -3,7 +3,6 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 from ta.volatility import BollingerBands
-import datetime
 
 # Page Configuration
 st.set_page_config(layout="wide", page_title="Automated Metal Trading & OI Analyzer")
@@ -27,7 +26,7 @@ if len(df) >= 2:
     o_915, h_915, l_915, c_915 = df.iloc[0]['Open'], df.iloc[0]['High'], df.iloc[0]['Low'], df.iloc[0]['Close']
     o_930, h_930, l_930, c_930 = df.iloc[1]['Open'], df.iloc[1]['High'], df.iloc[1]['Low'], df.iloc[1]['Close']
     
-    # Dummy Future OI Setup (As yfinance doesn't provide Live NSE Derivative OI directly, we simulate based on volume)
+    # Dummy Future OI Setup (Simulated based on volume)
     oi_915 = int(df.iloc[0]['Volume'] * 0.4)
     oi_930 = int(df.iloc[1]['Volume'] * 0.45)
     oi_change = oi_930 - oi_915
@@ -45,10 +44,10 @@ if len(df) >= 2:
     # Dow Theory Logic
     with col2:
         if l_930 > l_915 and c_930 > o_915:
-            dow_trend = "Uptrend (Fixed Low & Variable High)"
+            dow_trend = "Uptrend (Retest & Failure on Low)"
             dow_action = "Buy on Dip"
         elif h_930 < h_915 and c_930 < o_915:
-            dow_trend = "Downtrend (Fixed High & Variable Low)"
+            dow_trend = "Downtrend (Retest & Failure on High)"
             dow_action = "Sell on Rise"
         else:
             dow_trend = "Sideways (Low/High Volatile)"
@@ -77,7 +76,6 @@ if len(df) >= 2:
     # 2. Pivot Points Calculations (Dynamic R3 Breakout)
     st.header("2. Pivot Points & Dynamic Targets")
     
-    # Base calculation using 9:15 to 9:30 candle
     high_comb = max(h_915, h_930)
     low_comb = min(l_915, l_930)
     close_comb = c_930
@@ -96,10 +94,9 @@ if len(df) >= 2:
     current_price = df.iloc[-1]['Close']
     
     # Check R3 Breakout condition
-    r3_broken = current_price > pivots["R3"]
-    if r3_broken:
+    if current_price > pivots["R3"]:
         st.warning("⚠️ Market R3 அளவை கடந்துவிட்டது! புதிய Pivot கணக்கீடு செய்யப்பட்டுள்ளது.")
-        pivots = calc_pivots(pivots["R3"], pivots["R1"], pivots["R3"]) # Dynamic rule applied
+        pivots = calc_pivots(pivots["R3"], pivots["R1"], pivots["R3"])
 
     pivot_df = pd.DataFrame([pivots]).T.rename(columns={0: "Value (INR)"})
     st.table(pivot_df)
@@ -112,7 +109,6 @@ if len(df) >= 2:
     
     with col_bb:
         st.subheader("Bollinger Bands Analysis")
-        # Technical analysis using 'ta' library
         indicator_bb = BollingerBands(close=df['Close'], window=20, window_dev=2)
         df['bb_bbm'] = indicator_bb.bollinger_mavg()
         df['bb_bbh'] = indicator_bb.bollinger_hband()
@@ -133,12 +129,10 @@ if len(df) >= 2:
 
     with col_md:
         st.subheader("Simulated Market Depth & Entry Level")
-        # Creating a mockup of Market depth for recommendation
         bid_price = round(current_price - 0.10, 2)
         ask_price = round(current_price + 0.10, 2)
         st.write(f"Best Bid (Buyers): **₹{bid_price}** | Best Ask (Sellers): **₹{ask_price}**")
         
-        # Option Chain OI View (Call vs Put)
         st.write("**Option Chain OI Insight:**")
         st.write("Call OI (Resistance Barrier): High Open Interest at Upside Strike")
         st.write("Put OI (Support Barrier): High Open Interest at Downside Strike")
@@ -152,7 +146,6 @@ if len(df) >= 2:
 
     # 4. Macro Metal & Currency Matrix
     st.header("4. Global LME, MCX & Currency Matrix (Live Reference)")
-    
     col_lme, col_mcx, col_fx = st.columns(3)
     
     with col_lme:
