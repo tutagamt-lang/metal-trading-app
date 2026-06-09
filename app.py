@@ -2,10 +2,15 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import requests
+import plotly.graph_objects as go
 from ta.volatility import BollingerBands
 
 # Page Configuration
 st.set_page_config(layout="wide", page_title="Universal Real-Time NSE Trading Dashboard")
+
+# Initialize Watchlist in Session State if not exists
+if 'watchlist' not in st.session_state:
+    st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
 
 # -----------------------------------------------------------------
 # 0-DELAY REAL-TIME LIVE DATA FETCH FUNCTION
@@ -33,7 +38,7 @@ def fetch_realtime_nse_data(symbol):
     except Exception as e:
         times = pd.date_range(start="09:15", end="15:30", freq="5min")
         df_backup = pd.DataFrame(index=times)
-        base = {"TATASTEEL": 172.0, "HINDALCO": 655.0, "JSWSTEEL": 910.0, "VEDL": 452.0, "RELIANCE": 2450.0}.get(symbol, 500.0)
+        base = {"TATASTEEL": 172.0, "HINDALCO": 655.0, "JSWSTEEL": 910.0, "VEDL": 452.0, "RELIANCE": 2450.0, "ITC": 430.0, "SBIN": 780.0}.get(symbol, 500.0)
         df_backup['Open'] = base + np.random.uniform(-2, 2, len(times))
         df_backup['High'] = df_backup['Open'] + np.random.uniform(0, 4, len(times))
         df_backup['Low'] = df_backup['Open'] - np.random.uniform(0, 4, len(times))
@@ -49,47 +54,64 @@ def get_oi_movement(oi_change, price_diff):
     else: return "Short Covering (🟤)"
 
 # -----------------------------------------------------------------
-# FEATURE 1: SIDEBAR MULTI-STOCK LIVE SCANNER
+# SIDEBAR: SEARCH ALL STOCKS & WATCHLIST MANAGEMENT
 # -----------------------------------------------------------------
-st.sidebar.header("🔥 Multi-Stock Live Scanner")
-st.sidebar.caption("பின்னணியில் ஒரே நேரத்தில் ஸக்கேன் செய்யப்படும் முன்னணி பங்குகள்:")
-scanner_stocks = ["TATASTEEL", "HINDALCO", "JSWSTEEL", "VEDL", "RELIANCE"]
+st.sidebar.header("🔍 Universal Stock Search")
+st.sidebar.caption("NSE தளத்தில் உள்ள எந்தவொரு பங்கின் பெயரையும் (எ.கா: INFOSYS என்பதற்கு INFY, TATA MOTORS என்பதற்கு TATAMOTORS) என டைப் செய்யவும்.")
 
-scanner_data = []
-for s in scanner_stocks:
-    s_df, _ = fetch_realtime_nse_data(s)
-    if len(s_df) >= 3:
-        s_c915 = s_df.iloc[0]['Close']
-        s_c930 = s_df.iloc[2]['Close']  # 5-min intervals: index 2 is 9:25-9:30
-        s_oi915 = int(s_df.iloc[0]['Volume'] * 0.42)
-        s_oi930 = int(s_df.iloc[2]['Volume'] * 0.48)
-        
-        s_p_diff = s_c930 - s_c915
-        s_oi_diff = s_oi930 - s_oi915
-        s_move = get_oi_movement(s_oi_diff, s_p_diff)
-        
-        scanner_data.append({
-            "Stock": s,
-            "Live Price": f"₹{s_df.iloc[-1]['Close']:.2f}",
-            "OI Setup Matrix": s_move
-        })
+# Global Stock Search Input
+custom_ticker = st.sidebar.text_input("பங்கின் குறியீட்டு பெயர் (Ticker Symbol):", "").strip().upper()
 
-st.sidebar.table(pd.DataFrame(scanner_data))
+# Add/Remove from Watchlist UI
+if custom_ticker:
+    if custom_ticker not in st.session_state.watchlist:
+        if st.sidebar.button(f"➕ {custom_ticker}-ஐ வாட்ச்லிஸ்ட்டில் சேர்"):
+            st.session_state.watchlist.append(custom_ticker)
+            st.sidebar.success(f"{custom_ticker} சேர்க்கப்பட்டது!")
+    else:
+        if st.sidebar.button(f"➖ {custom_ticker}-ஐ வாட்ச்லிஸ்ட்டில் இருந்து நீக்கு"):
+            st.session_state.watchlist.remove(custom_ticker)
+            st.sidebar.warning(f"{custom_ticker} நீக்கப்பட்டது!")
 
-# Standard Single Stock Selection
 st.sidebar.markdown("---")
-st.sidebar.header("Main Stock Analysis Focus")
-selected_dropdown = st.sidebar.selectbox("விவரமாக பார்க்க வேண்டிய பங்கைத் தேர்வும் செய்க:", scanner_stocks)
-custom_ticker = st.sidebar.text_input("அல்லது வேறு பங்கு பெயர் (எ.கா: ITC):", "").strip().upper()
-ticker_display = custom_ticker if custom_ticker else selected_dropdown
+
+# Watchlist Live Scanner Area
+st.sidebar.header("⭐ My Live Watchlist")
+if st.session_state.watchlist:
+    scanner_data = []
+    for s in st.session_state.watchlist:
+        s_df, _ = fetch_realtime_nse_data(s)
+        if len(s_df) >= 3:
+            s_c915 = s_df.iloc[0]['Close']
+            s_c930 = s_df.iloc[2]['Close']
+            s_oi915 = int(s_df.iloc[0]['Volume'] * 0.42)
+            s_oi930 = int(s_df.iloc[2]['Volume'] * 0.48)
+            
+            s_p_diff = s_c930 - s_c915
+            s_oi_diff = s_oi930 - s_oi915
+            s_move = get_oi_movement(s_oi_diff, s_p_diff)
+            
+            scanner_data.append({
+                "Stock": s,
+                "Live Price": f"₹{s_df.iloc[-1]['Close']:.2f}",
+                "OI Setup": s_move
+            })
+    st.sidebar.table(pd.DataFrame(scanner_data))
+else:
+    st.sidebar.info("உங்கள் வாட்ச்லிஸ்ட் காலியாக உள்ளது. மேலே தேடி சேர்க்கவும்.")
+
+# Select Focus Stock from Watchlist
+st.sidebar.markdown("---")
+selected_focus = st.sidebar.selectbox("விவரமாக ஆராய வேண்டிய பங்கை வாட்ச்லிஸ்ட்டில் இருந்து தேர்வு செய்யவும்:", st.session_state.watchlist if st.session_state.watchlist else ["TATASTEEL"])
+
+# Final Ticker decision
+ticker_display = custom_ticker if custom_ticker else selected_focus
 
 # Get Live Data for Selected Focus Stock
 df, data_status = fetch_realtime_nse_data(ticker_display)
 
 if len(df) >= 3:
-    # -----------------------------------------------------------------
     # ADVANCED MATHEMATICAL VWAP CALCULATION
-    # -----------------------------------------------------------------
     typical_price = (df['High'] + df['Low'] + df['Close']) / 3
     tp_v = typical_price * df['Volume']
     df['VWAP'] = tp_v.cumsum() / df['Volume'].cumsum()
@@ -131,6 +153,7 @@ if len(df) >= 3:
     # MAIN HEADER & PRICE BANNER
     # -----------------------------------------------------------------
     st.title(f"⚡ {ticker_display} Real-Time Live Trading Dashboard")
+    st.caption(f"Data Status: {data_status} | Powered by Interactive Feed Engine")
     
     # LIVE BREAKOUT ALERTS
     high_threshold = H_val
@@ -149,6 +172,40 @@ if len(df) >= 3:
         <span style="color:{dc_color}; font-size:18px; font-weight:bold;">Today's Move: {day_change:+.2f} ({((day_change/day_open)*100):+.2f}%)</span>
     </div>
     """, unsafe_allow_html=True)
+
+    # -----------------------------------------------------------------
+    # INTERACTIVE STOCKS LIVE CHART WITH VWAP OVERLAY
+    # -----------------------------------------------------------------
+    st.header(f"📈 {ticker_display} 5-Minute Live Interactive Chart")
+    
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=df.index, 
+        y=df['Close'], 
+        mode='lines+markers', 
+        name='Live Price',
+        line=dict(color='#00E676', width=3),
+        marker=dict(size=6)
+    ))
+    fig.add_trace(go.Scatter(
+        x=df.index, 
+        y=df['VWAP'], 
+        mode='lines', 
+        name='VWAP (Institutional Avg)',
+        line=dict(color='#FFD600', width=2, dash='dash')
+    ))
+    
+    fig.update_layout(
+        template="plotly_dark",
+        margin=dict(l=20, r=20, t=20, b=20),
+        height=400,
+        xaxis=dict(title="Time (5-Min Candles)", showgrid=True, gridcolor='#333333'),
+        yaxis=dict(title="Price (INR)", showgrid=True, gridcolor='#333333'),
+        hovermode="x unified",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    st.markdown("---")
 
     # -----------------------------------------------------------------
     # SECTION 1: LIVE OPTION CHAIN MAX PAIN & PCR MATRIX
@@ -203,7 +260,7 @@ if len(df) >= 3:
     st.markdown("---")
 
     # -----------------------------------------------------------------
-    # NEW COMBINED SECTION 2: 9:15-9:30 & 5-MIN MICRO-TREND & VWAP ANALYSIS
+    # SECTION 2: TREND CONFORMATION HUB
     # -----------------------------------------------------------------
     st.header("🎯 2. Trend Conformation Hub (9:15-9:30 vs 5-Min Live Micro-Trend & VWAP)")
     
@@ -226,13 +283,9 @@ if len(df) >= 3:
 
     with trend_col2:
         st.subheader("⚡ 5-Min Live Micro-Trend")
-        
-        # 5-Minute Micro Trend Extraction (Last 2 Candles)
         last_candle = df.iloc[-1]
         prev_candle = df.iloc[-2]
-        
         micro_price_diff = last_candle['Close'] - prev_candle['Close']
-        micro_volume_diff = last_candle['Volume'] - prev_candle['Volume']
         
         st.write(f"Last Candle Close: **₹{last_candle['Close']:.2f}**")
         st.write(f"Prev Candle Close: **₹{prev_candle['Close']:.2f}**")
@@ -264,11 +317,11 @@ if len(df) >= 3:
         if live_price > current_vwap:
             vwap_status = "🟢 ABOVE VWAP (Bullish Dominance)"
             vwap_color = "#00E676"
-            vwap_desc = "விலை நிறுவனங்களின் சராசரி விலைக்கு மேல் உள்ளதால், சந்தை வாங்குபவர்களின் முழுக் கட்டுப்பாட்டில் உள்ளது. (Only Buy Trades)"
+            vwap_desc = "விலை நிறுவனங்களின் சராசரி விலைக்கு மேல் உள்ளதால், சந்தை வாங்குபவர்களின் முழுக் கட்டுப்பாட்டில் உள்ளது."
         else:
             vwap_status = "🔴 BELOW VWAP (Bearish Dominance)"
             vwap_color = "#FF1744"
-            vwap_desc = "விலை நிறுவனங்களின் சராசரி விலைக்கு கீழ் உள்ளதால், சந்தை விற்பனையாளர்களின் முழுக் கட்டுப்பாட்டில் உள்ளது. (Only Sell Trades)"
+            vwap_desc = "விலை நிறுவனங்களின் சராசரி விலைக்கு கீழ் உள்ளதால், சந்தை விற்பனையாளர்களின் முழுக் கட்டுப்பாட்டில் உள்ளது."
             
         st.markdown(f"""
         <div style="background-color:#1E1E1E; padding:12px; border-radius:8px; border-left:5px solid {vwap_color};">
@@ -301,7 +354,6 @@ if len(df) >= 3:
         st.write(f"**Buyer Ratio:** {buyer_ratio:.1f}% | **Seller Ratio:** {seller_ratio:.1f}%")
         
     with md_col2:
-        # ULTIMATE TRADING RULE: Base Trend + Micro Trend + VWAP + PCR must align
         is_buy_eligible = live_price > current_vwap and "UPTREND" in micro_verdict and pcr_val > 1.0 and buyer_ratio > 50
         is_sell_eligible = live_price < current_vwap and "DOWNTREND" in micro_verdict and pcr_val < 1.0 and seller_ratio > 50
         
@@ -309,4 +361,29 @@ if len(df) >= 3:
             entry_exact, target_exact, stop_loss = max(levels["R1"], h_930), levels["R2"], current_vwap
             st.markdown(f"""<div style="background-color:#1B382B; padding:15px; border-radius:8px; border:2px solid #00E676;"><b style="color:#00E676; font-size:16px;">🚀 TRIPLE CONFIRMED INSTANT BUY PLAN:</b><br><br>🔹 <b>Buy Entry Price:</b> ₹ {entry_exact:.2f} மேல் சஸ்டைன் செய்யும்போது<br>🎯 <b>Target:</b> ₹ {target_exact:.2f}<br>🛑 <b>Stop Loss (VWAP Level):</b> ₹ {stop_loss:.2f}</div>""", unsafe_allow_html=True)
         elif is_sell_eligible:
-            entry_exact,
+            entry_exact, target_exact, stop_loss = min(levels["S1"], l_930), levels["S2"], current_vwap
+            st.markdown(f"""<div style="background-color:#3D1C22; padding:15px; border-radius:8px; border:2px solid #FF1744;"><b style="color:#FF1744; font-size:16px;">📉 TRIPLE CONFIRMED INSTANT SELL PLAN:</b><br><br>🔹 <b>Sell Entry Price:</b> ₹ {entry_exact:.2f} கீழ் செல்லும்போது<br>🎯 <b>Target:</b> ₹ {target_exact:.2f}<br>🛑 <b>Stop Loss (VWAP Level):</b> ₹ {stop_loss:.2f}</div>""", unsafe_allow_html=True)
+        else:
+            if "Profit Booking" in movement_type or live_price > current_vwap:
+                st.markdown(f"""<div style="background-color:#2D2A1A; padding:15px; border-radius:8px; border:1px solid #FFD600;"><b style="color:#FFD600;">🛒 PULLBACK BUY ON DIP (VWAP Support):</b><br><br>🔹 <b>Buy Price Range:</b> ₹ {current_vwap:.2f} அருகில் சப்போர்ட் எடுக்கும்போது வாங்கவும்.<br>🎯 <b>Target:</b> ₹ {levels['R1']:.2f}<br>🛑 <b>Stop Loss:</b> ₹ {levels['S1']:.2f}</div>""", unsafe_allow_html=True)
+            else:
+                st.info("⚪ ட்ரெண்டுகள் இன்னும் ஒரு நேர்க்கோட்டில் இணையவில்லை. புதிய என்ட்ரிகளைத் தவிர்த்து சிக்னலுக்காகக் காத்திருக்கவும்.")
+
+    st.markdown("---")
+
+    # Pivot Point Table & Bollinger Bands
+    st.header("4. Pivot Points & Technical References")
+    tb1, tb2 = st.tabs(["Pivot Levels Table", "Bollinger Bands Reference"])
+    
+    with tb1:
+        st.table(pd.DataFrame([levels]).T.rename(columns={0: "விலை வரம்பு (INR)"}))
+    with tb2:
+        bb = BollingerBands(close=df['Close'], window=20, window_dev=2)
+        df['bb_h'], df['bb_m'], df['bb_l'] = bb.bollinger_hband(), bb.bollinger_mavg(), bb.bollinger_lband()
+        last = df.iloc[-1]
+        col_b1, col_b2, col_b3 = st.columns(3)
+        col_b1.metric("Upper Band (Overbought)", f"₹{last['bb_h']:.2f}")
+        col_b2.metric("Middle Band (Avg)", f"₹{last['bb_m']:.2f}")
+        col_b3.metric("Lower Band (Oversold)", f"₹{last['bb_l']:.2f}")
+else:
+    st.error("டேட்டா எடுப்பதில் சிக்கல் உள்ளது. ரீபூட் செய்யவும்.")
