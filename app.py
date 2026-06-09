@@ -9,20 +9,21 @@ from ta.volatility import BollingerBands
 st.set_page_config(layout="wide", page_title="Universal Real-Time NSE Trading Dashboard")
 
 # Initialize Watchlist in Session State if not exists
-if 'watchlist' not in st.session_state:
-    st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
-
 # -----------------------------------------------------------------
-# 0-DELAY REAL-TIME LIVE DATA FETCH FUNCTION
+# REAL-TIME LIVE DATA FETCH FUNCTION (WITH RATE LIMIT SAFETY)
 # -----------------------------------------------------------------
-@st.cache_data(ttl=2)  # 2 வினாடிகளுக்கு ஒருமுறை அசல் லைவ் டேட்டா புதுப்பிக்கப்படும் (No Delay)
+@st.cache_data(ttl=5)  # யாகூ சர்வருக்கு அழுத்தம் தராமல் இருக்க 5 வினாடிகளாக மாற்றப்பட்டுள்ளது
 def fetch_realtime_nse_data(symbol):
     try:
         url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}.NS?interval=5m&range=1d"
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-        response = requests.get(url, headers=headers).json()
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'}
+        response = requests.get(url, headers=headers, timeout=5)
         
-        result = response['chart']['result'][0]
+        # Rate limit பிழை வந்தால் நேரடியாக Backup மோடுக்கு மாறச் செய்தல்
+        if response.status_code == 429:
+            raise Exception("Rate limited by Yahoo")
+            
+        result = response.json()['chart']['result'][0]
         indicators = result['indicators']['quote'][0]
         timestamps = result['timestamp']
         
@@ -36,6 +37,16 @@ def fetch_realtime_nse_data(symbol):
         df = df.dropna()
         return df, "LIVE REAL-TIME FEED"
     except Exception as e:
+        # யாகூ பிளாக் செய்தால் ஆப் முடங்காமல் உள்நாட்டிலேயே லைவ் சிமுலேஷன் மேட்ரிக்ஸ் இயங்கும்
+        times = pd.date_range(start="09:15", end="15:30", freq="5min")
+        df_backup = pd.DataFrame(index=times)
+        base = {"TATASTEEL": 172.0, "HINDALCO": 655.0, "JSWSTEEL": 910.0, "VEDL": 452.0, "RELIANCE": 2450.0, "ITC": 430.0, "SBIN": 780.0}.get(symbol, 500.0)
+        df_backup['Open'] = base + np.random.uniform(-2, 2, len(times))
+        df_backup['High'] = df_backup['Open'] + np.random.uniform(0, 4, len(times))
+        df_backup['Low'] = df_backup['Open'] - np.random.uniform(0, 4, len(times))
+        df_backup['Close'] = (df_backup['High'] + df_backup['Low']) / 2
+        df_backup['Volume'] = np.random.randint(15000, 50000, len(times))
+        return df_backup, "LIVE SIMULATION FEED (Yahoo Limit Active)"
         times = pd.date_range(start="09:15", end="15:30", freq="5min")
         df_backup = pd.DataFrame(index=times)
         base = {"TATASTEEL": 172.0, "HINDALCO": 655.0, "JSWSTEEL": 910.0, "VEDL": 452.0, "RELIANCE": 2450.0, "ITC": 430.0, "SBIN": 780.0}.get(symbol, 500.0)
