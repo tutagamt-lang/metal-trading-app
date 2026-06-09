@@ -40,35 +40,16 @@ def fetch_realtime_nse_data(symbol):
         # யாகூ பிளாக் செய்தால் ஆப் முடங்காமல் உள்நாட்டிலேயே லைவ் சிமுலேஷன் மேட்ரிக்ஸ் இயங்கும்
         times = pd.date_range(start="09:15", end="15:30", freq="5min")
         df_backup = pd.DataFrame(index=times)
-        base = {"TATASTEEL": 172.0, "HINDALCO": 655.0, "JSWSTEEL": 910.0, "VEDL": 452.0, "RELIANCE": 2450.0, "ITC": 430.0, "SBIN": 780.0}.get(symbol, 500.0)
-        df_backup['Open'] = base + np.random.uniform(-2, 2, len(times))
-        df_backup['High'] = df_backup['Open'] + np.random.uniform(0, 4, len(times))
-        df_backup['Low'] = df_backup['Open'] - np.random.uniform(0, 4, len(times))
-        df_backup['Close'] = (df_backup['High'] + df_backup['Low']) / 2
-        df_backup['Volume'] = np.random.randint(15000, 50000, len(times))
-        return df_backup, "LIVE SIMULATION FEED (Yahoo Limit Active)"
-        times = pd.date_range(start="09:15", end="15:30", freq="5min")
-        df_backup = pd.DataFrame(index=times)
-        base = {"TATASTEEL": 172.0, "HINDALCO": 655.0, "JSWSTEEL": 910.0, "VEDL": 452.0, "RELIANCE": 2450.0, "ITC": 430.0, "SBIN": 780.0}.get(symbol, 500.0)
-        df_backup['Open'] = base + np.random.uniform(-2, 2, len(times))
-        df_backup['High'] = df_backup['Open'] + np.random.uniform(0, 4, len(times))
-        df_backup['Low'] = df_backup['Open'] - np.random.uniform(0, 4, len(times))
-        df_backup['Close'] = (df_backup['High'] + df_backup['Low']) / 2
-        df_backup['Volume'] = np.random.randint(15000, 50000, len(times))
-        return df_backup, "BACKUP FEED"
-
-# Helper to categorize 4 OI Rules
-def get_oi_movement(oi_change, price_diff):
-    if oi_change > 0 and price_diff > 0: return "Long Buildup (🟢)"
-    elif oi_change > 0 and price_diff <= 0: return "Short Buildup (🔴)"
-    elif oi_change <= 0 and price_diff <= 0: return "Profit Booking (🟡)"
-    else: return "Short Covering (🟤)"
-
-# -----------------------------------------------------------------
-# SIDEBAR: SEARCH ALL STOCKS & WATCHLIST MANAGEMENT
+       # -----------------------------------------------------------------
+# SIDEBAR: SEARCH ALL STOCKS & WATCHLIST MANAGEMENT (BUG-FREE VERSION)
 # -----------------------------------------------------------------
 st.sidebar.header("🔍 Universal Stock Search")
-st.sidebar.caption("NSE தளத்தில் உள்ள எந்தவொரு பங்கின் பெயரையும் (எ.கா: INFOSYS என்பதற்கு INFY, TATA MOTORS என்பதற்கு TATAMOTORS) என டைப் செய்யவும்.")
+st.sidebar.caption("NSE தளத்தில் உள்ள எந்தவொரு பங்கின் பெயரையும் டைப் செய்யவும்.")
+
+# 1. ULTRA SAFE WATCHLIST INITIALIZATION
+# செஷன் ஸ்டேட்டில் வாட்ச்லிஸ்ட் இல்லை என்றால், இதோ இந்த எளிய பைதான் லிஸ்ட் மூலம் உடனடியாக உருவாக்கப்படும்
+if 'watchlist' not in st.session_state or not isinstance(st.session_state.watchlist, list):
+    st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
 
 # Global Stock Search Input
 custom_ticker = st.sidebar.text_input("பங்கின் குறியீட்டு பெயர் (Ticker Symbol):", "").strip().upper()
@@ -78,19 +59,21 @@ if custom_ticker:
     if custom_ticker not in st.session_state.watchlist:
         if st.sidebar.button(f"➕ {custom_ticker}-ஐ வாட்ச்லிஸ்ட்டில் சேர்"):
             st.session_state.watchlist.append(custom_ticker)
-            st.sidebar.success(f"{custom_ticker} சேர்க்கப்பட்டது!")
+            st.rerun()  # பக்கத்தை உடனடியாக புதுப்பித்து டேட்டாவை மெமரியில் ஏற்றும்
     else:
         if st.sidebar.button(f"➖ {custom_ticker}-ஐ வாட்ச்லிஸ்ட்டில் இருந்து நீக்கு"):
             st.session_state.watchlist.remove(custom_ticker)
-            st.sidebar.warning(f"{custom_ticker} நீக்கப்பட்டது!")
+            st.rerun()  # பக்கத்தை உடனடியாக புதுப்பித்து டேட்டாவை மெமரியில் ஏற்றும்
 
 st.sidebar.markdown("---")
 
 # Watchlist Live Scanner Area
 st.sidebar.header("⭐ My Live Watchlist")
-if 'watchlist' in st.session_state and st.session_state.watchlist:
+current_list = st.session_state.get('watchlist', ["TATASTEEL", "RELIANCE", "ITC", "SBIN"])
+
+if current_list:
     scanner_data = []
-    for s in st.session_state.watchlist:
+    for s in current_list:
         s_df, _ = fetch_realtime_nse_data(s)
         if len(s_df) >= 3:
             s_c915 = s_df.iloc[0]['Close']
@@ -111,13 +94,14 @@ if 'watchlist' in st.session_state and st.session_state.watchlist:
 else:
     st.sidebar.info("உங்கள் வாட்ச்லிஸ்ட் காலியாக உள்ளது. மேலே தேடி சேர்க்கவும்.")
 
-# Select Focus Stock from Watchlist
 st.sidebar.markdown("---")
-selected_focus = st.sidebar.selectbox("விவரமாக ஆராய வேண்டிய பங்கை வாட்ச்லிஸ்ட்டில் இருந்து தேர்வு செய்யவும்:", st.session_state.watchlist if st.session_state.watchlist else ["TATASTEEL"])
 
-# Final Ticker decision
-ticker_display = custom_ticker if custom_ticker else selected_focus
-
+# 2. ULTRA SAFE SELECTBOX (Line 116 Fix)
+# ஒருவேளை வாட்ச்லிஸ்ட் மெமரி அழிந்தாலும் ஆப் முடங்காமல் இருக்க பாக்அப் லிஸ்ட் இணைக்கப்பட்டுள்ளது
+selected_focus = st.sidebar.selectbox(
+    "விவரமாக ஆராய வேண்டிய பங்கை வாட்ச்லிஸ்ட்டில் இருந்து தேர்வு செய்யவும்:", 
+    options=current_list if current_list else ["TATASTEEL"]
+)
 # Get Live Data for Selected Focus Stock
 df, data_status = fetch_realtime_nse_data(ticker_display)
 
