@@ -6,18 +6,15 @@ from ta.volatility import BollingerBands
 
 # Page Configuration
 st.set_page_config(layout="wide", page_title="Universal Live NSE Trading Dashboard")
-st.title("📊 Universal NSE Live Stock & Future OI Dashboard")
-st.caption("பங்குகளின் 9:15, 9:30 விலை மற்றும் OI மதிப்புகளுடன் கூடிய நேரடி அனாலிசிஸ்")
 
-# Sidebar for Stock Selection
+# -----------------------------------------------------------------
+# SIDEBAR FOR STOCK SELECTION
+# -----------------------------------------------------------------
 st.sidebar.header("Stock Selection")
 popular_stocks = ["TATASTEEL", "HINDALCO", "JSWSTEEL", "VEDL", "RELIANCE", "TCS", "INFY", "HDFCBANK", "SBIN"]
 selected_dropdown = st.sidebar.selectbox("பிரபலமான பங்குகள்:", popular_stocks)
 
-# Custom input text box for any NSE stock
 custom_ticker = st.sidebar.text_input("அல்லது வேறு எந்த பங்கின் பெயரையும் இங்கே டைப் செய்யவும் (எ.கா: ITC, MARUTI):", "").strip().upper()
-
-# Final Ticker Assignment
 ticker_display = custom_ticker if custom_ticker else selected_dropdown
 
 # Function to fetch real-time live data
@@ -42,7 +39,6 @@ def fetch_realtime_nse_data(symbol):
         df = df.dropna()
         return df, "LIVE REAL-TIME FEED"
     except Exception as e:
-        # Emergency backup to prevent downtime
         times = pd.date_range(start="09:15", end="15:30", freq="15min")
         df_backup = pd.DataFrame(index=times)
         base = {"TATASTEEL": 172.0, "HINDALCO": 655.0, "JSWSTEEL": 910.0, "VEDL": 452.0}.get(symbol, 500.0)
@@ -61,69 +57,19 @@ if len(df) >= 2:
     o_915, h_915, l_915, c_915 = df.iloc[0]['Open'], df.iloc[0]['High'], df.iloc[0]['Low'], df.iloc[0]['Close']
     o_930, h_930, l_930, c_930 = df.iloc[1]['Open'], df.iloc[1]['High'], df.iloc[1]['Low'], df.iloc[1]['Close']
     
+    # Current Live Price & General Day Calculations
+    live_price = df.iloc[-1]['Close']
+    day_open = df.iloc[0]['Open']
+    day_change = live_price - day_open
+    dc_color = "green" if day_change >= 0 else "red"
+    
     # Calculate Live Future Open Interest (OI) Changes
     oi_915 = int(df.iloc[0]['Volume'] * 0.42)
     oi_930 = int(df.iloc[1]['Volume'] * 0.48)
     oi_change = oi_930 - oi_915
     oi_color = "green" if oi_change > 0 else "red"
     
-    # -----------------------------------------------------------------
-    # SECTION 1: Future OI & Price & Dow Theory
-    # -----------------------------------------------------------------
-    st.header(f"1. {ticker_display} - Future OI, Price & Dow Theory Live Analysis")
-    c1, c2, c3, c4 = st.columns(4) # 4 பத்திகளாக (Columns) மாற்றப்பட்டுள்ளது
-    
-    with c1:
-        st.subheader("⏱️ Stock Live Price")
-        st.metric("காலை 9:15 Close Price", f"₹{c1_915:.2f}" if 'c1_915' in locals() else f"₹{c_915:.2f}")
-        st.metric("காலை 9:30 Close Price", f"₹{c_930:.2f}")
-        price_diff = c_930 - c_915
-        p_color = "green" if price_diff > 0 else "red"
-        st.markdown(f"Price Change: <span style='color:{p_color}; font-size:18px; font-weight:bold;'>{price_diff:+.2f}</span>", unsafe_allow_html=True)
-
-    with c2:
-        st.subheader("📊 Future OI Values")
-        st.metric("காலை 9:15 OI Value", f"{oi_915:,}")
-        st.metric("காலை 9:30 OI Value", f"{oi_930:,}")
-        st.markdown(f"OI Changes: <span style='color:{oi_color}; font-size:18px; font-weight:bold;'>{oi_change:+,}</span>", unsafe_allow_html=True)
-        
-    with c3:
-        st.subheader("📜 Dow Theory Conditions")
-        if l_930 > l_915 and c_930 > o_915:
-            trend = "🟢 Uptrend (Retest & Failure on Low)"
-            action = "Buy on Dip"
-        elif h_930 < h_915 and c_930 < o_915:
-            trend = "🔴 Downtrend (Retest & Failure on High)"
-            action = "Sell on Rise"
-        else:
-            trend = "🟡 Sideways Market"
-            action = "No Trade (Low/High Volatile Sideways)"
-        
-        st.info(f"**Trend:** {trend}\n\n**Strategy:** {action}")
-        
-    with c4:
-        st.subheader("🎯 Action & Movement")
-        price_up = c_930 > o_915
-        if oi_change > 0 and price_up:
-            act, move = "BUY (Long Buildup)", "பச்சை நிறம் (OI Increased + Price Up)"
-            st.success(f"**Action:** {act}\n\n**Movement:** {move}")
-        elif oi_change > 0 and not price_up:
-            act, move = "SELL / SHORT (Short Buildup)", "சிவப்பு நிறம் (OI Increased + Price Down)"
-            st.error(f"**Action:** {act}\n\n**Movement:** {move}")
-        elif oi_change < 0 and price_up:
-            act, move = "EXIT SHORT (Short Covering)", "சிவப்பு நிறம் (OI Decreased)"
-            st.warning(f"**Action:** {act}\n\n**Movement:** {move}")
-        else:
-            act, move = "EXIT LONG (Long Unwinding)", "சிவப்பு நிறம்"
-            st.markdown(f"**Action:** {act}\n\n**Movement:** {move}")
-
-    st.markdown("---")
-
-    # -----------------------------------------------------------------
-    # SECTION 2: Dynamic Pivot Point R3 Breakout
-    # -----------------------------------------------------------------
-    st.header("2. Pivot Points & Dynamic R3 Breakout Levels")
-    
+    # Pivot Points Calculations
     H_val = max(h_915, h_930)
     L_val = min(l_915, l_930)
     C_val = c_930
@@ -136,9 +82,90 @@ if len(df) >= 2:
             "R2": P + (H - L), "S2": P - (H - L),
             "R3": H + 2 * (P - L), "S3": L - 2 * (H - P)
         }
-        
     levels = calculate_levels(H_val, L_val, C_val)
-    live_price = df.iloc[-1]['Close']
+    
+    # -----------------------------------------------------------------
+    # TOP HIGHLIGHT: LIVE PRICE BLOCK
+    # -----------------------------------------------------------------
+    st.title(f"📊 {ticker_display} Live Trading Dashboard")
+    st.markdown(f"""
+    <div style="background-color:#1E1E1E; padding: 20px; border-radius: 10px; border-left: 8px solid #00FF00; margin-bottom: 25px;">
+        <span style="color:#AAAAAA; font-size:16px; font-weight:bold;">CURRENT LIVE PRICE (நேரடிச் சந்தை விலை)</span>
+        <h1 style="color:#FFFFFF; margin:0; font-size:48px;">₹ {live_price:.2f}</h1>
+        <span style="color:{dc_color}; font-size:18px; font-weight:bold;">Today's Change: {day_change:+.2f} ({((day_change/day_open)*100):+.2f}%)</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # -----------------------------------------------------------------
+    # SECTION 1: Future OI, Prices & 4 Custom Rules
+    # -----------------------------------------------------------------
+    st.header("1. Future OI, Historical Price & Custom Rule Target Analysis")
+    c1, c2, c3 = st.columns(3)
+    
+    with c1:
+        st.subheader("⏱️ 9:15 & 9:30 Prices")
+        st.metric("காலை 9:15 Close Price", f"₹{c_915:.2f}")
+        st.metric("காலை 9:30 Close Price", f"₹{c_930:.2f}")
+        price_diff = c_930 - c_915
+        p_color = "green" if price_diff > 0 else "red"
+        st.markdown(f"Price Change: <span style='color:{p_color}; font-size:18px; font-weight:bold;'>{price_diff:+.2f}</span>", unsafe_allow_html=True)
+
+    with c2:
+        st.subheader("📊 Future OI Values")
+        st.metric("காலை 9:15 OI Value", f"{oi_915:,}")
+        st.metric("காலை 9:30 OI Value", f"{oi_930:,}")
+        st.markdown(f"OI Changes: <span style='color:{oi_color}; font-size:18px; font-weight:bold;'>{oi_change:+,}</span>", unsafe_allow_html=True)
+        
+    # 🌟 CORE LOGIC: THE 4 CUSTOM USER RULES WITH ENTRY LEVELS
+    with c3:
+        st.subheader("🎯 Market Build-up & Entry Setup")
+        
+        # Rule variables
+        oi_increased = oi_change > 0
+        price_increased = price_diff > 0
+        
+        if oi_increased and price_increased:
+            movement_type = "Long Buildup"
+            trade_action = "BUY"
+            # Buy Entry at R1 or 9:30 High Breakout
+            entry_price = max(levels["R1"], h_930)
+            target_price = levels["R2"]
+            st.success(f"**Movement:** {movement_type}\n\n**Action:** {trade_action}")
+            st.info(f"💡 **எந்த விலையில் வாங்கலாம் (Buy Entry):** ₹{entry_price:.2f} மேல்\n\n🎯 **இலக்கு (Target):** ₹{target_price:.2f}")
+            
+        elif oi_increased and not price_increased:
+            movement_type = "Short Buildup"
+            trade_action = "SELL"
+            # Sell Entry at S1 or 9:30 Low Breakdown
+            entry_price = min(levels["S1"], l_930)
+            target_price = levels["S2"]
+            st.error(f"**Movement:** {movement_type}\n\n**Action:** {trade_action}")
+            st.info(f"💡 **எந்த விலையில் விற்கலாம் (Short Entry):** ₹{entry_price:.2f} கீழ்\n\n🎯 **இலக்கு (Target):** ₹{target_price:.2f}")
+            
+        elif not oi_increased and not price_increased:
+            movement_type = "Profit Booking"
+            trade_action = "Buy on Dip"
+            # Buy on Dip entry near S2 support level as market bounces up
+            entry_price = levels["S2"]
+            target_price = levels["P (Pivot Point)"]
+            st.warning(f"**Movement:** {movement_type}\n\n📊 *விதி: மார்க்கெட் கீழே இறங்கி மேலே எழும்!*")
+            st.info(f"💡 **எந்த விலையில் வாங்கலாம் (Buy on Dip Entry):** ₹{entry_price:.2f} அருகில்\n\n🎯 **இலக்கு (Target):** ₹{target_price:.2f}")
+            
+        else: # not oi_increased and price_increased
+            movement_type = "Short Covering"
+            trade_action = "Sell on Rise"
+            # Sell on Rise entry near R2 resistance level as market goes up and falls
+            entry_price = levels["R2"]
+            target_price = levels["P (Pivot Point)"]
+            st.markdown(f"<div style='background-color:#4B3621; padding:10px; border-radius:5px; color:white;'><b>Movement:</b> {movement_type}<br><br>📊 <i>விதி: மார்க்கெட் மேலே போய் கீழே இறங்கும்!</i></div>", unsafe_allow_html=True)
+            st.info(f"💡 **எந்த விலையில் விற்கலாம் (Sell on Rise Entry):** ₹{entry_price:.2f} அருகில்\n\n🎯 **இலக்கு (Target):** ₹{target_price:.2f}")
+
+    st.markdown("---")
+
+    # -----------------------------------------------------------------
+    # SECTION 2: Dynamic Pivot Point R3 Breakout
+    # -----------------------------------------------------------------
+    st.header("2. Pivot Points & Dynamic R3 Breakout Levels")
     
     if live_price > levels["R3"]:
         st.warning("⚠️ தற்போதைய விலை R3 அளவை கடந்துவிட்டது! விதியின்படி புதிய லெவல்கள் மாற்றியமைக்கப்பட்டுள்ளன.")
@@ -149,44 +176,17 @@ if len(df) >= 2:
     st.markdown("---")
 
     # -----------------------------------------------------------------
-    # SECTION 3: Bollinger Bands & Market Depth Recommendation
+    # SECTION 3: Bollinger Bands
     # -----------------------------------------------------------------
-    st.header("3. Bollinger Bands (20, 2 SD) & Market Depth")
-    col_b, col_m = st.columns(2)
+    st.header("3. Bollinger Bands (20, 2 SD)")
+    bb = BollingerBands(close=df['Close'], window=20, window_dev=2)
+    df['bb_h'], df['bb_m'], df['bb_l'] = bb.bollinger_hband(), bb.bollinger_mavg(), bb.bollinger_lband()
+    last = df.iloc[-1]
     
-    with col_b:
-        st.subheader("Bollinger Bands")
-        bb = BollingerBands(close=df['Close'], window=20, window_dev=2)
-        df['bb_h'], df['bb_m'], df['bb_l'] = bb.bollinger_hband(), bb.bollinger_mavg(), bb.bollinger_lband()
-        last = df.iloc[-1]
-        
-        st.write(f"Upper Band (Overbought): **₹{last['bb_h']:.2f}**")
-        st.write(f"Middle Band (Avg): **₹{last['bb_m']:.2f}**")
-        st.write(f"Lower Band (Oversold): **₹{last['bb_l']:.2f}**")
-        
-        if last['Close'] >= last['bb_h']:
-            bb_sig = "SELL (Overbought - Scalping Alert)"
-            st.error(f"**Bollinger Bands Signal:** {bb_sig}")
-        elif last['Close'] <= last['bb_l']:
-            bb_sig = "BUY (Oversold - Scalping Alert)"
-            st.success(f"**Bollinger Bands Signal:** {bb_sig}")
-        else:
-            st.info("**Bollinger Bands Signal:** HOLD (Range bound)")
-
-    with col_m:
-        st.subheader("Market Depth & Option OI Target Price")
-        bid = round(live_price - 0.15, 2)
-        ask = round(live_price + 0.15, 2)
-        st.write(f"Best Bid Price (Buyers Open Lock): **₹{bid}**")
-        st.write(f"Best Ask Price (Sellers Open Lock): **₹{ask}**")
-        
-        st.write("**📈 சந்தை எந்த விலை வரை போக வாய்ப்புள்ளது?**")
-        if "BUY" in trend or live_price > levels["P (Pivot Point)"]:
-            st.success(f"Target Upside: **₹{levels['R2']:.2f}** வரை செல்ல அதிக வாய்ப்பு உள்ளது (Call OI Resistance Broken).")
-            st.write(f"**பரிந்துரைக்கப்படும் வாங்கும் விலை:** ₹{bid}")
-        else:
-            st.error(f"Target Downside: **₹{levels['S2']:.2f}** வரை வீழ்ச்சியடைய வாய்ப்பு உள்ளது (Put OI Support Broken).")
-            st.write(f"**பரிந்துரைக்கப்படும் விற்கும் விலை:** ₹{ask}")
+    col_b1, col_b2, col_b3 = st.columns(3)
+    col_b1.metric("Upper Band (Overbought)", f"₹{last['bb_h']:.2f}")
+    col_b2.metric("Middle Band (Avg)", f"₹{last['bb_m']:.2f}")
+    col_b3.metric("Lower Band (Oversold)", f"₹{last['bb_l']:.2f}")
 
     st.markdown("---")
 
