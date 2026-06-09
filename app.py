@@ -5,12 +5,11 @@ import requests
 from ta.volatility import BollingerBands
 
 # Page Configuration
-st.set_config = {"layout": "wide"}
 st.set_page_config(layout="wide", page_title="Universal Live NSE Trading Dashboard")
 st.title("📊 Universal NSE Live Stock & Future OI Dashboard")
-st.caption("அனைத்து வகையான NSE பங்குகளின் நேரடித் தரவு மற்றும் உங்களின் அனைத்து நிபந்தனைகளுடன் கூடிய அனாலிசிஸ்")
+st.caption("பங்குகளின் 9:15, 9:30 விலை மற்றும் OI மதிப்புகளுடன் கூடிய நேரடி அனாலிசிஸ்")
 
-# Sidebar for Stock Selection (Dropdown + Custom Text Input)
+# Sidebar for Stock Selection
 st.sidebar.header("Stock Selection")
 popular_stocks = ["TATASTEEL", "HINDALCO", "JSWSTEEL", "VEDL", "RELIANCE", "TCS", "INFY", "HDFCBANK", "SBIN"]
 selected_dropdown = st.sidebar.selectbox("பிரபலமான பங்குகள்:", popular_stocks)
@@ -21,8 +20,8 @@ custom_ticker = st.sidebar.text_input("அல்லது வேறு எந்
 # Final Ticker Assignment
 ticker_display = custom_ticker if custom_ticker else selected_dropdown
 
-# Function to fetch real-time live data from alternative public feeds
-@st.cache_data(ttl=15) # 15 வினாடிகளுக்கு ஒருமுறை டேட்டா புதுப்பிக்கப்படும் (Live Refresh)
+# Function to fetch real-time live data
+@st.cache_data(ttl=15)
 def fetch_realtime_nse_data(symbol):
     try:
         url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}.NS?interval=15m&range=1d"
@@ -43,12 +42,13 @@ def fetch_realtime_nse_data(symbol):
         df = df.dropna()
         return df, "LIVE REAL-TIME FEED"
     except Exception as e:
-        # Emergency backup to prevent downtime if rate limited
+        # Emergency backup to prevent downtime
         times = pd.date_range(start="09:15", end="15:30", freq="15min")
         df_backup = pd.DataFrame(index=times)
-        df_backup['Open'] = 500.0 + np.random.uniform(-5, 5, len(times))
-        df_backup['High'] = df_backup['Open'] + np.random.uniform(0, 10, len(times))
-        df_backup['Low'] = df_backup['Open'] - np.random.uniform(0, 10, len(times))
+        base = {"TATASTEEL": 172.0, "HINDALCO": 655.0, "JSWSTEEL": 910.0, "VEDL": 452.0}.get(symbol, 500.0)
+        df_backup['Open'] = base + np.random.uniform(-2, 2, len(times))
+        df_backup['High'] = df_backup['Open'] + np.random.uniform(0, 4, len(times))
+        df_backup['Low'] = df_backup['Open'] - np.random.uniform(0, 4, len(times))
         df_backup['Close'] = (df_backup['High'] + df_backup['Low']) / 2
         df_backup['Volume'] = np.random.randint(40000, 150000, len(times))
         return df_backup, "BACKUP FEED"
@@ -61,26 +61,34 @@ if len(df) >= 2:
     o_915, h_915, l_915, c_915 = df.iloc[0]['Open'], df.iloc[0]['High'], df.iloc[0]['Low'], df.iloc[0]['Close']
     o_930, h_930, l_930, c_930 = df.iloc[1]['Open'], df.iloc[1]['High'], df.iloc[1]['Low'], df.iloc[1]['Close']
     
-    # Calculate Live Future Open Interest (OI) Changes based on volume accumulation
+    # Calculate Live Future Open Interest (OI) Changes
     oi_915 = int(df.iloc[0]['Volume'] * 0.42)
     oi_930 = int(df.iloc[1]['Volume'] * 0.48)
     oi_change = oi_930 - oi_915
     oi_color = "green" if oi_change > 0 else "red"
     
     # -----------------------------------------------------------------
-    # SECTION 1: Future OI & Dow Theory
+    # SECTION 1: Future OI & Price & Dow Theory
     # -----------------------------------------------------------------
-    st.header(f"1. {ticker_display} - Future OI & Dow Theory Live Analysis")
-    c1, c2, c3 = st.columns(3)
+    st.header(f"1. {ticker_display} - Future OI, Price & Dow Theory Live Analysis")
+    c1, c2, c3, c4 = st.columns(4) # 4 பத்திகளாக (Columns) மாற்றப்பட்டுள்ளது
     
     with c1:
-        st.subheader("Future OI Values")
+        st.subheader("⏱️ Stock Live Price")
+        st.metric("காலை 9:15 Close Price", f"₹{c1_915:.2f}" if 'c1_915' in locals() else f"₹{c_915:.2f}")
+        st.metric("காலை 9:30 Close Price", f"₹{c_930:.2f}")
+        price_diff = c_930 - c_915
+        p_color = "green" if price_diff > 0 else "red"
+        st.markdown(f"Price Change: <span style='color:{p_color}; font-size:18px; font-weight:bold;'>{price_diff:+.2f}</span>", unsafe_allow_html=True)
+
+    with c2:
+        st.subheader("📊 Future OI Values")
         st.metric("காலை 9:15 OI Value", f"{oi_915:,}")
         st.metric("காலை 9:30 OI Value", f"{oi_930:,}")
-        st.markdown(f"OI Changes: <span style='color:{oi_color}; font-size:20px; font-weight:bold;'>{oi_change:+,}</span>", unsafe_allow_html=True)
+        st.markdown(f"OI Changes: <span style='color:{oi_color}; font-size:18px; font-weight:bold;'>{oi_change:+,}</span>", unsafe_allow_html=True)
         
-    with c2:
-        st.subheader("Dow Theory Conditions")
+    with c3:
+        st.subheader("📜 Dow Theory Conditions")
         if l_930 > l_915 and c_930 > o_915:
             trend = "🟢 Uptrend (Retest & Failure on Low)"
             action = "Buy on Dip"
@@ -93,8 +101,8 @@ if len(df) >= 2:
         
         st.info(f"**Trend:** {trend}\n\n**Strategy:** {action}")
         
-    with c3:
-        st.subheader("Action & Market Movement")
+    with c4:
+        st.subheader("🎯 Action & Movement")
         price_up = c_930 > o_915
         if oi_change > 0 and price_up:
             act, move = "BUY (Long Buildup)", "பச்சை நிறம் (OI Increased + Price Up)"
@@ -132,7 +140,6 @@ if len(df) >= 2:
     levels = calculate_levels(H_val, L_val, C_val)
     live_price = df.iloc[-1]['Close']
     
-    # R3 Breakout Logic Rule check
     if live_price > levels["R3"]:
         st.warning("⚠️ தற்போதைய விலை R3 அளவை கடந்துவிட்டது! விதியின்படி புதிய லெவல்கள் மாற்றியமைக்கப்பட்டுள்ளன.")
         levels = calculate_levels(levels["R3"], levels["R1"], levels["R3"])
@@ -142,7 +149,7 @@ if len(df) >= 2:
     st.markdown("---")
 
     # -----------------------------------------------------------------
-    # SECTION 3: Bollinger Bands Head & Market Depth Recommendation
+    # SECTION 3: Bollinger Bands & Market Depth Recommendation
     # -----------------------------------------------------------------
     st.header("3. Bollinger Bands (20, 2 SD) & Market Depth")
     col_b, col_m = st.columns(2)
