@@ -88,7 +88,7 @@ st.sidebar.markdown("---")
 
 # Watchlist Live Scanner Area
 st.sidebar.header("⭐ My Live Watchlist")
-if st.session_state.watchlist:
+if 'watchlist' in st.session_state and st.session_state.watchlist:
     scanner_data = []
     for s in st.session_state.watchlist:
         s_df, _ = fetch_realtime_nse_data(s)
