@@ -252,22 +252,24 @@ if len(df) >= 3:
         st.subheader("💎 Institutional VWAP Status")
         st.metric("VWAP Price", f"₹ {current_vwap:.2f}")
         if live_price > current_vwap: st.success("🟢 ABOVE VWAP")
-        else: st.error("🔴 BELOW VWAP")
-
-    st.markdown("---")
-
-    # SECTION 3: LIVE MARKET DEPTH ANALYSIS & ORDER LOGIC
+       # -----------------------------------------------------------------
+    # SECTION 3: LIVE MARKET DEPTH ANALYSIS & ORDER LOGIC (FIXED)
+    # -----------------------------------------------------------------
     st.header("3. Live Market Depth Analysis & Advanced Action Plan")
-    np.random.seed(int(live_price) % 100)
-    total_buyers, total_sellers = np.random.randint(550000, 950000), np.random.randint(300000, 540000) if day_change >= 0 else (np.random.randint(300000, 540000), np.random.randint(550000, 950000))
-    buyer_ratio = (total_buyers / (total_buyers + total_sellers)) * 100
-    seller_ratio = 100 - buyer_ratio
+    
+    # Ultra-Safe Random Integer Generation (TypeError வராமல் தடுக்க மாற்று வழி)
+    import random
+    if day_change >= 0:
+        total_buyers = random.randint(550000, 950000)
+        total_sellers = random.randint(300000, 540000)
+    else:
+        total_buyers = random.randint(300000, 540000)
+        total_sellers = random.randint(550000, 950000)
+        
+    buyer_ratio = float((total_buyers / (total_buyers + total_sellers)) * 100)
+    seller_ratio = 100.0 - buyer_ratio
     
     md_col1, md_col2 = st.columns([1, 2])
-    with md_col1:
-        st.progress(int(buyer_ratio))
-        st.write(f"**Buyer:** {buyer_ratio:.1f}% | **Seller:** {seller_ratio:.1f}%")
-    with md_col2:
         is_buy_eligible = live_price > current_vwap and "UPTREND" in micro_verdict and pcr_val > 1.0
         is_sell_eligible = live_price < current_vwap and "DOWNTREND" in micro_verdict and pcr_val < 1.0
         if is_buy_eligible:
