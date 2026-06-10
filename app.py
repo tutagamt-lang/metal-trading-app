@@ -9,8 +9,6 @@ import time
 # Page Configuration
 st.set_page_config(layout="wide", page_title="Universal Real-Time NSE Trading Dashboard")
 
-# 🔄 5 வினாடிக்கு ஒருமுறை பக்கம் தானாகவே புதுப்பிக்கப்பட (Auto Refresh) இந்த வரி சேர்க்கப்பட்டுள்ளது
-st.logo("https://via.placeholder.com/150", icon_image="https://via.placeholder.com/50") # Just placeholders to keep structure
 if "last_refresh" not in st.session_state:
     st.session_state.last_refresh = time.time()
 
@@ -23,7 +21,19 @@ def get_oi_movement(oi_change, price_diff):
     elif oi_change <= 0 and price_diff <= 0: return "Profit Booking (🟡)"
     else: return "Short Covering (🟤)"
 
-# ttl=2 ஆகக் குறைக்கப்பட்டுள்ளது, இதனால் Yahoo Finance-இல் இருந்து புதிய தரவு உடனடியாக எடுக்கப்படும்
+# Pivot பாயிண்ட் கணக்கீட்டு ஃபார்முலா
+def calculate_pivots(H, L, C):
+    P = (H + L + C) / 3
+    return {
+        "P (Pivot Point)": P,
+        "R1 (Resistance 1)": (2 * P) - L,
+        "S1 (Support 1)": (2 * P) - H,
+        "R2 (Resistance 2)": P + (H - L),
+        "S2 (Support 2)": P - (H - L),
+        "R3 (Resistance 3)": H + 2 * (P - L),
+        "S3 (Support 3)": L - 2 * (H - P)
+    }
+
 @st.cache_data(ttl=2)
 def fetch_realtime_nse_data(symbol):
     try:
@@ -134,28 +144,42 @@ if len(df) >= 1:
     
     oi_live_color = "red" if oi_change > 0 else "green"
     
-    H_val = float(df.iloc[0:idx_930+1]['High'].max())
-    L_val = float(df.iloc[0:idx_930+1]['Low'].min())
-    C_val = float(c_930)
+    # ⏱️ 9:15-9:30 ஆரம்பக்கால High / Low அசல் லெவல்கள்
+    base_high = float(df.iloc[0:idx_930+1]['High'].max())
+    base_low = float(df.iloc[0:idx_930+1]['Low'].min())
+    base_close = float(c_930)
     
-    def calculate_levels(H, L, C):
-        P = (H + L + C) / 3
-        return {
-            "P (Pivot Point)": P, "R1": (2 * P) - L, "S1": (2 * P) - H,
-            "R2": P + (H - L), "S2": P - (H - L),
-            "R3": H + 2 * (P - L), "S3": L - 2 * (H - P)
-        }
-    levels = calculate_levels(H_val, L_val, C_val)
+    # முதற்கட்ட லெவல்கள் கணக்கீடு
+    initial_levels = calculate_pivots(base_high, base_low, base_close)
+    levels = initial_levels.copy()
+    
+    pivot_status_msg = "⏱️ 9:15-9:30 வரம்பை அடிப்படையாகக் கொண்ட ஆரம்ப லெவல்கள்"
+    
+    # 🧠 உங்களின் புதிய திருத்தப்பட்ட டைனமிக் பிரேக்அவுட் லாஜிக் (Open சேர்க்கப்பட்டுள்ளது)
+    if live_price > initial_levels["R3 (Resistance 3)"]:
+        new_o = initial_levels["R1 (Resistance 1)"]
+        new_h = initial_levels["R3 (Resistance 3)"]
+        new_l = initial_levels["R1 (Resistance 1)"]
+        new_c = initial_levels["R3 (Resistance 3)"]
+        levels = calculate_pivots(new_h, new_l, new_c)
+        pivot_status_msg = f"🚀 R3 உடைக்கப்பட்டது! விதியின்படி [Open={new_o:.2f}, High={new_h:.2f}, Low={new_l:.2f}, Close={new_c:.2f}] கொண்டு புதிய Pivot லெவல்கள் கணக்கிடப்பட்டுள்ளன."
+        
+    elif live_price < initial_levels["S3 (Support 3)"]:
+        new_o = initial_levels["S1 (Support 1)"]
+        new_h = initial_levels["S1 (Support 1)"]
+        new_l = initial_levels["S3 (Support 3)"]
+        new_c = initial_levels["S3 (Support 3)"]
+        levels = calculate_pivots(new_h, new_l, new_c)
+        pivot_status_msg = f"💥 S3 உடைக்கப்பட்டது! விதியின்படி [Open={new_o:.2f}, High={new_h:.2f}, Low={new_l:.2f}, Close={new_c:.2f}] கொண்டு புதிய Pivot லெவல்கள் கணக்கிடப்பட்டுள்ளன."
+
     price_diff = c_930 - c_915
     movement_type = get_oi_movement(oi_change, price_diff)
 
-    # 🎯 புதிய உண்மையான லைவ் கால்குலேஷன் (விலை மாறும்போது PCR & Max Pain தானாகவே மாறும்)
     strike_step = 5.0 if live_price < 300 else (20.0 if live_price < 1500 else 50.0)
     atm_strike = round(live_price / strike_step) * strike_step
     
-    # விலை ஏறினால் புல்லிஷ் பிசிஆர், இறங்கினால் பியரிஷ் பிசிஆர் (உண்மையான லாஜிக்)
     pcr_val = 1.0 + (day_change / day_open) * 10
-    pcr_val = max(0.4, min(1.8, pcr_val)) # எல்லையைத் தாண்டிப் போகாமல் தடுக்க
+    pcr_val = max(0.4, min(1.8, pcr_val))
     max_pain = atm_strike + (strike_step if day_change >= 0 else -strike_step)
 
     # Main Header
@@ -224,10 +248,9 @@ if len(df) >= 1:
 
     st.markdown("---")
 
-    # Section 2: Precise Action Box
+    # Section 2: Action Box
     st.header("2. Live Market Depth Analysis & Order Suitability")
     
-    # பையர் மற்றும் செல்லர் ரேஷியோவும் லைவ் விலைக்கு ஏற்ப மாறும் வண்ணம் சீரமைக்கப்பட்டுள்ளது
     base_buyer = 60 if day_change >= 0 else 40
     buyer_ratio = float(base_buyer + np.random.uniform(-3, 3))
     total_buyers = int(700000 * (buyer_ratio/100))
@@ -246,8 +269,8 @@ if len(df) >= 1:
         # 1️⃣ LONG BUILDUP
         if oi_change > 0 and price_diff > 0:
             suitability = "🟢 Long Buildup (சந்தையில் புதிய வாங்குதல் பலமாக உள்ளது)"
-            entry_exact = max(levels["R1"], h_930)
-            target_exact = levels["R2"]
+            entry_exact = max(levels["R1 (Resistance 1)"], h_930)
+            target_exact = levels["R2 (Resistance 2)"]
             stop_loss = levels["P (Pivot Point)"]
             
             action_box = f"""<div style="background-color:#0d2e1f; padding:20px; border-radius:10px; border:2px solid #00E676; color:#ffffff;">
@@ -261,8 +284,8 @@ if len(df) >= 1:
         # 2️⃣ SHORT BUILDUP
         elif oi_change > 0 and price_diff <= 0:
             suitability = "🔴 Short Buildup (விற்பனையாளர்களின் ஆதிக்கம் அதிகமாக உள்ளது)"
-            entry_exact = min(levels["S1"], l_930)
-            target_exact = levels["S2"]
+            entry_exact = min(levels["S1 (Support 1)"], l_930)
+            target_exact = levels["S2 (Support 2)"]
             stop_loss = levels["P (Pivot Point)"]
             
             action_box = f"""<div style="background-color:#421119; padding:20px; border-radius:10px; border:2px solid #FF1744; color:#ffffff;">
@@ -276,9 +299,9 @@ if len(df) >= 1:
         # 3️⃣ PROFIT BOOKING
         elif oi_change <= 0 and price_diff <= 0:
             suitability = "🟡 Profit Booking (லாபப் பதிவு - Market கீழே இறங்கி மேலே எழும்)"
-            entry_exact = levels["S1"]
+            entry_exact = levels["S1 (Support 1)"]
             target_exact = levels["P (Pivot Point)"]
-            stop_loss = levels["S2"]
+            stop_loss = levels["S2 (Support 2)"]
             
             action_box = f"""<div style="background-color:#332903; padding:20px; border-radius:10px; border:2px solid #FFD600; color:#ffffff;">
                 <b style="color:#FFD600; font-size:18px;">🛒 BUY ON DIP PLAN (Profit Booking):</b><br>
@@ -291,9 +314,9 @@ if len(df) >= 1:
         # 4️⃣ SHORT COVERING
         else:
             suitability = "🟤 Short Covering (ஷார்ட் கவரிங் - Market மேலே போய் கீழே இறங்கும்)"
-            entry_exact = levels["R1"]
+            entry_exact = levels["R1 (Resistance 1)"]
             target_exact = levels["P (Pivot Point)"]
-            stop_loss = levels["R2"]
+            stop_loss = levels["R2 (Resistance 2)"]
             
             action_box = f"""<div style="background-color:#2c1e16; padding:20px; border-radius:10px; border:2px solid #FFCCBC; color:#ffffff;">
                 <b style="color:#FFCCBC; font-size:18px;">⚠️ SELL ON RISE PLAN (Short Covering):</b><br>
@@ -308,10 +331,13 @@ if len(df) >= 1:
 
     st.markdown("---")
 
-    # Section 3: Pivot Table Reference
+    # Section 3: Pivot Table Reference WITH DYNAMIC BREAKOUT ALERTS
     st.header("3. Pivot Points & Dynamic Breakout Levels Reference")
-    if live_price > levels["R3"]:
-        levels = calculate_levels(levels["R3"], levels["R1"], levels["R3"])
+    
+    if "உடைக்கப்பட்டது" in pivot_status_msg:
+        st.warning(f"🔄 {pivot_status_msg}")
+    else:
+        st.info(f"ℹ️ {pivot_status_msg}")
         
     pivot_df = pd.DataFrame(list(levels.items()), columns=["Levels Name", "Price Range (INR)"])
     st.dataframe(pivot_df, use_container_width=True, hide_index=True)
@@ -329,7 +355,7 @@ if len(df) >= 1:
     col_b2.metric("Middle Band (Avg)", f"₹{last['bb_m']:.2f}")
     col_b3.metric("Lower Band (Oversold)", f"₹{last['bb_l']:.2f}")
 
-    # 🔄 பக்கத்தை ஒவ்வொரு 5 வினாடிக்கும் தானாகப் புதுப்பிக்க வைக்கும் மேஜிக் குறியீடு (Auto-Refresh script)
+    # 🔄 5 வினாடி ஆட்டோ ரீஃப்ரெஷ் லூப்
     time.sleep(5)
     st.rerun()
 
