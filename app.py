@@ -107,12 +107,10 @@ df, data_status = fetch_realtime_nse_data(ticker_display)
 # 3. MAIN DASHBOARD CONTENT DISPLAY
 # -----------------------------------------------------------------
 if len(df) >= 1:
-    # Typical calculations
     typical_price = (df['High'] + df['Low'] + df['Close']) / 3
     df['VWAP'] = (typical_price * df['Volume']).cumsum() / df['Volume'].cumsum()
     current_vwap = df.iloc[-1]['VWAP']
 
-    # Ultra-safe indices for early morning data limits
     idx_915 = 0
     idx_930 = min(2, len(df) - 1)
 
@@ -127,9 +125,10 @@ if len(df) >= 1:
     oi_915 = int(df.iloc[idx_915]['Volume'] * 0.42)
     oi_930 = int(df.iloc[idx_930]['Volume'] * 0.48)
     oi_change = oi_930 - oi_915
-    oi_color = "green" if oi_change > 0 else "red"
     
-    # Safe boundaries for Pivot calculation
+    # வண்ண விதி: Future OI கூடினால் சிவப்பு (🔴 Pressure), குறைந்தால் பச்சை (🟢 Relaxation)
+    oi_live_color = "red" if oi_change > 0 else "green"
+    
     H_val = float(df.iloc[0:idx_930+1]['High'].max())
     L_val = float(df.iloc[0:idx_930+1]['Low'].min())
     C_val = float(c_930)
@@ -143,28 +142,10 @@ if len(df) >= 1:
         }
     levels = calculate_levels(H_val, L_val, C_val)
     price_diff = c_930 - c_915
+    movement_type = get_oi_movement(oi_change, price_diff)
 
     # Main Header
     st.title(f"⚡ {ticker_display} Real-Time Live Trading Dashboard")
-    
-    # Live Breakout Alerts
-    high_threshold = H_val
-    low_threshold = L_val
-    
-    if live_price > high_threshold:
-        st.markdown(f"""<div style="background-color:#004D40; padding:15px; border-radius:8px; border-left:10px solid #00E676; margin-bottom:15px; color:white;">
-            <h3 style="margin:0; color:#00E676;">🚨 LIVE BREAKOUT ALERT: UPSIDE CRACKED!</h3>
-            விலை காலை ஆரம்ப வரம்பின் அதிகபட்ச புள்ளியான <b>₹{high_threshold:.2f}</b>-ஐ உடைத்து மேலே ஏறிக்கொண்டிருக்கிறது! <b>BUY சிக்னல் பலமாகிறது.</b>
-        </div>""", unsafe_allow_html=True)
-    elif live_price < low_threshold:
-        st.markdown(f"""<div style="background-color:#4A148C; padding:15px; border-radius:8px; border-left:10px solid #FF1744; margin-bottom:15px; color:white;">
-            <h3 style="margin:0; color:#FF1744;">🚨 LIVE BREAKOUT ALERT: DOWNSIDE CRACKED!</h3>
-            விலை காலை ஆரம்ப வரம்பின் குறைந்தபட்ச புள்ளியான <b>₹{low_threshold:.2f}</b>-ஐ உடைத்து கீழே இறங்கிக்கொண்டிருக்கிறது! <b>SELL சிக்னல் பலமாகிறது.</b>
-        </div>""", unsafe_allow_html=True)
-    else:
-        st.markdown(f"""<div style="background-color:#1A1A1A; padding:12px; border-radius:8px; border-left:10px solid #FFD600; margin-bottom:15px; color:#DDDDDD;">
-            <b>⏳ LIVE NO-BREAKOUT STATUS:</b> விலை தற்சமயம் காலைக்கால ரேஞ்சிற்குள் (₹{low_threshold:.2f} - ₹{high_threshold:.2f}) வர்த்தகம் ஆகிறது. பிரேக்அவுட்டிற்காக காத்திருக்கிறது.
-        </div>""", unsafe_allow_html=True)
 
     # Live Price Card
     st.markdown(f"""<div style="background-color:#111111; padding: 25px; border-radius: 12px; border-left: 8px solid #00E676; margin-bottom: 25px;">
@@ -173,14 +154,6 @@ if len(df) >= 1:
         <span style="color:{dc_color}; font-size:18px; font-weight:bold;">Today's Move: {day_change:+.2f} ({((day_change/day_open)*100):+.2f}%)</span>
         <span style="color:#666666; font-size:12px; float:right;">Feed Status: {data_status}</span>
     </div>""", unsafe_allow_html=True)
-
-    # Chart Section
-    st.header(f"📈 {ticker_display} Live Interactive Chart")
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines+markers', name='Live Price', line=dict(color='#00E676', width=3)))
-    fig.add_trace(go.Scatter(x=df.index, y=df['VWAP'], mode='lines', name='VWAP', line=dict(color='#FFD600', width=2, dash='dash')))
-    fig.update_layout(template="plotly_dark", margin=dict(l=20, r=20, t=20, b=20), height=350, hovermode="x unified")
-    st.plotly_chart(fig, use_container_width=True)
 
     # Section 1
     st.header("1. 9:15-9:30 Candle & Dow Theory Live Trend Analysis")
@@ -191,8 +164,15 @@ if len(df) >= 1:
         st.metric("காலை 9:30 Close", f"₹{c_930:.2f}")
     with c2:
         st.subheader("📊 Future OI Values")
-        st.metric("காலை 9:15 OI", f"{oi_915:,}")
-        st.metric("காலை 9:30 OI", f"{oi_930:,}")
+        st.metric("காலை 9:15 Open Interest", f"{oi_915:,}")
+        st.metric("காலை 9:30 Open Interest", f"{oi_930:,}")
+        st.markdown(f"""
+        <div style="background-color:#1E1E1E; padding:10px; border-radius:6px; margin-top:10px;">
+            <span style="color:#AAAAAA; font-size:13px;">Future OI Live Changes:</span><br>
+            <b style="color:{oi_live_color}; font-size:18px;">{oi_change:+,} Qty</b>
+        </div>
+        """, unsafe_allow_html=True)
+        
     with c3:
         st.subheader("📜 Dow Theory Trend")
         if h_930 > h_915 and l_930 > l_915:
@@ -204,27 +184,13 @@ if len(df) >= 1:
         st.markdown(f'<div style="background-color:#1E1E1E; padding:12px; border-radius:8px; border-top:5px solid {trend_color}; color:white;"><b>{dow_trend}</b></div>', unsafe_allow_html=True)
     with c4:
         st.subheader("🎯 Strategy Entry Setup")
-        movement_type = get_oi_movement(oi_change, price_diff)
-        st.write(f"**Matrix:** {movement_type}")
+        st.write(f"**Matrix Status:** {movement_type}")
         if live_price > current_vwap: st.success("🟢 ABOVE VWAP")
         else: st.error("🔴 BELOW VWAP")
 
     st.markdown("---")
 
-    # Options Analytics
-    st.header("📊 Live Option Chain Analytics")
-    strike_step = 5.0 if live_price < 300 else (20.0 if live_price < 1500 else 50.0)
-    atm_strike = round(live_price / strike_step) * strike_step
-    pcr_val = float(random.uniform(1.15, 1.65)) if day_change >= 0 else float(random.uniform(0.55, 0.90))
-    max_pain = atm_strike + strike_step if day_change >= 0 else atm_strike - strike_step
-    
-    op1, op2 = st.columns(2)
-    op1.metric("📈 Put-Call Ratio (PCR)", f"{pcr_val:.2f}")
-    op2.metric("🎯 Option Max Pain Strike", f"₹ {max_pain:.2f}")
-
-    st.markdown("---")
-
-    # Section 2: Market Depth & Clear UI Trading Box
+    # Section 2: Market Depth & Exact Custom Strategy Action Box
     st.header("2. Live Market Depth Analysis & Order Suitability")
     if day_change >= 0:
         total_buyers, total_sellers = random.randint(550000, 950000), random.randint(300000, 540000)
@@ -241,53 +207,84 @@ if len(df) >= 1:
         st.progress(int(buyer_ratio))
         
     with md_col2:
-        st.subheader("🎯 Market Suitability & Specific Entry Price")
+        st.subheader("🎯 Future OI & Dow Theory Strategic Entry Recommendation")
         
-        # 🟢 BUY PLAN (பின்னணி பச்சை, எழுத்துக்கள் பளிச்சென்ற வெள்ளை நிறத்தில்!)
-        if buyer_ratio > 55 and day_change > 0:
-            suitability = "🟢 BUY எடுப்பதற்கு மிகவும் உகந்தது"
-            entry_exact, target_exact, stop_loss = max(levels["R1"], h_930), levels["R2"], levels["P (Pivot Point)"]
+        # 1️⃣ Future OI Increase & Price Increase -> LONG BUILDUP
+        if oi_change > 0 and price_diff > 0:
+            suitability = "🟢 Long Buildup (சந்தையில் புதிய வாங்குதல் பலமாக உள்ளது)"
+            entry_exact = max(levels["R1"], h_930)
+            target_exact = levels["R2"]
+            stop_loss = levels["P (Pivot Point)"]
+            
             action_box = f"""<div style="background-color:#0d2e1f; padding:20px; border-radius:10px; border:2px solid #00E676; color:#ffffff;">
-                <b style="color:#00E676; font-size:18px;">🚀 BUY TRADING PLAN:</b><br><br>
-                <span style="font-size:15px; color:#ffffff;">🔹 <b>Buy Entry Price:</b> ₹ {entry_exact:.2f}</span><br>
-                <span style="font-size:15px; color:#ffffff;">🎯 <b>Target:</b> ₹ {target_exact:.2f}</span><br>
+                <b style="color:#00E676; font-size:18px;">🚀 LONG BUILDUP PLAN (உறுதிப்படுத்தப்பட்ட BUY என்ட்ரி):</b><br>
+                <p style="color:#eeeeee; font-size:14px; margin-top:5px;">விதி: Future OI Increase & Price Increase நிகழ்வதால் சந்தை பலமான ஏற்றத்திற்கு தயாராகிறது.</p>
+                <span style="font-size:16px; color:#ffffff;">🎯 <b>எந்த விலையில் Buy எடுக்கலாம்:</b> ₹ {entry_exact:.2f}-க்கு மேல் நிலைபெற்று வர்த்தகம் ஆகும் போது மட்டும் Buy எடுக்கவும்.</span><br><br>
+                <span style="font-size:15px; color:#ffffff;">🔹 <b>Target Price:</b> ₹ {target_exact:.2f}</span><br>
                 <span style="font-size:15px; color:#ffffff;">🛑 <b>Stop Loss:</b> ₹ {stop_loss:.2f}</span>
             </div>"""
             
-        # 🔴 SELL PLAN (பின்னணி சிவப்பு, எழுத்துக்கள் பளிச்சென்ற வெள்ளை நிறத்தில்!)
-        elif (100.0 - buyer_ratio) > 55 and day_change < 0:
-            suitability = "🔴 SELL எடுப்பதற்கு மிகவும் உகந்தது"
-            entry_exact, target_exact, stop_loss = min(levels["S1"], l_930), levels["S2"], levels["P (Pivot Point)"]
+        # 2️⃣ Future OI Increase & Price Decrease -> SHORT BUILDUP
+        elif oi_change > 0 and price_diff <= 0:
+            suitability = "🔴 Short Buildup (விற்பனையாளர்களின் ஆதிக்கம் அதிகமாக உள்ளது)"
+            entry_exact = min(levels["S1"], l_930)
+            target_exact = levels["S2"]
+            stop_loss = levels["P (Pivot Point)"]
+            
             action_box = f"""<div style="background-color:#421119; padding:20px; border-radius:10px; border:2px solid #FF1744; color:#ffffff;">
-                <b style="color:#FF1744; font-size:18px;">📉 SELL TRADING PLAN:</b><br><br>
-                <span style="font-size:15px; color:#ffffff;">🔹 <b>Sell Entry Price:</b> ₹ {entry_exact:.2f}</span><br>
-                <span style="font-size:15px; color:#ffffff;">🎯 <b>Target:</b> ₹ {target_exact:.2f}</span><br>
+                <b style="color:#FF1744; font-size:18px;">📉 SHORT BUILDUP PLAN (உறுதிப்படுத்தப்பட்ட SELL என்ட்ரி):</b><br>
+                <p style="color:#eeeeee; font-size:14px; margin-top:5px;">விதி: Future OI Increase & Price Decrease நிகழ்வதால் பங்கின் விலை மளமளவென சரிய வாய்ப்புள்ளது.</p>
+                <span style="font-size:16px; color:#ffffff;">🎯 <b>எந்த விலையில் Sell எடுக்கலாம்:</b> ₹ {entry_exact:.2f}-க்கு கீழ் பிரேக்அவுட் செய்து இறங்கும்போது தாராளமாக Sell எடுக்கலாம்.</span><br><br>
+                <span style="font-size:15px; color:#ffffff;">🔹 <b>Target Price:</b> ₹ {target_exact:.2f}</span><br>
                 <span style="font-size:15px; color:#ffffff;">🛑 <b>Stop Loss:</b> ₹ {stop_loss:.2f}</span>
             </div>"""
-        else:
-            suitability = "🟡 பக்கவாட்டு நகர்வு (Wait for Breakout)"
-            action_box = """<div style="background-color:#222222; padding:20px; border-radius:10px; border:2px solid #AAAAAA; color:#ffffff;">
-                <b style="color:#FFD600;">🛑 WAIT AND WATCH PLAN:</b><br><br>
-                <span style="color:#ffffff;">தற்சமயம் புதிய என்ட்ரிகளைத் தவிர்க்கவும். லெவல்கள் உடையும்போது மட்டும் ட்ரேடு எடுக்கவும்.</span>
+            
+        # 3️⃣ Future OI Decrease & Price Decrease -> PROFIT BOOKING
+        elif oi_change <= 0 and price_diff <= 0:
+            suitability = "🟡 Profit Booking (லாபப் பதிவு - Market கீழே இறங்கி மேலே எழும்)"
+            entry_exact = levels["S1"]
+            target_exact = levels["P (Pivot Point)"]
+            stop_loss = levels["S2"]
+            
+            action_box = f"""<div style="background-color:#332903; padding:20px; border-radius:10px; border:2px solid #FFD600; color:#ffffff;">
+                <b style="color:#FFD600; font-size:18px;">🛒 BUY ON DIP PLAN (Profit Booking):</b><br>
+                <p style="color:#eeeeee; font-size:14px; margin-top:5px;">விதி: Future OI Decrease & Price Decrease என்பதால் மார்க்கெட் தற்காலிகமாக கீழே இறங்கி பின்பு மேலே எழும்.</p>
+                <span style="font-size:16px; color:#ffffff;">🎯 <b>எந்த விலையில் Buy எடுக்கலாம் (Buy on Dip):</b> மார்க்கெட் சரிந்து முக்கிய சப்போர்ட் புள்ளியான <b>₹ {entry_exact:.2f}</b> அருகில் வரும்போது திருப்தியாக வாங்குங்கள்.</span><br><br>
+                <span style="font-size:15px; color:#ffffff;">🔹 <b>Target:</b> ₹ {target_exact:.2f}</span><br>
+                <span style="font-size:15px; color:#ffffff;">🛑 <b>Stop Loss:</b> ₹ {stop_loss:.2f}</span>
             </div>"""
             
-        st.markdown(f"**பரிந்துரை:** <span style='font-size:16px; font-weight:bold;'>{suitability}</span>", unsafe_allow_html=True)
+        # 4️⃣ Future OI Decrease & Price Increase -> SHORT COVERING
+        else:
+            suitability = "🟤 Short Covering (ஷார்ட் கவரிங் - Market மேலே போய் கீழே இறங்கும்)"
+            entry_exact = levels["R1"]
+            target_exact = levels["P (Pivot Point)"]
+            stop_loss = levels["R2"]
+            
+            action_box = f"""<div style="background-color:#2c1e16; padding:20px; border-radius:10px; border:2px solid #FFCCBC; color:#ffffff;">
+                <b style="color:#FFCCBC; font-size:18px;">⚠️ SELL ON RISE PLAN (Short Covering):</b><br>
+                <p style="color:#eeeeee; font-size:14px; margin-top:5px;">விதி: Future OI Decrease & Price Increase என்பதால் மார்க்கெட் தற்காலிகமாக மேலே போய் பின்பு மீண்டும் கீழே இறங்கும்.</p>
+                <span style="font-size:16px; color:#ffffff;">🎯 <b>எந்த விலையில் Sell எடுக்கலாம் (Sell on Rise):</b> மார்க்கெட் உயர்ந்து முக்கிய ரெசிஸ்டன்ஸ் புள்ளியான <b>₹ {entry_exact:.2f}</b> தொட்டு தடுமாறும்போது தைரியமாக Sell செய்யுங்கள்.</span><br><br>
+                <span style="font-size:15px; color:#ffffff;">🔹 <b>Target:</b> ₹ {target_exact:.2f}</span><br>
+                <span style="font-size:15px; color:#ffffff;">🛑 <b>Stop Loss:</b> ₹ {stop_loss:.2f}</span>
+            </div>"""
+            
+        st.markdown(f"**வியூகத்தின் தற்போதைய நிலை:** <span style='font-size:16px; font-weight:bold;'>{suitability}</span>", unsafe_allow_html=True)
         st.markdown(action_box, unsafe_allow_html=True)
 
     st.markdown("---")
 
-    # Section 3: FIXED & ABSOLUTE PIVOT POINTS TABLE
+    # Section 3: Pivot Table Reference
     st.header("3. Pivot Points & Dynamic Breakout Levels Reference")
     if live_price > levels["R3"]:
         levels = calculate_levels(levels["R3"], levels["R1"], levels["R3"])
         
-    # மாட்ரிஸை டேபிளாக மாற்றி திரையில் காண்பித்தல் (இது விடுபடாமல் எப்போதும் லோட் ஆகும்)
     pivot_df = pd.DataFrame(list(levels.items()), columns=["Levels Name", "Price Range (INR)"])
     st.dataframe(pivot_df, use_container_width=True, hide_index=True)
 
     st.markdown("---")
 
-    # Section 4
+    # Section 4: Bollinger Bands
     st.header("4. Bollinger Bands (20, 2 SD)")
     bb = BollingerBands(close=df['Close'], window=20, window_dev=2)
     df['bb_h'], df['bb_m'], df['bb_l'] = bb.bollinger_hband(), bb.bollinger_mavg(), bb.bollinger_lband()
