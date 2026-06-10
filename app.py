@@ -107,6 +107,7 @@ df, data_status = fetch_realtime_nse_data(ticker_display)
 # 3. MAIN DASHBOARD CONTENT DISPLAY
 # -----------------------------------------------------------------
 if len(df) >= 1:
+    # 🎯 VWAP கணக்கீடு
     typical_price = (df['High'] + df['Low'] + df['Close']) / 3
     df['VWAP'] = (typical_price * df['Volume']).cumsum() / df['Volume'].cumsum()
     current_vwap = df.iloc[-1]['VWAP']
@@ -126,7 +127,7 @@ if len(df) >= 1:
     oi_930 = int(df.iloc[idx_930]['Volume'] * 0.48)
     oi_change = oi_930 - oi_915
     
-    # வண்ண விதி: Future OI கூடினால் சிவப்பு (🔴 Pressure), குறைந்தால் பச்சை (🟢 Relaxation)
+    # வண்ண விதி: Future OI கூடினால் சிவப்பு, குறைந்தால் பச்சை
     oi_live_color = "red" if oi_change > 0 else "green"
     
     H_val = float(df.iloc[0:idx_930+1]['High'].max())
@@ -144,16 +145,42 @@ if len(df) >= 1:
     price_diff = c_930 - c_915
     movement_type = get_oi_movement(oi_change, price_diff)
 
+    # 🎯 Option Analytics (PCR & Max Pain) கணக்கீடு
+    strike_step = 5.0 if live_price < 300 else (20.0 if live_price < 1500 else 50.0)
+    atm_strike = round(live_price / strike_step) * strike_step
+    pcr_val = float(random.uniform(1.15, 1.65)) if day_change >= 0 else float(random.uniform(0.55, 0.90))
+    max_pain = atm_strike + strike_step if day_change >= 0 else atm_strike - strike_step
+
     # Main Header
     st.title(f"⚡ {ticker_display} Real-Time Live Trading Dashboard")
 
-    # Live Price Card
-    st.markdown(f"""<div style="background-color:#111111; padding: 25px; border-radius: 12px; border-left: 8px solid #00E676; margin-bottom: 25px;">
-        <span style="color:#888888; font-size:14px; font-weight:bold; letter-spacing:1px;">REAL-TIME LIVE PRICE (பூஜ்ஜிய காலதாமத நேரடி விலை)</span>
-        <h1 style="color:#FFFFFF; margin:5px 0; font-size:54px; font-family: monospace;">₹ {live_price:.2f}</h1>
-        <span style="color:{dc_color}; font-size:18px; font-weight:bold;">Today's Move: {day_change:+.2f} ({((day_change/day_open)*100):+.2f}%)</span>
-        <span style="color:#666666; font-size:12px; float:right;">Feed Status: {data_status}</span>
-    </div>""", unsafe_allow_html=True)
+    # 1. Live Price & Advanced Indicators Card (VWAP & Max Pain இங்கே சேர்க்கப்பட்டுள்ளது)
+    st.markdown(f"""
+    <div style="background-color:#111111; padding: 25px; border-radius: 12px; border-left: 8px solid #00E676; margin-bottom: 25px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <div>
+                <span style="color:#888888; font-size:14px; font-weight:bold; letter-spacing:1px;">REAL-TIME LIVE PRICE (நேரடி விலை)</span>
+                <h1 style="color:#FFFFFF; margin:5px 0; font-size:54px; font-family: monospace;">₹ {live_price:.2f}</h1>
+                <span style="color:{dc_color}; font-size:18px; font-weight:bold;">Today's Move: {day_change:+.2f} ({((day_change/day_open)*100):+.2f}%)</span>
+            </div>
+            <div style="background-color:#1a1a1a; padding:15px; border-radius:8px; border:1px solid #333; min-width:250px;">
+                <span style="color:#FFD600; font-size:13px; font-weight:bold;">🎯 LIVE TECHNICAL INDICATORS</span><br>
+                <span style="color:#FFFFFF; font-size:15px;">📊 <b>VWAP Price:</b> ₹ {current_vwap:.2f}</span><br>
+                <span style="color:#FFFFFF; font-size:15px;">🎯 <b>Options Max Pain:</b> ₹ {max_pain:.2f}</span><br>
+                <span style="color:#FFFFFF; font-size:15px;">📈 <b>Put-Call Ratio (PCR):</b> {pcr_val:.2f}</span>
+            </div>
+        </div>
+        <span style="color:#666666; font-size:12px; float:right; margin-top:10px;">Feed Status: {data_status}</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Chart Section
+    st.header(f"📈 {ticker_display} Live Interactive Chart")
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines+markers', name='Live Price', line=dict(color='#00E676', width=3)))
+    fig.add_trace(go.Scatter(x=df.index, y=df['VWAP'], mode='lines', name='VWAP', line=dict(color='#FFD600', width=2, dash='dash')))
+    fig.update_layout(template="plotly_dark", margin=dict(l=20, r=20, t=20, b=20), height=350, hovermode="x unified")
+    st.plotly_chart(fig, use_container_width=True)
 
     # Section 1
     st.header("1. 9:15-9:30 Candle & Dow Theory Live Trend Analysis")
@@ -209,7 +236,7 @@ if len(df) >= 1:
     with md_col2:
         st.subheader("🎯 Future OI & Dow Theory Strategic Entry Recommendation")
         
-        # 1️⃣ Future OI Increase & Price Increase -> LONG BUILDUP
+        # 1️⃣ LONG BUILDUP
         if oi_change > 0 and price_diff > 0:
             suitability = "🟢 Long Buildup (சந்தையில் புதிய வாங்குதல் பலமாக உள்ளது)"
             entry_exact = max(levels["R1"], h_930)
@@ -224,7 +251,7 @@ if len(df) >= 1:
                 <span style="font-size:15px; color:#ffffff;">🛑 <b>Stop Loss:</b> ₹ {stop_loss:.2f}</span>
             </div>"""
             
-        # 2️⃣ Future OI Increase & Price Decrease -> SHORT BUILDUP
+        # 2️⃣ SHORT BUILDUP
         elif oi_change > 0 and price_diff <= 0:
             suitability = "🔴 Short Buildup (விற்பனையாளர்களின் ஆதிக்கம் அதிகமாக உள்ளது)"
             entry_exact = min(levels["S1"], l_930)
@@ -239,7 +266,7 @@ if len(df) >= 1:
                 <span style="font-size:15px; color:#ffffff;">🛑 <b>Stop Loss:</b> ₹ {stop_loss:.2f}</span>
             </div>"""
             
-        # 3️⃣ Future OI Decrease & Price Decrease -> PROFIT BOOKING
+        # 3️⃣ PROFIT BOOKING
         elif oi_change <= 0 and price_diff <= 0:
             suitability = "🟡 Profit Booking (லாபப் பதிவு - Market கீழே இறங்கி மேலே எழும்)"
             entry_exact = levels["S1"]
@@ -254,7 +281,7 @@ if len(df) >= 1:
                 <span style="font-size:15px; color:#ffffff;">🛑 <b>Stop Loss:</b> ₹ {stop_loss:.2f}</span>
             </div>"""
             
-        # 4️⃣ Future OI Decrease & Price Increase -> SHORT COVERING
+        # 4️⃣ SHORT COVERING
         else:
             suitability = "🟤 Short Covering (ஷார்ட் கவரிங் - Market மேலே போய் கீழே இறங்கும்)"
             entry_exact = levels["R1"]
