@@ -69,7 +69,7 @@ def fetch_realtime_nse_data(symbol):
         return df_backup, "LIVE SIMULATION FEED"
 
 # -----------------------------------------------------------------
-# 2. SIDEBAR: SEARCH ALL STOCKS & MULTI-STOCK LIVE SCANNER
+# 2. SIDEBAR: SEARCH STOCKS & WATCHLIST SCANNER
 # -----------------------------------------------------------------
 st.sidebar.header("🔍 Universal Stock Search")
 
@@ -155,7 +155,7 @@ if len(df) >= 1:
     
     pivot_status_msg = "⏱️ 9:15-9:30 வரம்பை அடிப்படையாகக் கொண்ட ஆரம்ப லெவல்கள்"
     
-    # 🧠 உங்களின் புதிய திருத்தப்பட்ட டைனமிக் பிரேக்அவுட் லாஜிக் (Open சேர்க்கப்பட்டுள்ளது)
+    # 🧠 உங்களின் திருத்தப்பட்ட டைனமிக் பிரேக்அவுட் லாஜிக் (Open சேர்க்கப்பட்டுள்ளது)
     if live_price > initial_levels["R3 (Resistance 3)"]:
         new_o = initial_levels["R1 (Resistance 1)"]
         new_h = initial_levels["R3 (Resistance 3)"]
@@ -181,6 +181,17 @@ if len(df) >= 1:
     pcr_val = 1.0 + (day_change / day_open) * 10
     pcr_val = max(0.4, min(1.8, pcr_val))
     max_pain = atm_strike + (strike_step if day_change >= 0 else -strike_step)
+
+    # 📜 Dow Theory Trend கணக்கீடு
+    if h_930 > h_915 and l_930 > l_915:
+        dow_trend = "UPTREND"
+        dow_trend_display, trend_color = "🟢 STRONG UPTREND", "#00E676"
+    elif h_930 < h_915 and l_930 < l_915:
+        dow_trend = "DOWNTREND"
+        dow_trend_display, trend_color = "🔴 STRONG DOWNTREND", "#FF1744"
+    else:
+        dow_trend = "SIDEWAYS"
+        dow_trend_display, trend_color = "🟡 SIDEWAYS MARKET", "#FFD600"
 
     # Main Header
     st.title(f"⚡ {ticker_display} Real-Time Live Trading Dashboard")
@@ -233,13 +244,7 @@ if len(df) >= 1:
         
     with c3:
         st.subheader("📜 Dow Theory Trend")
-        if h_930 > h_915 and l_930 > l_915:
-            dow_trend, trend_color = "🟢 STRONG UPTREND", "#00E676"
-        elif h_930 < h_915 and l_930 < l_915:
-            dow_trend, trend_color = "🔴 STRONG DOWNTREND", "#FF1744"
-        else:
-            dow_trend, trend_color = "🟡 SIDEWAYS MARKET", "#FFD600"
-        st.markdown(f'<div style="background-color:#1E1E1E; padding:12px; border-radius:8px; border-top:5px solid {trend_color}; color:white;"><b>{dow_trend}</b></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="background-color:#1E1E1E; padding:12px; border-radius:8px; border-top:5px solid {trend_color}; color:white;"><b>{dow_trend_display}</b></div>', unsafe_allow_html=True)
     with c4:
         st.subheader("🎯 Strategy Entry Setup")
         st.write(f"**Matrix Status:** {movement_type}")
@@ -248,7 +253,7 @@ if len(df) >= 1:
 
     st.markdown("---")
 
-    # Section 2: Action Box
+    # Section 2: Action Box (DOUBLE CONFIRMATION LOGIC ADDED HERE)
     st.header("2. Live Market Depth Analysis & Order Suitability")
     
     base_buyer = 60 if day_change >= 0 else 40
@@ -264,66 +269,45 @@ if len(df) >= 1:
         st.progress(int(buyer_ratio))
         
     with md_col2:
-        st.subheader("🎯 Future OI & Dow Theory Strategic Entry Recommendation")
+        st.subheader("🛡️ Double Confirmation Strategic Trade Recommendation")
         
-        # 1️⃣ LONG BUILDUP
-        if oi_change > 0 and price_diff > 0:
-            suitability = "🟢 Long Buildup (சந்தையில் புதிய வாங்குதல் பலமாக உள்ளது)"
+        # 🟢 1. Double Confirmed BUY Rule (Trend is Up AND Price is above VWAP)
+        if dow_trend == "UPTREND" and live_price > current_vwap:
             entry_exact = max(levels["R1 (Resistance 1)"], h_930)
             target_exact = levels["R2 (Resistance 2)"]
             stop_loss = levels["P (Pivot Point)"]
             
-            action_box = f"""<div style="background-color:#0d2e1f; padding:20px; border-radius:10px; border:2px solid #00E676; color:#ffffff;">
-                <b style="color:#00E676; font-size:18px;">🚀 LONG BUILDUP PLAN (உறுதிப்படுத்தப்பட்ட BUY என்ட்ரி):</b><br>
-                <p style="color:#eeeeee; font-size:14px; margin-top:5px;">விதி: Future OI Increase & Price Increase நிகழ்வதால் சந்தை பலமான ஏற்றத்திற்கு தயாராகிறது.</p>
-                <span style="font-size:16px; color:#ffffff;">🎯 <b>எந்த விலையில் Buy எடுக்கலாம்:</b> ₹ {entry_exact:.2f}-க்கு மேல் நிலைபெற்று வர்த்தகம் ஆகும் போது மட்டும் Buy எடுக்கவும்.</span><br><br>
+            suitability = "🚀 DOUBLE CONFIRMED BUY (முழுமையான சிக்னல் கிடைத்துவிட்டது)"
+            action_box = f"""<div style="background-color:#0d2e1f; padding:20px; border-radius:10px; border:3px solid #00E676; color:#ffffff;">
+                <b style="color:#00E676; font-size:18px;">🔥 DOUBLE CONFIRMED BUY PLAN:</b><br>
+                <p style="color:#eeeeee; font-size:14px; margin-top:5px;">விதி: Dow Theory Trend ஏறுமுகமாக உள்ளது + விலை VWAP-க்கு மேல் வர்த்தகமாகிறது. சந்தை மிக பலமாக உள்ளது.</p>
+                <span style="font-size:16px; color:#ffffff;">🎯 <b>எந்த விலையில் Buy எடுக்கலாம்:</b> ₹ {entry_exact:.2f}-க்கு மேல் நிலைபெறும் போது மட்டும் Buy எடுக்கவும்.</span><br><br>
                 <span style="font-size:15px; color:#ffffff;">🔹 <b>Target Price:</b> ₹ {target_exact:.2f}</span><br>
                 <span style="font-size:15px; color:#ffffff;">🛑 <b>Stop Loss:</b> ₹ {stop_loss:.2f}</span>
             </div>"""
-            
-        # 2️⃣ SHORT BUILDUP
-        elif oi_change > 0 and price_diff <= 0:
-            suitability = "🔴 Short Buildup (விற்பனையாளர்களின் ஆதிக்கம் அதிகமாக உள்ளது)"
+
+        # 🔴 2. Double Confirmed SELL Rule (Trend is Down AND Price is below VWAP)
+        elif dow_trend == "DOWNTREND" and live_price < current_vwap:
             entry_exact = min(levels["S1 (Support 1)"], l_930)
             target_exact = levels["S2 (Support 2)"]
             stop_loss = levels["P (Pivot Point)"]
             
+            suitability = "📉 DOUBLE CONFIRMED SELL (விற்பனை செய்ய முழு அனுமதி)"
             action_box = f"""<div style="background-color:#421119; padding:20px; border-radius:10px; border:2px solid #FF1744; color:#ffffff;">
-                <b style="color:#FF1744; font-size:18px;">📉 SHORT BUILDUP PLAN (உறுதிப்படுத்தப்பட்ட SELL என்ட்ரி):</b><br>
-                <p style="color:#eeeeee; font-size:14px; margin-top:5px;">விதி: Future OI Increase & Price Decrease நிகழ்வதால் பங்கின் விலை மளமளவென சரிய வாய்ப்புள்ளது.</p>
-                <span style="font-size:16px; color:#ffffff;">🎯 <b>எந்த விலையில் Sell எடுக்கலாம்:</b> ₹ {entry_exact:.2f}-க்கு கீழ் பிரேக்அவுட் செய்து இறங்கும்போது தாராளமாக Sell எடுக்கலாம்.</span><br><br>
+                <b style="color:#FF1744; font-size:18px;">🔥 DOUBLE CONFIRMED SELL PLAN:</b><br>
+                <p style="color:#eeeeee; font-size:14px; margin-top:5px;">விதி: Dow Theory Trend இறங்குமுகமாக உள்ளது + விலை VWAP-க்கு கீழ் வர்த்தகமாகிறது. விற்பனையாளர்கள் வசம் மார்க்கெட் உள்ளது.</p>
+                <span style="font-size:16px; color:#ffffff;">🎯 <b>எந்த விலையில் Sell எடுக்கலாம்:</b> ₹ {entry_exact:.2f}-க்கு கீழ் உடைத்துச் செல்லும்போது தாராளமாக Sell எடுக்கலாம்.</span><br><br>
                 <span style="font-size:15px; color:#ffffff;">🔹 <b>Target Price:</b> ₹ {target_exact:.2f}</span><br>
                 <span style="font-size:15px; color:#ffffff;">🛑 <b>Stop Loss:</b> ₹ {stop_loss:.2f}</span>
             </div>"""
-            
-        # 3️⃣ PROFIT BOOKING
-        elif oi_change <= 0 and price_diff <= 0:
-            suitability = "🟡 Profit Booking (லாபப் பதிவு - Market கீழே இறங்கி மேலே எழும்)"
-            entry_exact = levels["S1 (Support 1)"]
-            target_exact = levels["P (Pivot Point)"]
-            stop_loss = levels["S2 (Support 2)"]
-            
-            action_box = f"""<div style="background-color:#332903; padding:20px; border-radius:10px; border:2px solid #FFD600; color:#ffffff;">
-                <b style="color:#FFD600; font-size:18px;">🛒 BUY ON DIP PLAN (Profit Booking):</b><br>
-                <p style="color:#eeeeee; font-size:14px; margin-top:5px;">விதி: Future OI Decrease & Price Decrease என்பதால் மார்க்கெட் தற்காலிகமாக கீழே இறங்கி பின்பு மேலே எழும்.</p>
-                <span style="font-size:16px; color:#ffffff;">🎯 <b>எந்த விலையில் Buy எடுக்கலாம் (Buy on Dip):</b> மார்க்கெட் சரிந்து முக்கிய சப்போர்ட் புள்ளியான <b>₹ {entry_exact:.2f}</b> அருகில் வரும்போது திருப்தியாக வாங்குங்கள்.</span><br><br>
-                <span style="font-size:15px; color:#ffffff;">🔹 <b>Target:</b> ₹ {target_exact:.2f}</span><br>
-                <span style="font-size:15px; color:#ffffff;">🛑 <b>Stop Loss:</b> ₹ {stop_loss:.2f}</span>
-            </div>"""
-            
-        # 4️⃣ SHORT COVERING
+
+        # ⚠️ 3. No Trade Zone / Multi-directional Conflict (If rules don't match)
         else:
-            suitability = "🟤 Short Covering (ஷார்ட் கவரிங் - Market மேலே போய் கீழே இறங்கும்)"
-            entry_exact = levels["R1 (Resistance 1)"]
-            target_exact = levels["P (Pivot Point)"]
-            stop_loss = levels["R2 (Resistance 2)"]
-            
-            action_box = f"""<div style="background-color:#2c1e16; padding:20px; border-radius:10px; border:2px solid #FFCCBC; color:#ffffff;">
-                <b style="color:#FFCCBC; font-size:18px;">⚠️ SELL ON RISE PLAN (Short Covering):</b><br>
-                <p style="color:#eeeeee; font-size:14px; margin-top:5px;">விதி: Future OI Decrease & Price Increase என்பதால் மார்க்கெட் தற்காலிகமாக மேலே போய் பின்பு மீண்டும் கீழே இறங்கும்.</p>
-                <span style="font-size:16px; color:#ffffff;">🎯 <b>எந்த விலையில் Sell எடுக்கலாம் (Sell on Rise):</b> மார்க்கெட் உயர்ந்து முக்கிய ரெசிஸ்டன்ஸ் புள்ளியான <b>₹ {entry_exact:.2f}</b> தொட்டு தடுமாறும்போது தைரியமாக Sell செய்யுங்கள்.</span><br><br>
-                <span style="font-size:15px; color:#ffffff;">🔹 <b>Target:</b> ₹ {target_exact:.2f}</span><br>
-                <span style="font-size:15px; color:#ffffff;">🛑 <b>Stop Loss:</b> ₹ {stop_loss:.2f}</span>
+            suitability = "⚠️ NO TRADE ZONE (உறுதிப்படுத்தல் இல்லை / முரண்பாடு உள்ளது)"
+            action_box = f"""<div style="background-color:#2a2307; padding:20px; border-radius:10px; border:2px solid #FFD600; color:#ffffff;">
+                <b style="color:#FFD600; font-size:18px;">🛑 TRADE எடுப்பதைத் தவிர்க்கவும் (No Confirmation):</b><br>
+                <p style="color:#eeeeee; font-size:14px; margin-top:5px;">காரணம்: Dow Theory காட்டும் ட்ரெண்டும் (Trend) மற்றும் VWAP காட்டும் விலையின் நிலையும் முரண்படுகின்றன. சந்தை பக்கவாட்டு நகர்வில் (Sideways) நகரலாம்.</p>
+                <span style="font-size:15px; color:#FFD600;">💡 <b>Pro Tip:</b> இரண்டு குறியீடுகளும் ஒரே திசையைக் காட்டும் வரை பொறுமையாகக் காத்திருக்கவும். அவசரப்பட்டு பணத்தை இழக்க வேண்டாம்.</span>
             </div>"""
             
         st.markdown(f"**வியூகத்தின் தற்போதைய நிலை:** <span style='font-size:16px; font-weight:bold;'>{suitability}</span>", unsafe_allow_html=True)
@@ -331,7 +315,7 @@ if len(df) >= 1:
 
     st.markdown("---")
 
-    # Section 3: Pivot Table Reference WITH DYNAMIC BREAKOUT ALERTS
+    # Section 3: Pivot Table Reference
     st.header("3. Pivot Points & Dynamic Breakout Levels Reference")
     
     if "உடைக்கப்பட்டது" in pivot_status_msg:
