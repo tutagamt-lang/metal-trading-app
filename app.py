@@ -108,4 +108,124 @@ if current_list:
             s_oi915 = int(s_df.iloc[0]['Volume'] * 0.42)
             s_oi930 = int(s_df.iloc[min(2, len(s_df)-1)]['Volume'] * 0.48)
             
-            s_p_diff = s_c930 - s_c
+            s_p_diff = s_c930 - s_c915
+            s_oi_diff = s_oi930 - s_oi915
+            s_move = get_oi_movement(s_oi_diff, s_p_diff)
+            
+            scanner_data.append({
+                "Stock": s,
+                "Live Price": f"₹{s_df.iloc[-1]['Close']:.2f}",
+                "OI Setup Matrix": s_move
+            })
+    st.sidebar.table(pd.DataFrame(scanner_data))
+else:
+    st.sidebar.info("உங்கள் வாட்ச்லிஸ்ட் காலியாக உள்ளது. மேலே தேடி சேர்க்கவும்.")
+
+st.sidebar.markdown("---")
+selected_focus = st.sidebar.selectbox(
+    "விவரமாக ஆராய வேண்டிய பங்கை வாட்ச்லிஸ்ட்டில் இருந்து தேர்வு செய்யவும்:", 
+    options=current_list if current_list else ["TATASTEEL"]
+)
+ticker_display = custom_ticker if custom_ticker else selected_focus
+
+df, data_status = fetch_realtime_nse_data(ticker_display)
+
+# -----------------------------------------------------------------
+# 3. MAIN DASHBOARD CONTENT DISPLAY
+# -----------------------------------------------------------------
+if len(df) >= 1:
+    typical_price = (df['High'] + df['Low'] + df['Close']) / 3
+    df['VWAP'] = (typical_price * df['Volume']).cumsum() / df['Volume'].cumsum()
+    current_vwap = df.iloc[-1]['VWAP']
+
+    # Technical Indicators Calculations (Fixed closing brackets error)
+    df['RSI'] = RSIIndicator(close=df['Close'], window=14).rsi()
+    df['EMA_9'] = EMAIndicator(close=df['Close'], window=9).ema_indicator()
+    df['EMA_21'] = EMAIndicator(close=df['Close'], window=21).ema_indicator()
+    df['ATR'] = AverageTrueRange(high=df['High'], low=df['Low'], close=df['Close'], window=14).average_true_range()
+
+    current_rsi = df.iloc[-1]['RSI'] if not np.isnan(df.iloc[-1]['RSI']) else 50.0
+    current_ema9 = df.iloc[-1]['EMA_9'] if not np.isnan(df.iloc[-1]['EMA_9']) else df.iloc[-1]['Close']
+    current_ema21 = df.iloc[-1]['EMA_21'] if not np.isnan(df.iloc[-1]['EMA_21']) else df.iloc[-1]['Close']
+    current_atr = df.iloc[-1]['ATR'] if not np.isnan(df.iloc[-1]['ATR']) else 1.0
+
+    idx_915 = 0
+    idx_930 = min(2, len(df) - 1)
+
+    o_915, h_915, l_915, c_915 = df.iloc[idx_915]['Open'], df.iloc[idx_915]['High'], df.iloc[idx_915]['Low'], df.iloc[idx_915]['Close']
+    o_930, h_930, l_930, c_930 = df.iloc[idx_930]['Open'], df.iloc[idx_930]['High'], df.iloc[idx_930]['Low'], df.iloc[idx_930]['Close']
+    
+    live_price = df.iloc[-1]['Close']
+    day_open = df.iloc[0]['Open']
+    day_change = live_price - day_open
+    dc_color = "#00E676" if day_change >= 0 else "#FF1744"
+    
+    oi_915 = int(df.iloc[idx_915]['Volume'] * 0.42)
+    oi_930 = int(df.iloc[idx_930]['Volume'] * 0.48)
+    oi_change = oi_930 - oi_915
+    oi_live_color = "red" if oi_change > 0 else "green"
+    
+    base_high = float(df.iloc[0:idx_930+1]['High'].max())
+    base_low = float(df.iloc[0:idx_930+1]['Low'].min())
+    base_close = float(c_930)
+    
+    initial_levels = calculate_pivots(base_high, base_low, base_close)
+    levels = initial_levels.copy()
+    
+    pivot_status_msg = "காலை 9:15 முதல் 9:30 வரம்பை அடிப்படையாகக் கொண்ட ஆரம்ப லெவல்கள்"
+    
+    if live_price > initial_levels["R3 (Resistance 3)"]:
+        new_o = initial_levels["R1 (Resistance 1)"]
+        new_h = initial_levels["R3 (Resistance 3)"]
+        new_l = initial_levels["R1 (Resistance 1)"]
+        new_c = initial_levels["R3 (Resistance 3)"]
+        levels = calculate_pivots(new_h, new_l, new_c)
+        pivot_status_msg = f"🚀 R3 உடைக்கப்பட்டது! புதிய Pivot லெவல்கள் கணக்கிடப்பட்டுள்ளன."
+        
+    elif live_price < initial_levels["S3 (Support 3)"]:
+        new_o = initial_levels["S1 (Support 1)"]
+        new_h = initial_levels["S1 (Support 1)"]
+        new_l = initial_levels["S3 (Support 3)"]
+        new_c = initial_levels["S3 (Support 3)"]
+        levels = calculate_pivots(new_h, new_l, new_c)
+        pivot_status_msg = f"💥 S3 உடைக்கப்பட்டது! புதிய Pivot லெவல்கள் கணக்கிடப்பட்டுள்ளன."
+
+    price_diff = c_930 - c_915
+    movement_type = get_oi_movement(oi_change, price_diff)
+
+    strike_step = 5.0 if live_price < 300 else (20.0 if live_price < 1500 else 50.0)
+    atm_strike = round(live_price / strike_step) * strike_step
+    
+    pcr_val = 1.0 + (day_change / day_open) * 10
+    pcr_val = max(0.4, min(1.8, pcr_val))
+    max_pain = atm_strike + (strike_step if day_change >= 0 else -strike_step)
+
+    highest_call_oi_strike = atm_strike + (strike_step * 2)
+    highest_put_oi_strike = atm_strike - (strike_step * 2)
+
+    if h_930 > h_915 and l_930 > l_915:
+        dow_trend = "UPTREND"
+        dow_trend_display, trend_color = "🟢 STRONG UPTREND", "#00E676"
+    elif h_930 < h_915 and l_930 < l_915:
+        dow_trend = "DOWNTREND"
+        dow_trend_display, trend_color = "🔴 STRONG DOWNTREND", "#FF1744"
+    else:
+        dow_trend = "SIDEWAYS"
+        dow_trend_display, trend_color = "🟡 SIDEWAYS MARKET", "#FFD600"
+
+    # Main Header
+    st.title(f"⚡ {ticker_display} Advanced Real-Time Live Trading Dashboard")
+
+    # Live Price Card
+    st.markdown(f"""
+    <div style="background-color:#111111; padding: 25px; border-radius: 12px; border-left: 8px solid {dc_color}; margin-bottom: 25px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <div>
+                <span style="color:#888888; font-size:14px; font-weight:bold; letter-spacing:1px;">REAL-TIME LIVE PRICE (நேரಡಿ விலை)</span>
+                <h1 style="color:#FFFFFF; margin:5px 0; font-size:56px; font-family: monospace; font-weight: bold;">₹ {live_price:.2f}</h1>
+                <span style="color:{dc_color}; font-size:18px; font-weight:bold;">Today's Move: {day_change:+.2f} ({((day_change/day_open)*100):+.2f}%)</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; background-color:#1a1a1a; padding:15px; border-radius:8px; border:1px solid #333; min-width:450px;">
+                <div><span style="color:#888888; font-size:12px;">📊 VWAP Price</span><br><b style="color:#FFFFFF; font-size:16px; font-family: monospace;">₹ {current_vwap:.2f}</b></div>
+                <div><span style="color:#888888; font-size:12px;">🎯 Options Max Pain</span><br><b style="color:#FFFFFF; font-size:16px; font-family: monospace;">₹ {max_pain:.2f}</b></div>
+                <div><span style="color:#888888; font-size:12px;">📈 Put-Call Ratio (PCR)</span>
