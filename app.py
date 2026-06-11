@@ -24,10 +24,10 @@ elif not isinstance(st.session_state.watchlist, list):
 # 1. HELPER FUNCTIONS & REAL-TIME DATA FETCH ENGINE
 # -----------------------------------------------------------------
 def get_oi_movement(oi_change, price_diff):
-    if oi_change > 0 and price_diff > 0: return "Long Buildup (🟢)"
-    elif oi_change > 0 and price_diff <= 0: return "Short Buildup (🔴)"
-    elif oi_change <= 0 and price_diff <= 0: return "Profit Booking (🟡)"
-    else: return "Short Covering (🟤)"
+    if oi_change > 0 and price_diff > 0: return "Long Buildup [BUY]"
+    elif oi_change > 0 and price_diff <= 0: return "Short Buildup [SELL]"
+    elif oi_change <= 0 and price_diff <= 0: return "Profit Booking [EXIT]"
+    else: return "Short Covering [RECOVERY]"
 
 def calculate_pivots(H, L, C):
     P = (H + L + C) / 3
@@ -80,22 +80,22 @@ def fetch_realtime_nse_data(symbol):
 # -----------------------------------------------------------------
 # 2. SIDEBAR: SEARCH STOCKS & WATCHLIST SCANNER
 # -----------------------------------------------------------------
-st.sidebar.header("🔍 Universal Stock Search")
+st.sidebar.header("Stock Search")
 
-custom_ticker = st.sidebar.text_input("பங்கின் குறியீட்டு பெயர் (Ticker Symbol):", "").strip().upper()
+custom_ticker = st.sidebar.text_input("Ticker Symbol:", "").strip().upper()
 
 if custom_ticker:
     if custom_ticker not in st.session_state.watchlist:
-        if st.sidebar.button(f"➕ {custom_ticker} - ஐ வாட்ச்லிஸ்ட்டில் சேர்"):
+        if st.sidebar.button(f"[+] Add {custom_ticker}"):
             st.session_state.watchlist.append(custom_ticker)
             st.rerun()
     else:
-        if st.sidebar.button(f"➖ {custom_ticker} - ஐ வாட்ச்லிஸ்ட்டில் இருந்து நீக்கு"):
+        if st.sidebar.button(f"[-] Remove {custom_ticker}"):
             st.session_state.watchlist.remove(custom_ticker)
             st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.header("🔥 Multi-Stock Live Scanner")
+st.sidebar.header("Multi-Stock Live Scanner")
 current_list = st.session_state.watchlist
 
 if current_list:
@@ -114,16 +114,16 @@ if current_list:
             
             scanner_data.append({
                 "Stock": s,
-                "Live Price": f"₹{s_df.iloc[-1]['Close']:.2f}",
-                "OI Setup Matrix": s_move
+                "Price": f"INR {s_df.iloc[-1]['Close']:.2f}",
+                "OI Setup": s_move
             })
     st.sidebar.table(pd.DataFrame(scanner_data))
 else:
-    st.sidebar.info("உங்கள் வாட்ச்லிஸ்ட் காலியாக உள்ளது. மேலே தேடி சேர்க்கவும்.")
+    st.sidebar.info("Watchlist is empty.")
 
 st.sidebar.markdown("---")
 selected_focus = st.sidebar.selectbox(
-    "விவரமாக ஆராய வேண்டிய பங்கை வாட்ச்லிஸ்ட்டில் இருந்து தேர்வு செய்யவும்:", 
+    "Select Stock:", 
     options=current_list if current_list else ["TATASTEEL"]
 )
 ticker_display = custom_ticker if custom_ticker else selected_focus
@@ -198,56 +198,56 @@ if len(df) >= 1:
 
     if h_930 > h_915 and l_930 > l_915:
         dow_trend = "UPTREND"
-        dow_trend_display, trend_color = "🟢 STRONG UPTREND", "#00E676"
+        dow_trend_display, trend_color = "STRONG UPTREND", "#00E676"
     elif h_930 < h_915 and l_930 < l_915:
         dow_trend = "DOWNTREND"
-        dow_trend_display, trend_color = "🔴 STRONG DOWNTREND", "#FF1744"
+        dow_trend_display, trend_color = "STRONG DOWNTREND", "#FF1744"
     else:
         dow_trend = "SIDEWAYS"
-        dow_trend_display, trend_color = "🟡 SIDEWAYS MARKET", "#FFD600"
+        dow_trend_display, trend_color = "SIDEWAYS MARKET", "#FFD600"
 
     # Main Header
-    st.title(f"⚡ {ticker_display} Advanced Real-Time Live Trading Dashboard")
+    st.title(f" {ticker_display} Advanced Real-Time Live Trading Dashboard")
 
-    # Live Price Card
+    # Live Price Card (Fixed Font Colors and Structure)
     st.markdown(f"""
     <div style="background-color:#111111; padding: 25px; border-radius: 12px; border-left: 8px solid {dc_color}; margin-bottom: 25px;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
             <div>
-                <span style="color:#888888; font-size:14px; font-weight:bold; letter-spacing:1px;">REAL-TIME LIVE PRICE (நேரಡಿ விலை)</span>
-                <h1 style="color:#FFFFFF; margin:5px 0; font-size:56px; font-family: monospace; font-weight: bold;">₹ {live_price:.2f}</h1>
+                <span style="color:#FFFFFF; font-size:14px; font-weight:bold; letter-spacing:1px;">REAL-TIME LIVE PRICE (LIVE PRICE)</span>
+                <h1 style="color:#00E676; margin:5px 0; font-size:56px; font-family: monospace; font-weight: bold;">INR {live_price:.2f}</h1>
                 <span style="color:{dc_color}; font-size:18px; font-weight:bold;">Today's Move: {day_change:+.2f} ({((day_change/day_open)*100):+.2f}%)</span>
             </div>
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; background-color:#1a1a1a; padding:15px; border-radius:8px; border:1px solid #333; min-width:450px;">
-                <div><span style="color:#888888; font-size:12px;">📊 VWAP Price</span><br><b style="color:#FFFFFF; font-size:16px; font-family: monospace;">₹ {current_vwap:.2f}</b></div>
-                <div><span style="color:#888888; font-size:12px;">🎯 Options Max Pain</span><br><b style="color:#FFFFFF; font-size:16px; font-family: monospace;">₹ {max_pain:.2f}</b></div>
-                <div><span style="color:#888888; font-size:12px;">📈 Put-Call Ratio (PCR)</span><br><b style="color:#FFFFFF; font-size:16px; font-family: monospace;">{pcr_val:.2f}</b></div>
-                <div><span style="color:#888888; font-size:12px;">⚡ ATR Volatility (14)</span><br><b style="color:#FFD600; font-size:16px; font-family: monospace;">₹ {current_atr:.2f}</b></div>
+                <div><span style="color:#FFFFFF; font-size:12px;">VWAP Price</span><br><b style="color:#00B0FF; font-size:16px; font-family: monospace;">INR {current_vwap:.2f}</b></div>
+                <div><span style="color:#FFFFFF; font-size:12px;">Options Max Pain</span><br><b style="color:#00B0FF; font-size:16px; font-family: monospace;">INR {max_pain:.2f}</b></div>
+                <div><span style="color:#FFFFFF; font-size:12px;">Put-Call Ratio (PCR)</span><br><b style="color:#00B0FF; font-size:16px; font-family: monospace;">{pcr_val:.2f}</b></div>
+                <div><span style="color:#FFFFFF; font-size:12px;">ATR Volatility (14)</span><br><b style="color:#FFD600; font-size:16px; font-family: monospace;">INR {current_atr:.2f}</b></div>
             </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Indicator KPIs
-    rsi_status = "🟢 Oversold" if current_rsi < 30 else ("🔴 Overbought" if current_rsi > 70 else "🟡 Neutral")
+    # Indicator KPIs (Fixed Text Colors to High Contrast White/Custom Colors)
+    rsi_status = "Oversold" if current_rsi < 30 else ("Overbought" if current_rsi > 70 else "Neutral")
     rsi_color = "#00E676" if current_rsi < 30 else ("#FF1744" if current_rsi > 70 else "#FFD600")
-    ema_status = "🟢 Bullish" if current_ema9 > current_ema21 else "🔴 Bearish"
+    ema_status = "Bullish" if current_ema9 > current_ema21 else "Bearish"
     ema_color = "#00E676" if current_ema9 > current_ema21 else "#FF1744"
 
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
     with kpi1:
-        st.markdown(f'<div style="background-color:#1a1a1a; padding:15px; border-radius:8px; border-top:4px solid {rsi_color}; text-align:center;"><h5>📟 Live RSI (14)</h5><h3>{current_rsi:.2f}</h3><span style="color:{rsi_color}; font-weight:bold;">{rsi_status}</span></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="background-color:#1a1a1a; padding:15px; border-radius:8px; border-top:4px solid {rsi_color}; text-align:center;"><h5 style="color:#FFFFFF;">Live RSI (14)</h5><h2 style="color:#FFFFFF;">{current_rsi:.2f}</h2><span style="color:{rsi_color}; font-weight:bold;">{rsi_status}</span></div>', unsafe_allow_html=True)
     with kpi2:
-        st.markdown(f'<div style="background-color:#1a1a1a; padding:15px; border-radius:8px; border-top:4px solid {ema_color}; text-align:center;"><h5>📈 EMA (9 vs 21)</h5><h3>{current_ema9:.1f}/{current_ema21:.1f}</h3><span style="color:{ema_color}; font-weight:bold;">{ema_status}</span></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="background-color:#1a1a1a; padding:15px; border-radius:8px; border-top:4px solid {ema_color}; text-align:center;"><h5 style="color:#FFFFFF;">EMA (9 vs 21)</h5><h2 style="color:#FFFFFF;">{current_ema9:.1f}/{current_ema21:.1f}</h2><span style="color:{ema_color}; font-weight:bold;">{ema_status}</span></div>', unsafe_allow_html=True)
     with kpi3:
-        st.markdown(f'<div style="background-color:#1a1a1a; padding:15px; border-radius:8px; border-top:4px solid #FFD600; text-align:center;"><h5>🛡️ ATR Buffer</h5><h3>₹ {current_atr:.2f}</h3><span>Market Volatility</span></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="background-color:#1a1a1a; padding:15px; border-radius:8px; border-top:4px solid #FFD600; text-align:center;"><h5 style="color:#FFFFFF;">ATR Buffer</h5><h2 style="color:#FFD600;">INR {current_atr:.2f}</h2><span style="color:#FFFFFF;">Market Volatility</span></div>', unsafe_allow_html=True)
     with kpi4:
-        st.markdown(f'<div style="background-color:#1a1a1a; padding:15px; border-radius:8px; border-top:4px solid #00B0FF; text-align:center;"><h5>🔄 Loop Timer</h5><h3>5 Secs</h3><span>Auto Streaming Active</span></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="background-color:#1a1a1a; padding:15px; border-radius:8px; border-top:4px solid #00B0FF; text-align:center;"><h5 style="color:#FFFFFF;">Loop Timer</h5><h2 style="color:#00B0FF;">5 Secs</h2><span style="color:#FFFFFF;">Auto Streaming Active</span></div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
     # Chart Section
-    st.header(f"📈 {ticker_display} Live Interactive Chart")
+    st.header(f" {ticker_display} Live Interactive Chart")
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines+markers', name='Live Price', line=dict(color='#00E676', width=3)))
     fig.add_trace(go.Scatter(x=df.index, y=df['VWAP'], mode='lines', name='VWAP', line=dict(color='#FFD600', width=2, dash='dash')))
@@ -258,20 +258,20 @@ if len(df) >= 1:
     st.header("1. 9:15-9:30 Candle & Dow Theory Live Trend Analysis")
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.subheader("⏱️ Candle Check")
-        st.metric("காலை 9:15 Close", f"₹{c_915:.2f}")
-        st.metric("காலை 9:30 Close", f"₹{c_930:.2f}")
+        st.subheader("Candle Check")
+        st.metric("9:15 Close", f"INR {c_915:.2f}")
+        st.metric("9:30 Close", f"INR {c_930:.2f}")
     with c2:
-        st.subheader("📊 Future OI Matrix")
+        st.subheader("Future OI Matrix")
         st.metric("Futures OI Change", f"{oi_change:+,} Qty")
-        st.write(f"**நிலை:** {movement_type}")
+        st.write(f"**Setup:** {movement_type}")
     with c3:
-        st.subheader("📜 Dow Theory Trend")
+        st.subheader("Dow Theory Trend")
         st.markdown(f'<div style="background-color:#1E1E1E; padding:12px; border-radius:8px; border-top:5px solid {trend_color}; color:white;"><b>{dow_trend_display}</b></div>', unsafe_allow_html=True)
     with c4:
-        st.subheader("🎯 Live VWAP Status")
-        if live_price > current_vwap: st.success("🟢 ABOVE VWAP (Bullish)")
-        else: st.error("🔴 BELOW VWAP (Bearish)")
+        st.subheader("Live VWAP Status")
+        if live_price > current_vwap: st.success("ABOVE VWAP (Bullish)")
+        else: st.error("BELOW VWAP (Bearish)")
 
     st.markdown("---")
 
@@ -285,88 +285,88 @@ if len(df) >= 1:
     
     md_col1, md_col2 = st.columns([1, 2])
     with md_col1:
-        st.subheader("📊 Buyers vs Sellers Volume")
-        st.metric("மொத்த வாங்குபவர்கள்", f"{total_buyers:,} Qty")
-        st.metric("மொத்த விற்பனையாளர்கள்", f"{total_sellers:,} Qty")
+        st.subheader("Buyers vs Sellers Volume")
+        st.metric("Total Buyers", f"{total_buyers:,} Qty")
+        st.metric("Total Sellers", f"{total_sellers:,} Qty")
         st.write(f"**Buyer Ratio:** {buyer_ratio:.1f}% | **Seller Ratio:** {100-buyer_ratio:.1f}%")
         st.progress(int(buyer_ratio))
         
     with md_col2:
-        st.subheader("🛡️ Strategic Trade Analysis")
+        st.subheader("Strategic Trade Analysis")
         
-        # 🟢 BUY SCENARIO
+        # BUY SCENARIO
         if dow_trend == "UPTREND" and live_price > current_vwap and "Long Buildup" in movement_type:
             entry_exact = max(levels["R1 (Resistance 1)"], h_930)
             stop_loss = entry_exact - (current_atr * 1.5)
             target_exact = min(levels["R2 (Resistance 2)"], highest_call_oi_strike)
             
-            suitability = "🚀 DOUBLE CONFIRMED BUY SIGN"
+            suitability = "DOUBLE CONFIRMED BUY SIGN"
             action_box = f"""<div style="background-color:#0d2e1f; padding:25px; border-radius:12px; border:3px solid #00E676; color:#ffffff;">
-                <b style="color:#00E676; font-size:20px;">✅ [PART A] DOUBLE CONFIRMATION ANALYSIS:</b><br>
+                <b style="color:#00E676; font-size:20px;">[PART A] DOUBLE CONFIRMATION ANALYSIS:</b><br>
                 <p style="font-size:14px; margin-top:5px; color:#dddddd;">
-                1. <b>Dow Theory:</b> {dow_trend_display} (சந்தை ஏறுமுகம்)<br>
-                2. <b>VWAP:</b> விலை வரம்பிற்கு மேல் (₹ {current_vwap:.2f}) வர்த்தகம் ஆகிறது.<br>
-                3. <b>Futures OI Matrix:</b> <b>{movement_type}</b> நடந்துள்ளது (நிறுவனங்கள் வாங்கும் திசை).<br>
-                ⭐ <i>முடிவு: 3 விதிகளும் உறுதியானதால் <b>BUY</b> செய்ய முழு அனுமதி உண்டு!</i>
+                1. <b>Dow Theory:</b> {dow_trend_display}<br>
+                2. <b>VWAP:</b> Price is above VWAP (INR {current_vwap:.2f})<br>
+                3. <b>Futures OI Matrix:</b> <b>{movement_type}</b><br>
+                Result: All rules matched. High probability BUY setup.
                 </p>
                 <hr style="border-color:#1e4d34; margin: 15px 0;">
-                <b style="color:#FFD600; font-size:20px;">🛑 [PART B] OPTION OI (ஸ்பீட் பிரேக்கர்) லாஜிக்:</b><br>
+                <b style="color:#FFD600; font-size:20px;">[PART B] OPTION OI SPEED BREAKER:</b><br>
                 <p style="font-size:14px; margin-top:5px; color:#dddddd;">
-                • <b>Highest Call OI தடை (Speed Breaker):</b> ₹ {highest_call_oi_strike:.2f}-ல் கால் ரைட்டர்கள் தடுத்து நிறுத்தக் காத்திருக்கிறார்கள்.<br>
-                • <b>டிரேடிங் வியூகம்:</b> இந்த ஸ்பீட் பிரேக்கர் முட்டுக்கட்டைக்கு முன்பாகவே நாம் லாபத்தை புக் செய்ய வேண்டும்.
+                • <b>Highest Call OI Resistance:</b> INR {highest_call_oi_strike:.2f}<br>
+                • <b>Strategy:</b> Plan profit booking targets well before this resistance level.
                 </p>
                 <hr style="border-color:#1e4d34; margin: 15px 0;">
-                <span style="font-size:16px;">🎯 <b>வாங்க வேண்டிய விலை (Buy Price):</b> ₹ {entry_exact:.2f}-க்கு மேல் நிலைபெறும் போது</span><br>
-                <span style="font-size:16px; color:#00E676;">🔹 <b>பாதுகாப்பான இலக்கு (Safe Target):</b> ₹ {target_exact:.2f}</span><br>
-                <span style="font-size:16px; color:#FF3D00;">🛑 <b>ஸ்டாப் லாஸ் (Stop Loss):</b> ₹ {stop_loss:.2f}</span>
+                <span style="font-size:16px;"><b>Buy Trigger Price:</b> Above INR {entry_exact:.2f}</span><br>
+                <span style="font-size:16px; color:#00E676;"><b>Safe Target:</b> INR {target_exact:.2f}</span><br>
+                <span style="font-size:16px; color:#FF3D00;"><b>Stop Loss:</b> INR {stop_loss:.2f}</span>
             </div>"""
 
-        # 🔴 SELL SCENARIO
+        # SELL SCENARIO
         elif dow_trend == "DOWNTREND" and live_price < current_vwap and "Short Buildup" in movement_type:
             entry_exact = min(levels["S1 (Support 1)"], l_930)
             stop_loss = entry_exact + (current_atr * 1.5)
             target_exact = max(levels["S2 (Support 2)"], highest_put_oi_strike)
             
-            suitability = "📉 DOUBLE CONFIRMED SELL SIGN"
+            suitability = "DOUBLE CONFIRMED SELL SIGN"
             action_box = f"""<div style="background-color:#421119; padding:25px; border-radius:12px; border:3px solid #FF1744; color:#ffffff;">
-                <b style="color:#FF1744; font-size:20px;">✅ [PART A] DOUBLE CONFIRMATION ANALYSIS:</b><br>
+                <b style="color:#FF1744; font-size:20px;">[PART A] DOUBLE CONFIRMATION ANALYSIS:</b><br>
                 <p style="font-size:14px; margin-top:5px; color:#dddddd;">
-                1. <b>Dow Theory:</b> {dow_trend_display} (சந்தை இறங்குமுகம்)<br>
-                2. <b>VWAP:</b> விலை வரம்பிற்கு கீழ் (₹ {current_vwap:.2f}) வர்த்தகம் ஆகிறது.<br>
-                3. <b>Futures OI Matrix:</b> <b>{movement_type}</b> நடந்துள்ளது (நிறுவனங்கள் விற்கும் திசை).<br>
-                ⭐ <i>முடிவு: 3 விதிகளும் உறுதியானதால் <b>SHORT SELL</b> செய்ய முழு அனுமதி உண்டு!</i>
+                1. <b>Dow Theory:</b> {dow_trend_display}<br>
+                2. <b>VWAP:</b> Price is below VWAP (INR {current_vwap:.2f})<br>
+                3. <b>Futures OI Matrix:</b> <b>{movement_type}</b><br>
+                Result: All rules matched. High probability SHORT SELL setup.
                 </p>
                 <hr style="border-color:#611c24; margin: 15px 0;">
-                <b style="color:#FFD600; font-size:20px;">🛑 [PART B] OPTION OI (ஸ்பீட் பிரேக்கர்) லாஜிக்:</b><br>
+                <b style="color:#FFD600; font-size:20px;">[PART B] OPTION OI SPEED BREAKER:</b><br>
                 <p style="font-size:14px; margin-top:5px; color:#dddddd;">
-                • <b>Highest Put OI ஆதரவு (Speed Breaker):</b> ₹ {highest_put_oi_strike:.2f}-ல் புட் ரைட்டர்கள் முட்டுக்கட்டை போட்டுள்ளனர்.<br>
-                • <b>டிரேடிங் வியூகம்:</b> விலை இந்த சிக்னலைத் தாண்டி கீழே செல்வது கடினம் என்பதால், இதற்கு முன்பே லாபத்தை புக் செய்ய வேண்டும்.
+                • <b>Highest Put OI Support:</b> INR {highest_put_oi_strike:.2f}<br>
+                • <b>Strategy:</b> Book shorts before price reaches this heavy support wall.
                 </p>
                 <hr style="border-color:#611c24; margin: 15px 0;">
-                <span style="font-size:16px;">🎯 <b>விற்க வேண்டிய விலை (Sell Price):</b> ₹ {entry_exact:.2f}-க்கு கீழ் உடையும் போது</span><br>
-                <span style="font-size:16px; color:#FF1744;">🔹 <b>பாதுகாப்பான இலக்கு (Safe Target):</b> ₹ {target_exact:.2f}</span><br>
-                <span style="font-size:16px; color:#FF3D00;">🛑 <b>ஸ்டாப் லாஸ் (Stop Loss):</b> ₹ {stop_loss:.2f}</span>
+                <span style="font-size:16px;"><b>Sell Trigger Price:</b> Below INR {entry_exact:.2f}</span><br>
+                <span style="font-size:16px; color:#FF1744;"><b>Safe Target:</b> INR {target_exact:.2f}</span><br>
+                <span style="font-size:16px; color:#FF3D00;"><b>Stop Loss:</b> INR {stop_loss:.2f}</span>
             </div>"""
 
-        # ⚠️ NO TRADE SCENARIO
+        # NO TRADE SCENARIO
         else:
-            suitability = "⚠️ NO TRADE ZONE"
+            suitability = "NO TRADE ZONE"
             action_box = f"""<div style="background-color:#2a2307; padding:25px; border-radius:12px; border:2px solid #FFD600; color:#ffffff;">
-                <b style="color:#FFD600; font-size:20px;">❌ [PART A] DOUBLE CONFIRMATION ANALYSIS (விடுபட்ட காரணங்கள்):</b><br>
+                <b style="color:#FFD600; font-size:20px;">[PART A] DOUBLE CONFIRMATION ANALYSIS (No Alignment):</b><br>
                 <p style="font-size:14px; margin-top:5px; color:#dddddd;">
-                • <b>நிலைமை:</b> Dow Theory ({dow_trend}), VWAP (விலை ₹ {live_price:.2f} vs VWAP ₹ {current_vwap:.2f}) மற்றும் Futures OI Matrix ({movement_type}) ஆகியவை <b>ஒரே நேர்க்கோட்டில் இல்லை.</b><br>
-                • ஏதேனும் ஒரு விதி முரண்பட்டாலும், அது போலி பிரேக்அவுட் (Fakeout) ஆக இருக்கலாம்.
+                • <b>Current State:</b> Dow Theory ({dow_trend}), VWAP (Price INR {live_price:.2f} vs VWAP INR {current_vwap:.2f}), and Futures OI ({movement_type}) are conflicting.<br>
+                • Risk of fakeout is high. Standing aside is recommended.
                 </p>
                 <hr style="border-color:#4a3f15; margin: 15px 0;">
-                <b style="color:#00B0FF; font-size:18px;">💡 [PART B] OPTION OI (ஸ்பீட் பிரேக்கர் தற்போதைய நிலவரம்):</b><br>
+                <b style="color:#00B0FF; font-size:18px;">[PART B] OPTION OI RANGES:</b><br>
                 <p style="font-size:14px; margin-top:5px; color:#dddddd;">
-                • மேல்நோக்கிச் சென்றால் வலுவான தடை (Call OI Break): <b>₹ {highest_call_oi_strike:.2f}</b><br>
-                • கீழ்நோக்கிச் சென்றால் வலுவான ஆதரவு (Put OI Break): <b>₹ {highest_put_oi_strike:.2f}</b><br>
-                • <i>சந்தை இந்த இரண்டு எல்லைகளுக்குள் சிக்கி பிரீமியத்தை கரைக்க வாய்ப்புள்ளது (Sideways).</i>
+                • Heavy Resistance (Call OI): <b>INR {highest_call_oi_strike:.2f}</b><br>
+                • Heavy Support (Put OI): <b>INR {highest_put_oi_strike:.2f}</b><br>
+                • Expect choppy or sideways market within this corridor.
                 </p>
             </div>"""
             
-        st.markdown(f"**வியூகத்தின் தற்போதைய நிலை:** <span style='font-size:16px; font-weight:bold;'>{suitability}</span>", unsafe_allow_html=True)
+        st.markdown(f"**Strategy Suitability:** <span style='font-size:16px; font-weight:bold; color:#FFFFFF;'>{suitability}</span>", unsafe_allow_html=True)
         st.markdown(action_box, unsafe_allow_html=True)
 
     # Section 3: Pivot Table Reference
@@ -378,4 +378,4 @@ if len(df) >= 1:
     time.sleep(5)
     st.rerun()
 else:
-    st.error("டேட்டா எடுப்பதில் சிக்கல் உள்ளது. ரீபூட் செய்யவும்.")
+    st.error("Data fetch error. Please reboot.")
