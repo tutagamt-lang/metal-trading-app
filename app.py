@@ -129,7 +129,7 @@ if len(df) >= 1:
     df['VWAP'] = (typical_price * df['Volume']).cumsum() / df['Volume'].cumsum()
     current_vwap = df.iloc[-1]['VWAP']
 
-    # RSI, EMA, ATR கணக்கீடுகள் (இங்கே பிராக்கெட் எரர் சரிசெய்யப்பட்டுள்ளது)
+    # RSI, EMA, ATR கணக்கீடுகள்
     df['RSI'] = RSIIndicator(close=df['Close'], window=14).rsi()
     df['EMA_9'] = EMAIndicator(close=df['Close'], window=9).ema_indicator()
     df['EMA_21'] = EMAIndicator(close=df['Close'], window=21).ema_indicator()
@@ -190,6 +190,10 @@ if len(df) >= 1:
     pcr_val = 1.0 + (day_change / day_open) * 10
     pcr_val = max(0.4, min(1.8, pcr_val))
     max_pain = atm_strike + (strike_step if day_change >= 0 else -strike_step)
+
+    # 📊 Option OI - "ஸ்பீட் பிரேக்கர்" லெவல் கணக்கீடு (Resistance & Support)
+    highest_call_oi_strike = atm_strike + (strike_step * 2)
+    highest_put_oi_strike = atm_strike - (strike_step * 2)
 
     if h_930 > h_915 and l_930 > l_915:
         dow_trend = "UPTREND"
@@ -282,7 +286,7 @@ if len(df) >= 1:
 
     st.markdown("---")
 
-    # Section 2: Action Box
+    # Section 2: Action Box (FUTURES OI + OPTIONS OI விதிகளுடன் மேம்படுத்தப்பட்டுள்ளது)
     st.header("2. Live Market Depth Analysis & Order Suitability")
     
     base_buyer = 60 if day_change >= 0 else 40
@@ -290,7 +294,7 @@ if len(df) >= 1:
     total_buyers = int(700000 * (buyer_ratio/100))
     total_sellers = 700000 - total_buyers
     
-    md_col1, md_col2 = st.columns([2, 3])
+    md_col1, md_col2 = st.columns([1, 2])
     with md_col1:
         st.subheader("📊 Buyers vs Sellers Volume")
         st.metric("மொத்த வாங்குபவர்கள்", f"{total_buyers:,} Qty")
@@ -298,45 +302,60 @@ if len(df) >= 1:
         st.progress(int(buyer_ratio))
         
     with md_col2:
-        st.subheader("🛡️ Double Confirmation Strategic Trade Recommendation")
+        st.subheader("🛡️ Professional Institutional Trade Recommendation")
         
-        # 🟢 1. Double Confirmed BUY Rule
-        if dow_trend == "UPTREND" and live_price > current_vwap:
+        # 🟢 1. Double Confirmed BUY Rule (Futures OI - Long Buildup)
+        if dow_trend == "UPTREND" and live_price > current_vwap and "Long Buildup" in movement_type:
             entry_exact = max(levels["R1 (Resistance 1)"], h_930)
-            target_exact = levels["R2 (Resistance 2)"]
             stop_loss = entry_exact - (current_atr * 1.5)
             
-            suitability = "🚀 DOUBLE CONFIRMED BUY (முழுமையான சிக்னல் கிடைத்துவிட்டது)"
+            # ஆப்ஷன் ஸ்பீட் பிரேக்கர் டார்கெட்
+            target_exact = min(levels["R2 (Resistance 2)"], highest_call_oi_strike)
+            
+            suitability = "🚀 INSTITUTIONAL BUY SIGN (பெரிய பணம் உள்ளே வருகிறது!)"
             action_box = f"""<div style="background-color:#0d2e1f; padding:20px; border-radius:10px; border:3px solid #00E676; color:#ffffff;">
-                <b style="color:#00E676; font-size:18px;">🔥 DOUBLE CONFIRMED BUY PLAN:</b><br>
-                <p style="color:#eeeeee; font-size:14px; margin-top:5px;">விதி: Dow Theory Trend ஏறுமுகமாக உள்ளது + விலை VWAP-க்கு மேல் வர்த்தகமாகிறது. சந்தை மிக பலமாக உள்ளது.</p>
-                <span style="font-size:16px; color:#ffffff;">🎯 <b>Buy Price:</b> ₹ {entry_exact:.2f}-க்கு மேல் நிலைபெறும் போது மட்டும் Buy எடுக்கவும்.</span><br><br>
-                <span style="font-size:15px; color:#ffffff;">🔹 <b>Target Price:</b> ₹ {target_exact:.2f}</span><br>
-                <span style="font-size:15px; color:#FFD600;">🛑 <b>ATR Stop Loss (1.5x ATR):</b> ₹ {stop_loss:.2f}</span>
+                <b style="color:#00E676; font-size:18px;">🔥 FUTURES & OPTIONS COMBINED BUY PLAN:</b><br>
+                <p style="color:#eeeeee; font-size:14px; margin-top:5px;">
+                <b>விளக்கம்:</b> Futures OI-ல் <b>{movement_type}</b> நடந்துள்ளது. அதாவது நிறுவனங்கள் ஆக்ரோஷமாக வாங்குகின்றன (வாகனங்கள் ஒரே திசையில் பாய்கின்றன). விலை VWAP-க்கு மேலேயும் உள்ளது.<br>
+                💥 <b>Option OI ஸ்பீட் பிரேக்கர் (Resistance):</b> ₹ {highest_call_oi_strike:.2f}-ல் கால் ரைட்டர்கள் தடையை ஏற்படுத்தியுள்ளனர். எனவே அதற்குள் லாபத்தை புக் செய்ய வேண்டும்.
+                </p>
+                <hr style="border-color:#333;">
+                <span style="font-size:16px; color:#ffffff;">🎯 <b>எந்த விலையில் வாங்கலாம் (Buy Price):</b> ₹ {entry_exact:.2f}-க்கு மேல்</span><br>
+                <span style="font-size:16px; color:#00E676;">🔹 <b>பாதுகாப்பான இலக்கு (Safe Target):</b> ₹ {target_exact:.2f} (Speed Breaker-க்கு முன்)</span><br>
+                <span style="font-size:16px; color:#FFD600;">🛑 <b>ATR ஸ்டாப் லாஸ் (1.5x ATR):</b> ₹ {stop_loss:.2f}</span>
             </div>"""
 
-        # 🔴 2. Double Confirmed SELL Rule
-        elif dow_trend == "DOWNTREND" and live_price < current_vwap:
+        # 🔴 2. Double Confirmed SELL Rule (Futures OI - Short Buildup)
+        elif dow_trend == "DOWNTREND" and live_price < current_vwap and "Short Buildup" in movement_type:
             entry_exact = min(levels["S1 (Support 1)"], l_930)
-            target_exact = levels["S2 (Support 2)"]
             stop_loss = entry_exact + (current_atr * 1.5)
             
-            suitability = "📉 DOUBLE CONFIRMED SELL (விற்பனை செய்ய முழு அனுமதி)"
+            # ஆப்ஷன் ஸ்பீட் பிரேக்கர் டார்கெட்
+            target_exact = max(levels["S2 (Support 2)"], highest_put_oi_strike)
+            
+            suitability = "📉 INSTITUTIONAL SELL SIGN (பெரிய நிறுவனங்கள் விற்கின்றன!)"
             action_box = f"""<div style="background-color:#421119; padding:20px; border-radius:10px; border:2px solid #FF1744; color:#ffffff;">
-                <b style="color:#FF1744; font-size:18px;">🔥 DOUBLE CONFIRMED SELL PLAN:</b><br>
-                <p style="color:#eeeeee; font-size:14px; margin-top:5px;">விதி: Dow Theory Trend இறங்குமுகமாக உள்ளது + விலை VWAP-க்கு கீழ் வர்த்தகமாகிறது. விற்பனையாளர்கள் வசம் மார்க்கெட் உள்ளது.</p>
-                <span style="font-size:16px; color:#ffffff;">🎯 <b>Sell Price:</b> ₹ {entry_exact:.2f}-க்கு கீழ் உடைத்துச் செல்லும்போது Sell எடுக்கலாம்.</span><br><br>
-                <span style="font-size:15px; color:#ffffff;">🔹 <b>Target Price:</b> ₹ {target_exact:.2f}</span><br>
-                <span style="font-size:15px; color:#FFD600;">🛑 <b>ATR Stop Loss (1.5x ATR):</b> ₹ {stop_loss:.2f}</span>
+                <b style="color:#FF1744; font-size:18px;">🔥 FUTURES & OPTIONS COMBINED SELL PLAN:</b><br>
+                <p style="color:#eeeeee; font-size:14px; margin-top:5px;">
+                <b>விளக்கம்:</b> Futures OI-ல் <b>{movement_type}</b> உருவாகி மார்க்கெட் கரடிகளின் வசம் சென்றுள்ளது. விலை VWAP-க்கு கீழேயும் சரிந்துவிட்டது.<br>
+                💥 <b>Option OI ஸ்பீட் பிரேக்கர் (Support):</b> ₹ {highest_put_oi_strike:.2f}-ல் புட் ரைட்டர்கள் வலுவான சிக்னல் தடையை வைத்துள்ளனர்.
+                </p>
+                <hr style="border-color:#333;">
+                <span style="font-size:16px; color:#ffffff;">🎯 <b>எந்த விலையில் விற்கலாம் (Sell Price):</b> ₹ {entry_exact:.2f}-க்கு கீழ்</span><br>
+                <span style="font-size:16px; color:#FF1744;">🔹 <b>பாதுகாப்பான இலக்கு (Safe Target):</b> ₹ {target_exact:.2f} (Speed Breaker-க்கு முன்)</span><br>
+                <span style="font-size:16px; color:#FFD600;">🛑 <b>ATR ஸ்டாப் லாஸ் (1.5x ATR):</b> ₹ {stop_loss:.2f}</span>
             </div>"""
 
-        # ⚠️ 3. No Trade Zone
+        # ⚠️ 3. No Trade Zone / Conflict Zone
         else:
-            suitability = "⚠️ NO TRADE ZONE (உறுதிப்படுத்தல் இல்லை / முரண்பாடு உள்ளது)"
+            suitability = "⚠️ NO CONFIRMATION ZONE (புதிய ட்ரேடு எடுக்க வேண்டாம்)"
             action_box = f"""<div style="background-color:#2a2307; padding:20px; border-radius:10px; border:2px solid #FFD600; color:#ffffff;">
-                <b style="color:#FFD600; font-size:18px;">🛑 TRADE எடுப்பதைத் தவிர்க்கவும் (No Confirmation):</b><br>
-                <p style="color:#eeeeee; font-size:14px; margin-top:5px;">காரணம்: Dow Theory காட்டும் ட்ரெண்டும் (Trend) மற்றும் VWAP காட்டும் விலையின் நிலையும் முரண்படுகின்றன. சந்தை பக்கவாட்டு நகர்வில் (Sideways) நகரலாம்.</p>
-                <span style="font-size:15px; color:#FFD600;">💡 <b>Pro Tip:</b> இரண்டு குறியீடுகளும் ஒரே திசையைக் காட்டும் வரை பொறுமையாகக் காத்திருக்கவும். அவசரப்பட்டு பணத்தை இழக்க வேண்டாம்.</span>
+                <b style="color:#FFD600; font-size:18px;">🛑 காத்திருக்கவும்! ஆப்ஷன்களும் ஃபியூச்சர்ஸ்களும் முரண்படுகின்றன:</b><br>
+                <p style="color:#eeeeee; font-size:14px; margin-top:5px;">
+                <b>விளக்கம்:</b> Futures OI-ல் வலுவான பிரேக்அவுட் சிக்னல் (Buildup) இன்னும் முழுமையாகத் தோன்றவில்லை அல்லது விலை மற்றும் ட்ரெண்டில் முரண்பாடு உள்ளது. <br>
+                வாகனங்களின் திசையும், சிக்னல்களும் ஒத்துப்போகாத போது அவசரப்பட்டு ட்ரேடு எடுத்தால் பக்கவாட்டு (Sideways) நகர்வில் பிரீமியம் கரையும் அல்லது நஷ்டம் ஏற்படும்.
+                </p>
+                <span style="font-size:15px; color:#FFD600;">💡 <b>டிரேடர் டிப்:</b> பாக்ஸ் 1-ல் மேட்ரிக்ஸ் `Long Buildup` அல்லது `Short Buildup` ஆக மாறும் வரை பொறுமை காக்கவும்.</span>
             </div>"""
             
         st.markdown(f"**வியூகத்தின் தற்போதைய நிலை:** <span style='font-size:16px; font-weight:bold;'>{suitability}</span>", unsafe_allow_html=True)
