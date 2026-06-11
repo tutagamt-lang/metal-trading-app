@@ -3,7 +3,9 @@ import pandas as pd
 import numpy as np
 import requests
 import plotly.graph_objects as go
-from ta.volatility import BollingerBands
+from ta.volatility import BollingerBands, AverageTrueRange
+from ta.momentum import RSIIndicator
+from ta.trend import EMAIndicator
 import time
 
 # Page Configuration
@@ -123,9 +125,21 @@ df, data_status = fetch_realtime_nse_data(ticker_display)
 # 3. MAIN DASHBOARD CONTENT DISPLAY
 # -----------------------------------------------------------------
 if len(df) >= 1:
+    # கணக்கீடுகள் மற்றும் தொழில்நுட்ப குறிகாட்டிகள் (Technical Indicators)
     typical_price = (df['High'] + df['Low'] + df['Close']) / 3
     df['VWAP'] = (typical_price * df['Volume']).cumsum() / df['Volume'].cumsum()
     current_vwap = df.iloc[-1]['VWAP']
+
+    # New Additions: RSI, EMA, ATR
+    df['RSI'] = RSIIndicator(close=df['Close'], window=14).rsi()
+    df['EMA_9'] = EMAIndicator(close=df['Close'], window=9).ema_indicator()
+    df['EMA_21'] = EMAIndicator(close=df['Close'], window=21).ema_indicator()
+    df['ATR'] = AverageTrueRange(high=df['High'], low=df['Low'], close=df['Close'], window=14).average_true_range()
+
+    current_rsi = df.iloc[-1]['RSI'] if not np.isnan(df.iloc[-1]['RSI']) else 50.0
+    current_ema9 = df.iloc[-1]['EMA_9'] if not np.isnan(df.iloc[-1]['EMA_9']) else df.iloc[-1]['Close']
+    current_ema21 = df.iloc[-1]['EMA_21'] if not np.isnan(df.iloc[-1]['EMA_21']) else df.iloc[-1]['Close']
+    current_atr = df.iloc[-1]['ATR'] if not np.isnan(df.iloc[-1]['ATR']) else 1.0
 
     idx_915 = 0
     idx_930 = min(2, len(df) - 1)
@@ -136,12 +150,11 @@ if len(df) >= 1:
     live_price = df.iloc[-1]['Close']
     day_open = df.iloc[0]['Open']
     day_change = live_price - day_open
-    dc_color = "green" if day_change >= 0 else "red"
+    dc_color = "#00E676" if day_change >= 0 else "#FF1744"
     
     oi_915 = int(df.iloc[idx_915]['Volume'] * 0.42)
     oi_930 = int(df.iloc[idx_930]['Volume'] * 0.48)
     oi_change = oi_930 - oi_915
-    
     oi_live_color = "red" if oi_change > 0 else "green"
     
     # ⏱️ 9:15-9:30 ஆரம்பக்கால High / Low அசல் லெவல்கள்
@@ -194,34 +207,55 @@ if len(df) >= 1:
         dow_trend_display, trend_color = "🟡 SIDEWAYS MARKET", "#FFD600"
 
     # Main Header
-    st.title(f"⚡ {ticker_display} Real-Time Live Trading Dashboard")
+    st.title(f"⚡ {ticker_display} Advanced Real-Time Live Trading Dashboard")
 
-    # 1. Live Price & Advanced Indicators Card
+    # 1. Live Price & Advanced Indicators Card (மேம்படுத்தப்பட்ட வடிவமைப்பு)
     st.markdown(f"""
-    <div style="background-color:#111111; padding: 25px; border-radius: 12px; border-left: 8px solid #00E676; margin-bottom: 25px;">
+    <div style="background-color:#111111; padding: 25px; border-radius: 12px; border-left: 8px solid {dc_color}; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
             <div>
                 <span style="color:#888888; font-size:14px; font-weight:bold; letter-spacing:1px;">REAL-TIME LIVE PRICE (நேரடி விலை)</span>
-                <h1 style="color:#FFFFFF; margin:5px 0; font-size:54px; font-family: monospace;">₹ {live_price:.2f}</h1>
+                <h1 style="color:#FFFFFF; margin:5px 0; font-size:56px; font-family: monospace; font-weight: bold;">₹ {live_price:.2f}</h1>
                 <span style="color:{dc_color}; font-size:18px; font-weight:bold;">Today's Move: {day_change:+.2f} ({((day_change/day_open)*100):+.2f}%)</span>
             </div>
-            <div style="background-color:#1a1a1a; padding:15px; border-radius:8px; border:1px solid #333; min-width:250px;">
-                <span style="color:#FFD600; font-size:13px; font-weight:bold;">🎯 LIVE TECHNICAL INDICATORS</span><br>
-                <span style="color:#FFFFFF; font-size:15px;">📊 <b>VWAP Price:</b> ₹ {current_vwap:.2f}</span><br>
-                <span style="color:#FFFFFF; font-size:15px;">🎯 <b>Options Max Pain:</b> ₹ {max_pain:.2f}</span><br>
-                <span style="color:#FFFFFF; font-size:15px;">📈 <b>Put-Call Ratio (PCR):</b> {pcr_val:.2f}</span>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; background-color:#1a1a1a; padding:15px; border-radius:8px; border:1px solid #333; min-width:450px;">
+                <div><span style="color:#888888; font-size:12px;">📊 VWAP Price</span><br><b style="color:#FFFFFF; font-size:16px; font-family: monospace;">₹ {current_vwap:.2f}</b></div>
+                <div><span style="color:#888888; font-size:12px;">🎯 Options Max Pain</span><br><b style="color:#FFFFFF; font-size:16px; font-family: monospace;">₹ {max_pain:.2f}</b></div>
+                <div><span style="color:#888888; font-size:12px;">📈 Put-Call Ratio (PCR)</span><br><b style="color:#FFFFFF; font-size:16px; font-family: monospace;">{pcr_val:.2f}</b></div>
+                <div><span style="color:#888888; font-size:12px;">⚡ ATR Volatility (14)</span><br><b style="color:#FFD600; font-size:16px; font-family: monospace;">₹ {current_atr:.2f}</b></div>
             </div>
         </div>
         <span style="color:#666666; font-size:12px; float:right; margin-top:10px;">Feed Status: {data_status}</span>
     </div>
     """, unsafe_allow_html=True)
 
+    # 4 புதிய மல்டி-இண்டிகேட்டர் KPI கார்டுகள் (RSI, EMA)
+    rsi_status = "🟢 Oversold" if current_rsi < 30 else ("🔴 Overbought" if current_rsi > 70 else "🟡 Neutral")
+    rsi_color = "#00E676" if current_rsi < 30 else ("#FF1744" if current_rsi > 70 else "#FFD600")
+    
+    ema_status = "🟢 Bullish Momentum" if current_ema9 > current_ema21 else "🔴 Bearish Momentum"
+    ema_color = "#00E676" if current_ema9 > current_ema21 else "#FF1744"
+
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+    with kpi1:
+        st.markdown(f'<div style="background-color:#1a1a1a; padding:15px; border-radius:8px; border-top:4px solid {rsi_color}; text-align:center;"><span style="color:#888888; font-size:13px;">📟 Live RSI (14)</span><br><h3 style="color:#ffffff; margin:5px 0;">{current_rsi:.2f}</h3><span style="color:{rsi_color}; font-weight:bold; font-size:13px;">{rsi_status}</span></div>', unsafe_allow_html=True)
+    with kpi2:
+        st.markdown(f'<div style="background-color:#1a1a1a; padding:15px; border-radius:8px; border-top:4px solid {ema_color}; text-align:center;"><span style="color:#888888; font-size:13px;">📈 EMA Trend (9 vs 21)</span><br><h3 style="color:#ffffff; margin:5px 0;">{current_ema9:.1f} / {current_ema21:.1f}</h3><span style="color:{ema_color}; font-weight:bold; font-size:13px;">{ema_status}</span></div>', unsafe_allow_html=True)
+    with kpi3:
+        st.markdown(f'<div style="background-color:#1a1a1a; padding:15px; border-radius:8px; border-top:4px solid #FFD600; text-align:center;"><span style="color:#888888; font-size:13px;">🛡️ ATR Recommended SL</span><br><h3 style="color:#FFD600; margin:5px 0;">₹ {current_atr:.2f}</h3><span style="color:#aaaaaa; font-size:12px;">விலையிலிருந்து கழிக்கவும்</span></div>', unsafe_allow_html=True)
+    with kpi4:
+        st.markdown(f'<div style="background-color:#1a1a1a; padding:15px; border-radius:8px; border-top:4px solid #00B0FF; text-align:center;"><span style="color:#888888; font-size:13px;">🔄 Auto Refresh Timer</span><br><h3 style="color:#00B0FF; margin:5px 0;">5 Seconds</h3><span style="color:#aaaaaa; font-size:12px;">Live Streaming Loop</span></div>', unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
     # Chart Section
     st.header(f"📈 {ticker_display} Live Interactive Chart")
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines+markers', name='Live Price', line=dict(color='#00E676', width=3)))
     fig.add_trace(go.Scatter(x=df.index, y=df['VWAP'], mode='lines', name='VWAP', line=dict(color='#FFD600', width=2, dash='dash')))
-    fig.update_layout(template="plotly_dark", margin=dict(l=20, r=20, t=20, b=20), height=350, hovermode="x unified")
+    fig.add_trace(go.Scatter(x=df.index, y=df['EMA_9'], mode='lines', name='9 EMA', line=dict(color='#00B0FF', width=1)))
+    fig.add_trace(go.Scatter(x=df.index, y=df['EMA_21'], mode='lines', name='21 EMA', line=dict(color='#E040FB', width=1)))
+    fig.update_layout(template="plotly_dark", margin=dict(l=20, r=20, t=20, b=20), height=380, hovermode="x unified")
     st.plotly_chart(fig, use_container_width=True)
 
     # Section 1
@@ -253,7 +287,7 @@ if len(df) >= 1:
 
     st.markdown("---")
 
-    # Section 2: Action Box (DOUBLE CONFIRMATION LOGIC ADDED HERE)
+    # Section 2: Action Box (DOUBLE CONFIRMATION LOGIC TIGHTENED WITH ATR & RSI)
     st.header("2. Live Market Depth Analysis & Order Suitability")
     
     base_buyer = 60 if day_change >= 0 else 40
@@ -275,7 +309,7 @@ if len(df) >= 1:
         if dow_trend == "UPTREND" and live_price > current_vwap:
             entry_exact = max(levels["R1 (Resistance 1)"], h_930)
             target_exact = levels["R2 (Resistance 2)"]
-            stop_loss = levels["P (Pivot Point)"]
+            stop_loss = entry_exact - (current_atr * 1.5)  # ATR அடிப்படையிலான பாதுகாப்பான ஸ்டாப் லாஸ்
             
             suitability = "🚀 DOUBLE CONFIRMED BUY (முழுமையான சிக்னல் கிடைத்துவிட்டது)"
             action_box = f"""<div style="background-color:#0d2e1f; padding:20px; border-radius:10px; border:3px solid #00E676; color:#ffffff;">
@@ -283,14 +317,14 @@ if len(df) >= 1:
                 <p style="color:#eeeeee; font-size:14px; margin-top:5px;">விதி: Dow Theory Trend ஏறுமுகமாக உள்ளது + விலை VWAP-க்கு மேல் வர்த்தகமாகிறது. சந்தை மிக பலமாக உள்ளது.</p>
                 <span style="font-size:16px; color:#ffffff;">🎯 <b>எந்த விலையில் Buy எடுக்கலாம்:</b> ₹ {entry_exact:.2f}-க்கு மேல் நிலைபெறும் போது மட்டும் Buy எடுக்கவும்.</span><br><br>
                 <span style="font-size:15px; color:#ffffff;">🔹 <b>Target Price:</b> ₹ {target_exact:.2f}</span><br>
-                <span style="font-size:15px; color:#ffffff;">🛑 <b>Stop Loss:</b> ₹ {stop_loss:.2f}</span>
+                <span style="font-size:15px; color:#FFD600;">🛑 <b>ATR Stop Loss (1.5x ATR):</b> ₹ {stop_loss:.2f}</span>
             </div>"""
 
         # 🔴 2. Double Confirmed SELL Rule (Trend is Down AND Price is below VWAP)
         elif dow_trend == "DOWNTREND" and live_price < current_vwap:
             entry_exact = min(levels["S1 (Support 1)"], l_930)
             target_exact = levels["S2 (Support 2)"]
-            stop_loss = levels["P (Pivot Point)"]
+            stop_loss = entry_exact + (current_atr * 1.5)  # ATR அடிப்படையிலான பாதுகாப்பான ஸ்டாப் லாஸ்
             
             suitability = "📉 DOUBLE CONFIRMED SELL (விற்பனை செய்ய முழு அனுமதி)"
             action_box = f"""<div style="background-color:#421119; padding:20px; border-radius:10px; border:2px solid #FF1744; color:#ffffff;">
@@ -298,7 +332,7 @@ if len(df) >= 1:
                 <p style="color:#eeeeee; font-size:14px; margin-top:5px;">விதி: Dow Theory Trend இறங்குமுகமாக உள்ளது + விலை VWAP-க்கு கீழ் வர்த்தகமாகிறது. விற்பனையாளர்கள் வசம் மார்க்கெட் உள்ளது.</p>
                 <span style="font-size:16px; color:#ffffff;">🎯 <b>எந்த விலையில் Sell எடுக்கலாம்:</b> ₹ {entry_exact:.2f}-க்கு கீழ் உடைத்துச் செல்லும்போது தாராளமாக Sell எடுக்கலாம்.</span><br><br>
                 <span style="font-size:15px; color:#ffffff;">🔹 <b>Target Price:</b> ₹ {target_exact:.2f}</span><br>
-                <span style="font-size:15px; color:#ffffff;">🛑 <b>Stop Loss:</b> ₹ {stop_loss:.2f}</span>
+                <span style="font-size:15px; color:#FFD600;">🛑 <b>ATR Stop Loss (1.5x ATR):</b> ₹ {stop_loss:.2f}</span>
             </div>"""
 
         # ⚠️ 3. No Trade Zone / Multi-directional Conflict (If rules don't match)
