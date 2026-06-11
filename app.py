@@ -14,6 +14,12 @@ st.set_page_config(layout="wide", page_title="Universal Real-Time NSE Trading Da
 if "last_refresh" not in st.session_state:
     st.session_state.last_refresh = time.time()
 
+# Initialize watchlist securely to prevent AttributeError or KeyError
+if 'watchlist' not in st.session_state:
+    st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
+elif not isinstance(st.session_state.watchlist, list):
+    st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
+
 # -----------------------------------------------------------------
 # 1. HELPER FUNCTIONS & REAL-TIME DATA FETCH ENGINE
 # -----------------------------------------------------------------
@@ -57,6 +63,8 @@ def fetch_realtime_nse_data(symbol):
             'Volume': indicators['volume']
         }, index=pd.to_datetime(timestamps, unit='s', utc=True).tz_convert('Asia/Kolkata'))
         df = df.dropna()
+        if len(df) == 0:
+            raise Exception("Empty Data")
         return df, "LIVE REAL-TIME FEED"
     except Exception as e:
         times = pd.date_range(start="09:15", end="15:30", freq="5min")
@@ -74,9 +82,6 @@ def fetch_realtime_nse_data(symbol):
 # -----------------------------------------------------------------
 st.sidebar.header("🔍 Universal Stock Search")
 
-if 'watchlist' not in st.session_state or not isinstance(st.session_state.watchlist, list):
-    st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
-
 custom_ticker = st.sidebar.text_input("பங்கின் குறியீட்டு பெயர் (Ticker Symbol):", "").strip().upper()
 
 if custom_ticker:
@@ -91,7 +96,7 @@ if custom_ticker:
 
 st.sidebar.markdown("---")
 st.sidebar.header("🔥 Multi-Stock Live Scanner")
-current_list = st.session_state.get('watchlist', ["TATASTEEL", "RELIANCE", "ITC", "SBIN"])
+current_list = st.session_state.watchlist
 
 if current_list:
     scanner_data = []
@@ -103,55 +108,4 @@ if current_list:
             s_oi915 = int(s_df.iloc[0]['Volume'] * 0.42)
             s_oi930 = int(s_df.iloc[min(2, len(s_df)-1)]['Volume'] * 0.48)
             
-            s_p_diff = s_c930 - s_c915
-            s_oi_diff = s_oi930 - s_oi915
-            s_move = get_oi_movement(s_oi_diff, s_p_diff)
-            
-            scanner_data.append({
-                "Stock": s,
-                "Live Price": f"₹{s_df.iloc[-1]['Close']:.2f}",
-                "OI Setup Matrix": s_move
-            })
-    st.sidebar.table(pd.DataFrame(scanner_data))
-
-st.sidebar.markdown("---")
-selected_focus = st.sidebar.selectbox("விவரமாக ஆராய வேண்டிய பங்கை வாட்ச்லிஸ்ட்டில் இருந்து தேர்வு செய்யவும்:", options=current_list if current_list else ["TATASTEEL"])
-ticker_display = custom_ticker if custom_ticker else selected_focus
-
-df, data_status = fetch_realtime_nse_data(ticker_display)
-
-# -----------------------------------------------------------------
-# 3. MAIN DASHBOARD CONTENT DISPLAY
-# -----------------------------------------------------------------
-if len(df) >= 1:
-    typical_price = (df['High'] + df['Low'] + df['Close']) / 3
-    df['VWAP'] = (typical_price * df['Volume']).cumsum() / df['Volume'].cumsum()
-    current_vwap = df.iloc[-1]['VWAP']
-
-    df['RSI'] = RSIIndicator(close=df['Close'], window=14).rsi()
-    df['EMA_9'] = EMAIndicator(close=df['Close'], window=9).ema_indicator()
-    df['EMA_21'] = EMAIndicator(close=df['Close'], window=21).ema_indicator()
-    df['ATR'] = AverageTrueRange(high=df['High'], low=df['Low'], close=df['Close'], window=14).average_true_range()
-
-    current_rsi = df.iloc[-1]['RSI'] if not np.isnan(df.iloc[-1]['RSI']) else 50.0
-    current_ema9 = df.iloc[-1]['EMA_9'] if not np.isnan(df.iloc[-1]['EMA_9']) else df.iloc[-1]['Close']
-    current_ema21 = df.iloc[-1]['EMA_21'] if not np.isnan(df.iloc[-1]['EMA_21']) else df.iloc[-1]['Close']
-    current_atr = df.iloc[-1]['ATR'] if not np.isnan(df.iloc[-1]['ATR']) else 1.0
-
-    idx_915 = 0
-    idx_930 = min(2, len(df) - 1)
-
-    o_915, h_915, l_915, c_915 = df.iloc[idx_915]['Open'], df.iloc[idx_915]['High'], df.iloc[idx_915]['Low'], df.iloc[idx_915]['Close']
-    o_930, h_930, l_930, c_930 = df.iloc[idx_930]['Open'], df.iloc[idx_930]['High'], df.iloc[idx_930]['Low'], df.iloc[idx_930]['Close']
-    
-    live_price = df.iloc[-1]['Close']
-    day_open = df.iloc[0]['Open']
-    day_change = live_price - day_open
-    dc_color = "#00E676" if day_change >= 0 else "#FF1744"
-    
-    oi_915 = int(df.iloc[idx_915]['Volume'] * 0.42)
-    oi_930 = int(df.iloc[idx_930]['Volume'] * 0.48)
-    oi_change = oi_930 - oi_915
-    oi_live_color = "red" if oi_change > 0 else "green"
-    
-    base_high = float(df.iloc
+            s_p_diff = s_c930 - s_c
