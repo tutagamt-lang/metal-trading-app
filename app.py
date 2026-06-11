@@ -286,7 +286,7 @@ if len(df) >= 1:
 
     st.markdown("---")
 
-    # Section 2: Action Box (DOUBLE CONFIRMATION + OPTION OI விதிகள் முற்றிலும் இணைக்கப்பட்டுள்ளன)
+    # Section 2: Action Box (FUTURES OI + OPTIONS OI + DOUBLE CONFIRMATION)
     st.header("2. Live Market Depth Analysis & Order Suitability")
     
     base_buyer = 60 if day_change >= 0 else 40
@@ -298,18 +298,16 @@ if len(df) >= 1:
     with md_col1:
         st.subheader("📊 Buyers vs Sellers Volume")
         st.metric("மொத்த வாங்குபவர்கள்", f"{total_buyers:,} Qty")
-        st.metric("மொத்த விற்பனையாளர்கள்", f"{total_sellers:,} Qty")
+        st.metric("மொத்த விற்பனையாளர்கள்", f"{total_sellers:,} Q放")
         st.progress(int(buyer_ratio))
         
     with md_col2:
         st.subheader("🛡️ Double Confirmation Strategic Trade Recommendation")
         
-        # 🟢 1. Double Confirmed BUY Rule (Dow Uptrend + Above VWAP + Futures Long Buildup)
+        # 🟢 1. Double Confirmed BUY Rule
         if dow_trend == "UPTREND" and live_price > current_vwap and "Long Buildup" in movement_type:
             entry_exact = max(levels["R1 (Resistance 1)"], h_930)
             stop_loss = entry_exact - (current_atr * 1.5)
-            
-            # ஆப்ஷன் ஸ்பீட் பிரேக்கர் டார்கெட்
             target_exact = min(levels["R2 (Resistance 2)"], highest_call_oi_strike)
             
             suitability = "🚀 DOUBLE CONFIRMED BUY (முழுமையான சிக்னல் கிடைத்துவிட்டது)"
@@ -319,20 +317,18 @@ if len(df) >= 1:
                 <b>விதி 1 (Dow Trend):</b> சந்தை ஏறுமுகமாக (Uptrend) உள்ளது.<br>
                 <b>விதி 2 (VWAP):</b> நேரடி விலை VWAP அளவிற்கு மேலே வலுவாக வர்த்தகமாகிறது.<br>
                 <b>விதி 3 (Futures OI):</b> பெரிய நிறுவனங்கள் புதிய பணத்துடன் <b>{movement_type}</b> செய்துள்ளனர்.<br>
-                🛑 <b>Option OI ஸ்பீட் பிரேக்கர் தடை:</b> ₹ {highest_call_oi_strike:.2f}-ல் கால் ரைட்டர்கள் தடுத்து நிறுத்த வாய்ப்புள்ளது (சிக்னல் ரெட் லைட்).
+                🛑 <b>Option OI ஸ்பீட் பிரேக்கர் தடை (Resistance):</b> ₹ {highest_call_oi_strike:.2f}-ல் கால் ரைட்டர்கள் தடையை ஏற்படுத்தியுள்ளனர், எனவே அதற்குள் லாபத்தை புக் செய்ய வேண்டும்.
                 </p>
-                <hr style="border-color:#222;">
-                <span style="font-size:16px; color:#ffffff;">🎯 <b>எந்த விலையில் வாங்கலாம் (Buy Price):</b> ₹ {entry_exact:.2f}-க்கு மேல் நிலைபெறும்போது</span><br>
-                <span style="font-size:16px; color:#00E676;">🔹 <b>பாதுகாப்பான இலக்கு (Safe Target):</b> ₹ {target_exact:.2f} (Speed Breaker-க்கு முன்)</span><br>
-                <span style="font-size:16px; color:#FFD600;">🛑 <b>ATR ஸ்டாப் லாஸ் (1.5x ATR):</b> ₹ {stop_loss:.2f}</span>
+                <hr style="border-color:#333;">
+                <span style="font-size:16px; color:#ffffff;">🎯 <b>Buy Price:</b> ₹ {entry_exact:.2f}-க்கு மேல் நிலைபெறும் போது மட்டும் Buy எடுக்கவும்.</span><br><br>
+                <span style="font-size:15px; color:#00E676;">🔹 <b>Safe Target Price:</b> ₹ {target_exact:.2f} (Option OI ஸ்பீட் பிரேக்கருக்கு முன்)</span><br>
+                <span style="font-size:15px; color:#FFD600;">🛑 <b>ATR Stop Loss (1.5x ATR):</b> ₹ {stop_loss:.2f}</span>
             </div>"""
 
-        # 🔴 2. Double Confirmed SELL Rule (Dow Downtrend + Below VWAP + Futures Short Buildup)
+        # 🔴 2. Double Confirmed SELL Rule
         elif dow_trend == "DOWNTREND" and live_price < current_vwap and "Short Buildup" in movement_type:
             entry_exact = min(levels["S1 (Support 1)"], l_930)
             stop_loss = entry_exact + (current_atr * 1.5)
-            
-            # ஆப்ஷன் ஸ்பீட் பிரேக்கர் டார்கெட்
             target_exact = max(levels["S2 (Support 2)"], highest_put_oi_strike)
             
             suitability = "📉 DOUBLE CONFIRMED SELL (விற்பனை செய்ய முழு அனுமதி)"
@@ -342,24 +338,24 @@ if len(df) >= 1:
                 <b>விதி 1 (Dow Trend):</b> சந்தை இறங்குமுகமாக (Downtrend) உள்ளது.<br>
                 <b>விதி 2 (VWAP):</b> நேரடி விலை VWAP அளவிற்கு கீழே சரிந்து வர்த்தகமாகிறது.<br>
                 <b>விதி 3 (Futures OI):</b> நிறுவனங்கள் ஆக்ரோஷமாக பங்குகளை விற்று <b>{movement_type}</b> உருவாக்கியுள்ளனர்.<br>
-                🛑 <b>Option OI ஸ்பீட் பிரேக்கர் ஆதரவு:</b> ₹ {highest_put_oi_strike:.2f}-ல் புட் ரைட்டர்கள் தடையை வைத்துள்ளனர்.
+                🛑 <b>Option OI ஸ்பீட் பிரேக்கர் ஆதரவு (Support):</b> ₹ {highest_put_oi_strike:.2f}-ல் புட் ரைட்டர்கள் வலுவான சிக்னல் தடையை வைத்துள்ளனர்.
                 </p>
-                <hr style="border-color:#222;">
-                <span style="font-size:16px; color:#ffffff;">🎯 <b>எந்த விலையில் விற்கலாம் (Sell Price):</b> ₹ {entry_exact:.2f}-க்கு கீழ் உடையும் போது</span><br>
-                <span style="font-size:16px; color:#FF1744;">🔹 <b>பாது加ப்பான இலக்கு (Safe Target):</b> ₹ {target_exact:.2f} (Speed Breaker-க்கு முன்)</span><br>
-                <span style="font-size:16px; color:#FFD600;">🛑 <b>ATR ஸ்டாப் லாஸ் (1.5x ATR):</b> ₹ {stop_loss:.2f}</span>
+                <hr style="border-color:#333;">
+                <span style="font-size:16px; color:#ffffff;">🎯 <b>Sell Price:</b> ₹ {entry_exact:.2f}-க்கு கீழ் உடைத்துச் செல்லும்போது Sell எடுக்கலாம்.</span><br><br>
+                <span style="font-size:15px; color:#FF1744;">🔹 <b>Safe Target Price:</b> ₹ {target_exact:.2f} (Option OI ஸ்பீட் பிரேக்கருக்கு முன்)</span><br>
+                <span style="font-size:15px; color:#FFD600;">🛑 <b>ATR Stop Loss (1.5x ATR):</b> ₹ {stop_loss:.2f}</span>
             </div>"""
 
-        # ⚠️ 3. No Trade Zone / Confirmation Missing Zone
+        # ⚠️ 3. No Trade Zone / Confirmation Missing
         else:
             suitability = "⚠️ NO TRADE ZONE (உறுதிப்படுத்தல் இல்லை / நிபந்தனைகள் முரண்படுகின்றன)"
             action_box = f"""<div style="background-color:#2a2307; padding:20px; border-radius:10px; border:2px solid #FFD600; color:#ffffff;">
                 <b style="color:#FFD600; font-size:18px;">🛑 TRADE எடுப்பதைத் தவிர்க்கவும் (Double Confirmation Missing):</b><br>
                 <p style="color:#eeeeee; font-size:14px; margin-top:5px;">
-                <b>காரணம்:</b> Dow Theory ட்ரெண்ட், VWAP விலை மற்றும் Futures OI மேட்ரிக்ஸ் ஆகிய மூன்றும் ஒரே திசையைக் காட்டவில்லை. <br>
-                உதாரணமாக, விலை VWAP-க்கு மேல் இருக்கலாம் ஆனால் Futures OI-ல் இன்னும் `Long Buildup` ஏற்பட்டு பெரிய நிறுவனங்களின் ஆதரவு கிடைக்காமல் இருக்கலாம்.
+                <b>காரணம்:</b> Dow Theory காட்டும் ட்ரெண்ட், VWAP விலை மற்றும் Futures OI மேட்ரிக்ஸ் ஆகிய மூன்றும் ஒரே திசையைக் காட்டவில்லை. <br>
+                வாகனங்களின் திசையும் (Futures), சிக்னல்களும் (Options/VWAP) ஒத்துப்போகாத போது அவசரப்பட்டு ட்ரேடு எடுத்தால் பக்கவாட்டு (Sideways) நகர்வில் பிரீமியம் கரையும் அல்லது நஷ்டம் ஏற்படும்.
                 </p>
-                <span style="font-size:15px; color:#FFD600;">💡 <b>Pro Tip:</b> அனைத்து குறியீடுகளும் (Dow + VWAP + Futures Matrix) ஒரே நேர்க்கோட்டில் வரும் வரை பொறுமையாகக் காத்திருக்கவும். அவசரப்பட்டு பணத்தை இழக்க வேண்டாம்.</span>
+                <span style="font-size:15px; color:#FFD600;">💡 <b>டிரேடர் டிப்:</b> பாக்ஸ் 1-ல் மேட்ரிக்ஸ் `Long Buildup` அல்லது `Short Buildup` ஆக மாறும் வரை பொறுமை காக்கவும்.</span>
             </div>"""
             
         st.markdown(f"**வியூகத்தின் தற்போதைய நிலை:** <span style='font-size:16px; font-weight:bold;'>{suitability}</span>", unsafe_allow_html=True)
