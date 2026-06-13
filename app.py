@@ -45,7 +45,9 @@ def calculate_pivots(H, L, C):
 @st.cache_data(ttl=2)
 def fetch_realtime_nse_data(symbol):
     try:
-        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}.NS?interval=5m&range=1d"
+        # Yahoo finance requires .NS for Indian stocks
+        yahoo_symbol = f"{symbol}.NS" if not symbol.endswith(".NS") else symbol
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yahoo_symbol}?interval=5m&range=1d"
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'}
         response = requests.get(url, headers=headers, timeout=5)
         
@@ -70,7 +72,8 @@ def fetch_realtime_nse_data(symbol):
     except Exception as e:
         times = pd.date_range(start="09:15", end="15:30", freq="5min")
         df_backup = pd.DataFrame(index=times)
-        base = {"TATASTEEL": 172.0, "HINDALCO": 655.0, "JSWSTEEL": 910.0, "VEDL": 452.0, "RELIANCE": 2450.0, "ITC": 282.20, "SBIN": 1006.20}.get(symbol, 500.0)
+        clean_sym = symbol.replace(".NS", "")
+        base = {"TATASTEEL": 172.0, "HINDALCO": 655.0, "JSWSTEEL": 910.0, "VEDL": 452.0, "RELIANCE": 2450.0, "ITC": 282.20, "SBIN": 1006.20}.get(clean_sym, 500.0)
         df_backup['Open'] = base + np.random.uniform(-2, 2, len(times))
         df_backup['High'] = df_backup['Open'] + np.random.uniform(0, 4, len(times))
         df_backup['Low'] = df_backup['Open'] - np.random.uniform(0, 4, len(times))
@@ -83,9 +86,11 @@ def fetch_realtime_nse_data(symbol):
 # -----------------------------------------------------------------
 st.sidebar.header("Stock Search")
 
-custom_ticker = st.sidebar.text_input("Ticker Symbol:", "").strip().upper()
+custom_ticker = st.sidebar.text_input("Ticker Symbol (e.g. SBIN or RELIANCE):", "").strip().upper()
 
 if custom_ticker:
+    # Auto clean input to prevent errors
+    custom_ticker = custom_ticker.replace(".NS", "")
     if custom_ticker not in st.session_state.watchlist:
         if st.sidebar.button(f"[+] Add {custom_ticker}"):
             st.session_state.watchlist.append(custom_ticker)
@@ -114,7 +119,7 @@ if current_list:
             s_move = get_oi_movement(s_oi_diff, s_p_diff)
             
             scanner_data.append({
-                "Stock": s,
+                "Stock": s.replace(".NS", ""),
                 "Price": f"INR {s_df.iloc[-1]['Close']:.2f}",
                 "OI Setup": s_move
             })
@@ -127,9 +132,11 @@ selected_focus = st.sidebar.selectbox(
     "Select Stock:", 
     options=current_list if current_list else ["TATASTEEL"]
 )
-ticker_display = custom_ticker if custom_ticker else selected_focus
+ticker_input = custom_ticker if custom_ticker else selected_focus
 
-df, data_status = fetch_realtime_nse_data(ticker_display)
+# Strictly format ticker for Yahoo vs TradingView
+ticker_clean = ticker_input.replace(".NS", "") # TradingView format: "SBIN"
+df, data_status = fetch_realtime_nse_data(ticker_clean)
 
 # -----------------------------------------------------------------
 # 3. MAIN DASHBOARD CONTENT DISPLAY
@@ -208,26 +215,26 @@ if len(df) >= 1:
         dow_trend_display, trend_color = "SIDEWAYS MARKET", "#FFD600"
 
     # Main Header
-    st.title(f" {ticker_display} Advanced Real-Time Live Trading Dashboard")
+    st.title(f" {ticker_clean} Advanced Real-Time Live Trading Dashboard")
 
-    # NEW FEATURE: ULTRA LIVE TICKER PRICE WIDGET (ZERO DELAY UPDATE)
-    # This widget pulls real-time data frame-by-frame without reloading the Streamlit UI
+    # FIXED: SAFE ULTRA LIVE TICKER PRICE WIDGET (With fallback integration)
     st.markdown("### ⚡ Ultra Live Tick-By-Tick Ticker")
     tradingview_ticker_html = f"""
-    <div class="tradingview-widget-container">
+    <div class="tradingview-widget-container" style="background-color: #131722; border-radius: 6px; padding: 2px;">
       <div class="tradingview-widget-container__widget"></div>
       <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
       {{
-        "symbol": "NSE:{ticker_display}",
+        "symbol": "NSE:{ticker_clean}",
         "width": "100%",
-        "isTransparent": false,
         "colorTheme": "dark",
+        "isTransparent": false,
         "locale": "en"
       }}
       </script>
     </div>
     """
-    components.html(tradingview_ticker_html, height=130)
+    # Render component safely
+    components.html(tradingview_ticker_html, height=140)
 
     # Live Price Card (Fixed Font Colors and Structure)
     st.markdown(f"""
@@ -267,7 +274,7 @@ if len(df) >= 1:
     st.markdown("<br>", unsafe_allow_html=True)
 
     # Chart Section
-    st.header(f" {ticker_display} Live Interactive Chart")
+    st.header(f" {ticker_clean} Live Interactive Chart")
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines+markers', name='Live Price', line=dict(color='#00E676', width=3)))
     fig.add_trace(go.Scatter(x=df.index, y=df['VWAP'], mode='lines', name='VWAP', line=dict(color='#FFD600', width=2, dash='dash')))
