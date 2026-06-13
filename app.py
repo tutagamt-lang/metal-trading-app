@@ -37,17 +37,18 @@ def calculate_pivots(H, L, C):
         "R1 (Resistance 1)": (2 * P) - L,
         "S1 (Support 1)": (2 * P) - H,
         "R2 (Resistance 2)": P + (H - L),
-        "S2 (Support 2)": P - (H - L),
+        "S2 (Support 2) tap": P - (H - L),
         "R3 (Resistance 3)": H + 2 * (P - L),
         "S3 (Support 3)": L - 2 * (H - P)
     }
 
-@st.cache_data(ttl=2)
+# CRITICAL FIX: TTL set to 1 second for ultra-fast python data polling
+@st.cache_data(ttl=1)
 def fetch_realtime_nse_data(symbol):
     try:
-        # Yahoo finance requires .NS for Indian stocks
         yahoo_symbol = f"{symbol}.NS" if not symbol.endswith(".NS") else symbol
-        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yahoo_symbol}?interval=5m&range=1d"
+        # Querying 1-minute interval data for faster and latest updates
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yahoo_symbol}?interval=1m&range=1d"
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'}
         response = requests.get(url, headers=headers, timeout=5)
         
@@ -70,13 +71,13 @@ def fetch_realtime_nse_data(symbol):
             raise Exception("Empty Data")
         return df, "LIVE REAL-TIME FEED"
     except Exception as e:
-        times = pd.date_range(start="09:15", end="15:30", freq="5min")
+        times = pd.date_range(start="09:15", end="15:30", freq="1min")
         df_backup = pd.DataFrame(index=times)
         clean_sym = symbol.replace(".NS", "")
-        base = {"TATASTEEL": 172.0, "HINDALCO": 655.0, "JSWSTEEL": 910.0, "VEDL": 452.0, "RELIANCE": 2450.0, "ITC": 282.20, "SBIN": 1006.20}.get(clean_sym, 500.0)
-        df_backup['Open'] = base + np.random.uniform(-2, 2, len(times))
-        df_backup['High'] = df_backup['Open'] + np.random.uniform(0, 4, len(times))
-        df_backup['Low'] = df_backup['Open'] - np.random.uniform(0, 4, len(times))
+        base = {"TATASTEEL": 197.80, "HINDALCO": 655.0, "JSWSTEEL": 910.0, "VEDL": 452.0, "RELIANCE": 1293.0, "ITC": 285.10, "SBIN": 1017.15}.get(clean_sym, 500.0)
+        df_backup['Open'] = base + np.random.uniform(-0.5, 0.5, len(times))
+        df_backup['High'] = df_backup['Open'] + np.random.uniform(0, 1, len(times))
+        df_backup['Low'] = df_backup['Open'] - np.random.uniform(0, 1, len(times))
         df_backup['Close'] = (df_backup['High'] + df_backup['Low']) / 2
         df_backup['Volume'] = np.random.randint(15000, 50000, len(times))
         return df_backup, "LIVE SIMULATION FEED"
@@ -89,7 +90,6 @@ st.sidebar.header("Stock Search")
 custom_ticker = st.sidebar.text_input("Ticker Symbol (e.g. SBIN or RELIANCE):", "").strip().upper()
 
 if custom_ticker:
-    # Auto clean input to prevent errors
     custom_ticker = custom_ticker.replace(".NS", "")
     if custom_ticker not in st.session_state.watchlist:
         if st.sidebar.button(f"[+] Add {custom_ticker}"):
@@ -110,9 +110,11 @@ if current_list:
         s_df, _ = fetch_realtime_nse_data(s)
         if len(s_df) >= 1:
             s_c915 = s_df.iloc[0]['Close']
-            s_c930 = s_df.iloc[min(2, len(s_df)-1)]['Close']
+            # Handles 1-minute interval indices safely for 9:30 strategy
+            idx_30 = min(15, len(s_df)-1)
+            s_c930 = s_df.iloc[idx_30]['Close']
             s_oi915 = int(s_df.iloc[0]['Volume'] * 0.42)
-            s_oi930 = int(s_df.iloc[min(2, len(s_df)-1)]['Volume'] * 0.48)
+            s_oi930 = int(s_df.iloc[idx_30]['Volume'] * 0.48)
             
             s_p_diff = s_c930 - s_c915
             s_oi_diff = s_oi930 - s_oi915
@@ -133,9 +135,8 @@ selected_focus = st.sidebar.selectbox(
     options=current_list if current_list else ["TATASTEEL"]
 )
 ticker_input = custom_ticker if custom_ticker else selected_focus
+ticker_clean = ticker_input.replace(".NS", "") 
 
-# Strictly format ticker for Yahoo vs TradingView
-ticker_clean = ticker_input.replace(".NS", "") # TradingView format: "SBIN"
 df, data_status = fetch_realtime_nse_data(ticker_clean)
 
 # -----------------------------------------------------------------
@@ -158,7 +159,7 @@ if len(df) >= 1:
     current_atr = df.iloc[-1]['ATR'] if not np.isnan(df.iloc[-1]['ATR']) else 1.0
 
     idx_915 = 0
-    idx_930 = min(2, len(df) - 1)
+    idx_930 = min(15, len(df) - 1)  # 15th minute candle corresponds to 9:30 AM in 1m intervals
 
     o_915, h_915, l_915, c_915 = df.iloc[idx_915]['Open'], df.iloc[idx_915]['High'], df.iloc[idx_915]['Low'], df.iloc[idx_915]['Close']
     o_930, h_930, l_930, c_930 = df.iloc[idx_930]['Open'], df.iloc[idx_930]['High'], df.iloc[idx_930]['Low'], df.iloc[idx_930]['Close']
@@ -184,7 +185,6 @@ if len(df) >= 1:
         new_l = initial_levels["R1 (Resistance 1)"]
         new_c = initial_levels["R3 (Resistance 3)"]
         levels = calculate_pivots(new_h, new_l, new_c)
-        
     elif live_price < initial_levels["S3 (Support 3)"]:
         new_h = initial_levels["S1 (Support 1)"]
         new_l = initial_levels["S3 (Support 3)"]
@@ -215,16 +215,22 @@ if len(df) >= 1:
         dow_trend_display, trend_color = "SIDEWAYS MARKET", "#FFD600"
 
     # Main Header
-    st.title(f" {ticker_clean} Advanced Real-Time Live Trading Dashboard")
+    st.title(f"⚡ {ticker_clean} Advanced Real-Time Live Trading Dashboard")
 
-    # FIXED: SAFE ULTRA LIVE TICKER PRICE WIDGET (With fallback integration)
+    # TradingView Ticker Widget (Instant Tick Feed)
     st.markdown("### ⚡ Ultra Live Tick-By-Tick Ticker")
+    
+    # FIXED LOGIC: TRADINGVIEW SYMBOL RE-MAPPING TO PREVENT CORRUPTION
+    tv_symbol = f"NSE:{ticker_clean}"
+    if ticker_clean in ["NIFTY", "BANKNIFTY"]:
+        tv_symbol = f"NSE:{ticker_clean}1!"
+        
     tradingview_ticker_html = f"""
     <div class="tradingview-widget-container" style="background-color: #131722; border-radius: 6px; padding: 2px;">
       <div class="tradingview-widget-container__widget"></div>
       <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
       {{
-        "symbol": "NSE:{ticker_clean}",
+        "symbol": "{tv_symbol}",
         "width": "100%",
         "colorTheme": "dark",
         "isTransparent": false,
@@ -233,15 +239,14 @@ if len(df) >= 1:
       </script>
     </div>
     """
-    # Render component safely
     components.html(tradingview_ticker_html, height=140)
 
-    # Live Price Card (Fixed Font Colors and Structure)
+    # Live Price Card (Now Syncs with 1-Minute Core Pipeline Engine)
     st.markdown(f"""
     <div style="background-color:#111111; padding: 25px; border-radius: 12px; border-left: 8px solid {dc_color}; margin-bottom: 25px;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
             <div>
-                <span style="color:#FFFFFF; font-size:14px; font-weight:bold; letter-spacing:1px;">LAST SYNCED DATA PRICE (5M REFRESH)</span>
+                <span style="color:#FFFFFF; font-size:14px; font-weight:bold; letter-spacing:1px;">ENGINE LIVE PRICE (HIGH SPEED POLLING)</span>
                 <h1 style="color:#00E676; margin:5px 0; font-size:56px; font-family: monospace; font-weight: bold;">INR {live_price:.2f}</h1>
                 <span style="color:{dc_color}; font-size:18px; font-weight:bold;">Today's Move: {day_change:+.2f} ({((day_change/day_open)*100):+.2f}%)</span>
             </div>
@@ -255,7 +260,7 @@ if len(df) >= 1:
     </div>
     """, unsafe_allow_html=True)
 
-    # Indicator KPIs (Fixed Text Colors to High Contrast White/Custom Colors)
+    # Indicator KPIs
     rsi_status = "Oversold" if current_rsi < 30 else ("Overbought" if current_rsi > 70 else "Neutral")
     rsi_color = "#00E676" if current_rsi < 30 else ("#FF1744" if current_rsi > 70 else "#FFD600")
     ema_status = "Bullish" if current_ema9 > current_ema21 else "Bearish"
@@ -269,12 +274,12 @@ if len(df) >= 1:
     with kpi3:
         st.markdown(f'<div style="background-color:#1a1a1a; padding:15px; border-radius:8px; border-top:4px solid #FFD600; text-align:center;"><h5 style="color:#FFFFFF;">ATR Buffer</h5><h2 style="color:#FFD600;">INR {current_atr:.2f}</h2><span style="color:#FFFFFF;">Market Volatility</span></div>', unsafe_allow_html=True)
     with kpi4:
-        st.markdown(f'<div style="background-color:#1a1a1a; padding:15px; border-radius:8px; border-top:4px solid #00B0FF; text-align:center;"><h5 style="color:#FFFFFF;">Loop Timer</h5><h2 style="color:#00B0FF;">5 Secs</h2><span style="color:#FFFFFF;">Auto Streaming Active</span></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="background-color:#1a1a1a; padding:15px; border-radius:8px; border-top:4px solid #00B0FF; text-align:center;"><h5 style="color:#FFFFFF;">Loop Timer</h5><h2 style="color:#00B0FF;">1 Sec</h2><span style="color:#FFFFFF;">Ultra Streaming Active</span></div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
     # Chart Section
-    st.header(f" {ticker_clean} Live Interactive Chart")
+    st.header(f"📈 {ticker_clean} Live Interactive Chart")
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines+markers', name='Live Price', line=dict(color='#00E676', width=3)))
     fig.add_trace(go.Scatter(x=df.index, y=df['VWAP'], mode='lines', name='VWAP', line=dict(color='#FFD600', width=2, dash='dash')))
@@ -402,7 +407,8 @@ if len(df) >= 1:
     pivot_df = pd.DataFrame(list(levels.items()), columns=["Levels Name", "Price Range (INR)"])
     st.dataframe(pivot_df, use_container_width=True, hide_index=True)
 
-    time.sleep(5)
+    # High speed rerun trigger
+    time.sleep(1)
     st.rerun()
 else:
     st.error("Data fetch error. Please reboot.")
