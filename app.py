@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Premium Global Styles Dashboard Styling
+# FIXED CSS: Adjusting padding-top to 2.2rem to completely fix the hidden title issue
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap');
@@ -25,15 +25,17 @@ st.markdown("""
             font-family: 'Inter', sans-serif;
         }
         .block-container {
-            padding-top: 0.5rem; 
+            padding-top: 2.2rem !important; 
             padding-bottom: 0rem; 
             padding-left: 1.5rem; 
             padding-right: 1.5rem;
         }
-        h1, h2, h3, h4 {
+        h2 {
             font-family: 'Inter', sans-serif;
             font-weight: 600;
             letter-spacing: -0.5px;
+            margin-top: 5px !important;
+            margin-bottom: 10px !important;
         }
         .mono-text {
             font-family: 'JetBrains Mono', monospace !important;
@@ -166,13 +168,13 @@ if len(df) >= 1:
     movement_type = get_oi_movement(oi_change, c_930 - c_915)
     levels = calculate_pivots(float(df.iloc[0:idx_930+1]['High'].max()), float(df.iloc[0:idx_930+1]['Low'].min()), float(c_930))
 
-    # Top Header Panel
+    # Top Header Panel - FIXED IN LINE HEIGHT WITH MARGINS
     head_col1, head_col2 = st.columns([1.5, 1])
     with head_col1:
-        st.markdown(f"<h2 style='margin: 0px; letter-spacing: -1px;'>INSTITUTIONAL QUANT TERMINAL // <span style='color:#888;'>{ticker_clean}</span></h2>", unsafe_allow_html=True)
+        st.markdown(f"<h2>INSTITUTIONAL QUANT TERMINAL // <span style='color:#888;'>{ticker_clean}</span></h2>", unsafe_allow_html=True)
     with head_col2:
         components.html(f"""
-            <div class="tradingview-widget-container">
+            <div class="tradingview-widget-container" style="margin-top: 5px;">
               <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
               {{"symbol": "NSE:{ticker_clean}", "width": "100%", "colorTheme": "dark", "isTransparent": true, "locale": "en"}}
               </script>
@@ -227,7 +229,6 @@ if len(df) >= 1:
         """, unsafe_allow_html=True)
 
     with layout_col2:
-        # FIXED: THE BUY/SELL BOX IS NOW FULLY PERSISTENT OUTSIDE ANY CONDITIONAL BLOCKS
         strike_step = 5.0 if live_price < 300 else (20.0 if live_price < 1500 else 50.0)
         atm_strike = round(live_price / strike_step) * strike_step
         highest_call_oi_strike = atm_strike + (strike_step * 2)
@@ -236,7 +237,7 @@ if len(df) >= 1:
         h_color = "#00ff88" if h_930 > h_915 and l_930 > l_915 else ("#ff2a5f" if h_930 < h_915 and l_930 < l_915 else "#ffcc00")
         dow_label = "UPTREND" if h_color == "#00ff88" else ("DOWNTREND" if h_color == "#ff2a5f" else "SIDEWAYS")
 
-        # Dynamic Recommendation Box Generation Logic
+        # Recommendation Box Logic
         if "UPTREND" in dow_label and live_price > current_vwap and "LONG" in movement_type:
             entry_exact = max(levels["R1 (Resistance 1)"], h_930)
             action_html = f"""<div style="background-color:#031f12; padding:20px; border-radius:6px; border-left:5px solid #00ff88; border-top:1px solid #1c2333; border-right:1px solid #1c2333; border-bottom:1px solid #1c2333; color:#ffffff;">
@@ -256,7 +257,6 @@ if len(df) >= 1:
                 • QUANT STOP LOSS RISK: <b class="mono-text" style="color:#ff3d00; font-size:18px;">INR {entry_exact + (current_atr * 1.5):.2f}</b>
             </div>"""
         else:
-            # Re-calculating temporary levels to make sure the user ALWAYS gets prices to look at
             calc_entry_b = max(levels["R1 (Resistance 1)"], h_930)
             calc_entry_s = min(levels["S1 (Support 1)"], l_930)
             action_html = f"""<div style="background-color:#1c1703; padding:20px; border-radius:6px; border-left:5px solid #ffcc00; border-top:1px solid #1c2333; border-right:1px solid #1c2333; border-bottom:1px solid #1c2333; color:#ffffff;">
@@ -270,7 +270,7 @@ if len(df) >= 1:
         
         st.markdown(action_html, unsafe_allow_html=True)
 
-        # Volume Distribution
+        # Volume Distribution Bar
         st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
         st.progress(24)
 
