@@ -43,12 +43,17 @@ def get_oi_movement(oi_change, price_diff):
     elif oi_change <= 0 and price_diff <= 0: return "Profit Booking"
     else: return "Short Covering"
 
+# FIXED: Pivot Levels ordered exactly from R3 down to S3
 def calculate_pivots(H, L, C):
     P = (H + L + C) / 3
     return {
-        "P (Pivot)": P, "R1": (2 * P) - L, "S1": (2 * P) - H,
-        "R2": P + (H - L), "S2": P - (H - L),
-        "R3": H + 2 * (P - L), "S3": L - 2 * (H - P)
+        "R3 (Resistance 3)": H + 2 * (P - L),
+        "R2 (Resistance 2)": P + (H - L),
+        "R1 (Resistance 1)": (2 * P) - L,
+        "P (Pivot Point)": P,
+        "S1 (Support 1)": (2 * P) - H,
+        "S2 (Support 2)": P - (H - L),
+        "S3 (Support 3)": L - 2 * (H - P)
     }
 
 @st.cache_data(ttl=1)
@@ -165,21 +170,21 @@ if len(df) >= 1:
     <div style="background-color:#111111; padding: 12px; border-radius: 8px; border-left: 6px solid {dc_color}; margin-bottom: 15px;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
             <div>
-                <span style="color:#888; font-size:11px; font-weight:bold;">ENGINE POLLING PRICE</span>
-                <h2 style="color:#00E676; margin:0px; font-size:34px; font-family: monospace;">INR {live_price:.2f} <span style="color:{dc_color}; font-size:16px;">{day_change:+.2f} ({((day_change/day_open)*100):+.2f}%)</span></h2>
+                <span style="color:#FFF; font-size:12px; font-weight:bold; letter-spacing:1px;">ENGINE LIVE RUNNING PRICE</span>
+                <h2 style="color:#00E676; margin:0px; font-size:36px; font-family: monospace; font-weight:bold;">INR {live_price:.2f} <span style="color:{dc_color}; font-size:18px;">{day_change:+.2f} ({((day_change/day_open)*100):+.2f}%)</span></h2>
             </div>
-            <div style="display: flex; gap: 20px; background-color:#1a1a1a; padding:8px 20px; border-radius:6px; border:1px solid #333;">
-                <div><span style="color:#aaa; font-size:11px;">VWAP</span><br><b style="color:#00B0FF; font-size:14px; font-family: monospace;">{current_vwap:.2f}</b></div>
-                <div><span style="color:#aaa; font-size:11px;">RSI (14)</span><br><b style="color:#FFD600; font-size:14px; font-family: monospace;">{current_rsi:.2f}</b></div>
-                <div><span style="color:#aaa; font-size:11px;">EMA 9/21</span><br><b style="color:#00E676; font-size:14px; font-family: monospace;">{current_ema9:.1f}/{current_ema21:.1f}</b></div>
-                <div><span style="color:#aaa; font-size:11px;">ATR (14)</span><br><b style="color:#FFD600; font-size:14px; font-family: monospace;">{current_atr:.2f}</b></div>
+            <div style="display: flex; gap: 20px; background-color:#1a1a1a; padding:10px 20px; border-radius:6px; border:2px solid #444;">
+                <div><span style="color:#fff; font-size:12px; font-weight:bold;">VWAP</span><br><b style="color:#00B0FF; font-size:16px; font-family: monospace;">{current_vwap:.2f}</b></div>
+                <div><span style="color:#fff; font-size:12px; font-weight:bold;">RSI (14)</span><br><b style="color:#FFD600; font-size:16px; font-family: monospace;">{current_rsi:.2f}</b></div>
+                <div><span style="color:#fff; font-size:12px; font-weight:bold;">EMA 9/21</span><br><b style="color:#00E676; font-size:16px; font-family: monospace;">{current_ema9:.1f}/{current_ema21:.1f}</b></div>
+                <div><span style="color:#fff; font-size:12px; font-weight:bold;">ATR (14)</span><br><b style="color:#FFD600; font-size:16px; font-family: monospace;">{current_atr:.2f}</b></div>
             </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
     # Split Screen Layout: Left (Chart & Pivots) | Right (Strategy Analysis)
-    layout_col1, layout_col2 = st.columns([1.1, 1])
+    layout_col1, layout_col2 = st.columns([1, 1])
 
     with layout_col1:
         # Mini Chart
@@ -189,55 +194,50 @@ if len(df) >= 1:
         fig.update_layout(template="plotly_dark", margin=dict(l=10, r=10, t=10, b=10), height=180, showlegend=False)
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-        # 9:15-9:30 Strategy Block & Pivot Levels Combined
-        row_c1, row_c2 = st.columns(2)
-        with row_c1:
-            st.markdown(f"""
-            <div style="background-color:#161616; padding:10px; border-radius:6px; font-size:13px; border: 1px solid #333;">
-                <b style="color:#FFD600;">9:15-9:30 Matrix:</b><br>
-                • 9:15 Cl: <b>{c_915:.2f}</b> | 9:30 Cl: <b>{c_930:.2f}</b><br>
-                • Futures OI: <b>{oi_change:+,} Qty</b><br>
-                • Setup: <span style="color:#00B0FF;"><b>{movement_type}</b></span>
-            </div>
-            """, unsafe_allow_html=True)
-        with row_c2:
-            dow_color = "#00E676" if h_930 > h_915 and l_930 > l_915 else ("#FF1744" if h_930 < h_915 and l_930 < l_915 else "#FFD600")
-            dow_label = "UPTREND" if dow_color == "#00E676" else ("DOWNTREND" if dow_color == "#FF1744" else "SIDEWAYS")
-            st.markdown(f"""
-            <div style="background-color:#161616; padding:10px; border-radius:6px; font-size:13px; border: 1px solid #333; height: 100%;">
-                <b style="color:#FFD600;">Trend Analysis:</b><br>
-                • Dow Trend: <span style="color:{dow_color}; font-weight:bold;">{dow_label}</span><br>
-                • VWAP Position: <b>{"ABOVE" if live_price > current_vwap else "BELOW"} VWAP</b>
-            </div>
-            """, unsafe_allow_html=True)
+        # 9:15-9:30 Strategy Block & Trend Layout (HIGH VISIBILITY FONTS)
+        st.markdown(f"""
+        <div style="background-color:#1c1c1c; padding:15px; border-radius:8px; font-size:15px; border: 2px solid #555; color:#ffffff; line-height:1.6;">
+            <b style="color:#FFD600; font-size:17px; letter-spacing:1px;">📊 9:15 - 9:30 STRATEGY MATRIX</b><br>
+            • 9:15 Candle Close Price: <b style="color:#00B0FF; font-family:monospace;">INR {c_915:.2f}</b><br>
+            • 9:30 Candle Close Price: <b style="color:#00B0FF; font-family:monospace;">INR {c_930:.2f}</b><br>
+            • Futures Open Interest (OI) Change: <b style="color:#FFD600; font-family:monospace;">{oi_change:+,} Qty</b><br>
+            • Setup Identification: <span style="background-color:#333; padding:2px 6px; border-radius:4px; color:#00E676; font-weight:bold;">{movement_type}</span>
+        </div>
+        """, unsafe_allow_html=True)
 
     with layout_col2:
-        # Dynamic Buying/Selling Action Box Area
+        # Dynamic Buying/Selling Action Box Area (HIGH CONTRAST & ENHANCED FONT)
         strike_step = 5.0 if live_price < 300 else (20.0 if live_price < 1500 else 50.0)
         atm_strike = round(live_price / strike_step) * strike_step
         highest_call_oi_strike = atm_strike + (strike_step * 2)
         highest_put_oi_strike = atm_strike - (strike_step * 2)
 
-        # BUY / SELL LOGIC GENERATOR
+        dow_color = "#00E676" if h_930 > h_915 and l_930 > l_915 else ("#FF1744" if h_930 < h_915 and l_930 < l_915 else "#FFD600")
+        dow_label = "UPTREND" if dow_color == "#00E676" else ("DOWNTREND" if dow_color == "#FF1744" else "SIDEWAYS")
+
+        # BUY / SELL LOGIC GENERATOR WITH ULTRA CLEAR TEXT
         if "UPTREND" in dow_label and live_price > current_vwap and "Long" in movement_type:
-            entry_exact = max(levels["R1"], h_930)
-            action_html = f"""<div style="background-color:#0d2e1f; padding:12px; border-radius:8px; border:2px solid #00E676; font-size:13px;">
-                <b style="color:#00E676; font-size:15px;">🔥 DOUBLE CONFIRMED BUY SIGN</b><br>
-                • Trigger Entry: <b>Above {entry_exact:.2f}</b> | Target: <b>{min(levels["R2"], highest_call_oi_strike):.2f}</b><br>
-                • Stop Loss: <span style="color:#FF1744;"><b>{entry_exact - (current_atr * 1.5):.2f}</b></span>
+            entry_exact = max(levels["R1 (Resistance 1)"], h_930)
+            action_html = f"""<div style="background-color:#052e16; padding:18px; border-radius:8px; border:3px solid #00E676; font-size:16px; color:#ffffff; line-height:1.6;">
+                <b style="color:#00E676; font-size:20px; letter-spacing:1px;">🔥 [BUY SIGN] TRIPLE CONFIRMED MATCHED</b><br>
+                • TRIGGER ENTRY PRICE: <b style="color:#00E676; font-size:18px; font-family:monospace;">Above INR {entry_exact:.2f}</b><br>
+                • SAFE TARGET PRICE: <b style="color:#00B0FF; font-size:18px; font-family:monospace;">INR {min(levels["R2 (Resistance 2)"], highest_call_oi_strike):.2f}</b><br>
+                • SYSTEM STOP LOSS (ATR): <b style="color:#FF1744; font-size:18px; font-family:monospace;">INR {entry_exact - (current_atr * 1.5):.2f}</b>
             </div>"""
         elif "DOWNTREND" in dow_label and live_price < current_vwap and "Short" in movement_type:
-            entry_exact = min(levels["S1"], l_930)
-            action_html = f"""<div style="background-color:#421119; padding:12px; border-radius:8px; border:2px solid #FF1744; font-size:13px;">
-                <b style="color:#FF1744; font-size:15px;">🚨 DOUBLE CONFIRMED SHORT SELL</b><br>
-                • Trigger Entry: <b>Below {entry_exact:.2f}</b> | Target: <b>{max(levels["S2"], highest_put_oi_strike):.2f}</b><br>
-                • Stop Loss: <span style="color:#FF1744;"><b>{entry_exact + (current_atr * 1.5):.2f}</b></span>
+            entry_exact = min(levels["S1 (Support 1)"], l_930)
+            action_html = f"""<div style="background-color:#450a0a; padding:18px; border-radius:8px; border:3px solid #FF1744; font-size:16px; color:#ffffff; line-height:1.6;">
+                <b style="color:#FF1744; font-size:20px; letter-spacing:1px;">🚨 [SELL SIGN] TRIPLE CONFIRMED MATCHED</b><br>
+                • TRIGGER ENTRY PRICE: <b style="color:#FF1744; font-size:18px; font-family:monospace;">Below INR {entry_exact:.2f}</b><br>
+                • SAFE TARGET PRICE: <b style="color:#00B0FF; font-size:18px; font-family:monospace;">INR {max(levels["S2 (Support 2)"], highest_put_oi_strike):.2f}</b><br>
+                • SYSTEM STOP LOSS (ATR): <b style="color:#FF3D00; font-size:18px; font-family:monospace;">INR {entry_exact + (current_atr * 1.5):.2f}</b>
             </div>"""
         else:
-            action_html = f"""<div style="background-color:#2a2307; padding:12px; border-radius:8px; border:2px solid #FFD600; font-size:13px;">
-                <b style="color:#FFD600; font-size:15px;">⚠️ NO TRADE ZONE (Signals Conflicting)</b><br>
-                • Heavy Call Resistance Wall: <b>INR {highest_call_oi_strike:.2f}</b><br>
-                • Heavy Put Support Wall: <b>INR {highest_put_oi_strike:.2f}</b>
+            action_html = f"""<div style="background-color:#2e2505; padding:18px; border-radius:8px; border:3px solid #FFD600; font-size:16px; color:#ffffff; line-height:1.6;">
+                <b style="color:#FFD600; font-size:19px; letter-spacing:1px;">⚠️ NO TRADE ZONE (SIGNALS CONFLICTING)</b><br>
+                • Dow Theory Setup: <b style="color:#fff;">{dow_label}</b> | VWAP Status: <b style="color:#fff;">{"Price > VWAP" if live_price > current_vwap else "Price < VWAP"}</b><br>
+                • Call Resistance Wall: <b style="color:#FF1744; font-family:monospace;">INR {highest_call_oi_strike:.2f}</b><br>
+                • Put Support Wall: <b style="color:#00E676; font-family:monospace;">INR {highest_put_oi_strike:.2f}</b>
             </div>"""
         
         st.markdown(action_html, unsafe_allow_html=True)
@@ -246,15 +246,24 @@ if len(df) >= 1:
         st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
         md_col1, md_col2 = st.columns(2)
         with md_col1:
-            st.caption("🔴 Institutional Sell Pressure (Sellers: 934K)")
+            st.markdown("<b>🔴 Institutional Sellers: 934K</b>", unsafe_allow_html=True)
         with md_col2:
-            st.caption("🟢 Buyer Pressure (Buyers: 306K)")
-        st.progress(24) # 24% buyer ratio representation
+            st.markdown("<p style='text-align:right;'><b>🟢 Active Buyers: 306K</b></p>", unsafe_allow_html=True)
+        st.progress(24)
 
-        # Pivot Point Dashboard Reference Sheet (Compact Matrix View)
-        st.markdown("<div style='margin-top:5px;'></div>", unsafe_allow_html=True)
-        p_matrix = pd.DataFrame([levels.values()], columns=levels.keys())
-        st.dataframe(p_matrix, hide_index=True, use_container_width=True)
+    # -----------------------------------------------------------------
+    # FIXED ORDER PIVOT MATRIX SHEET (R3 down to S3 - Vertical Layout)
+    # -----------------------------------------------------------------
+    st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
+    st.subheader("🎯 Dynamic Breakout & Pivot Matrix Sheet")
+    
+    # Convert dictionary items into structured Dataframe rows
+    pivot_rows = []
+    for level_name, val in levels.items():
+        pivot_rows.append({"Pivot Levels Block": level_name, "Target Price (INR)": f"{val:.2f}"})
+    
+    pivot_matrix_df = pd.DataFrame(pivot_rows)
+    st.dataframe(pivot_matrix_df, hide_index=True, use_container_width=True)
 
     # 1-Second Refresh Clock Trigger
     time.sleep(1)
