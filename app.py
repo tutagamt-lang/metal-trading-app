@@ -9,20 +9,47 @@ from ta.trend import EMAIndicator
 import streamlit.components.v1 as components
 import time
 
-# 1. Page Configuration for Ultra Wide and Tight Layout
+# 1. Page Configuration for Pro Institutional Layout
 st.set_page_config(
     layout="wide", 
-    page_title="Universal Real-Time NSE Trading Dashboard",
+    page_title="QUANTUM-X Live Trading Terminal",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS to reduce padding and maximize vertical screen space
+# Premium Global Styles Dashboard Styling
 st.markdown("""
     <style>
-        .block-container {padding-top: 1rem; padding-bottom: 0rem; padding-left: 2rem; padding-right: 2rem;}
-        h1 {margin-top: -10px; padding-top: 0px; margin-bottom: 10px;}
-        h3 {margin-top: 5px; margin-bottom: 5px;}
-        .stMetric {padding-top: 0px; padding-bottom: 0px;}
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        .block-container {
+            padding-top: 0.5rem; 
+            padding-bottom: 0rem; 
+            padding-left: 1.5rem; 
+            padding-right: 1.5rem;
+        }
+        h1, h2, h3, h4 {
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+        .mono-text {
+            font-family: 'JetBrains Mono', monospace !important;
+        }
+        /* Custom styled table for pivots */
+        .pivot-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            background-color: #0b0c10;
+        }
+        .pivot-table td, .pivot-table th {
+            border: 1px solid #1f2833;
+            padding: 8px 12px;
+            font-family: 'JetBrains Mono', monospace;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -31,19 +58,16 @@ if "last_refresh" not in st.session_state:
 
 if 'watchlist' not in st.session_state:
     st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
-elif not isinstance(st.session_state.watchlist, list):
-    st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
 
 # -----------------------------------------------------------------
-# CORE DATA ENGINE (High Speed 1-Minute Polling)
+# DATA ENGINE PIPELINE
 # -----------------------------------------------------------------
 def get_oi_movement(oi_change, price_diff):
-    if oi_change > 0 and price_diff > 0: return "Long Buildup"
-    elif oi_change > 0 and price_diff <= 0: return "Short Buildup"
-    elif oi_change <= 0 and price_diff <= 0: return "Profit Booking"
-    else: return "Short Covering"
+    if oi_change > 0 and price_diff > 0: return "LONG BUILDUP"
+    elif oi_change > 0 and price_diff <= 0: return "SHORT BUILDUP"
+    elif oi_change <= 0 and price_diff <= 0: return "PROFIT BOOKING"
+    else: return "SHORT COVERING"
 
-# FIXED: Pivot Levels ordered exactly from R3 down to S3
 def calculate_pivots(H, L, C):
     P = (H + L + C) / 3
     return {
@@ -61,53 +85,45 @@ def fetch_realtime_nse_data(symbol):
     try:
         yahoo_symbol = f"{symbol}.NS" if not symbol.endswith(".NS") else symbol
         url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yahoo_symbol}?interval=1m&range=1d"
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(url, headers=headers, timeout=5)
-        
         result = response.json()['chart']['result'][0]
         indicators = result['indicators']['quote'][0]
         timestamps = result['timestamp']
-        
         df = pd.DataFrame({
             'Open': indicators['open'], 'High': indicators['high'],
             'Low': indicators['low'], 'Close': indicators['close'],
             'Volume': indicators['volume']
         }, index=pd.to_datetime(timestamps, unit='s', utc=True).tz_convert('Asia/Kolkata'))
-        return df.dropna(), "LIVE FEED"
+        return df.dropna(), "LIVE"
     except:
         times = pd.date_range(start="09:15", end="15:30", freq="1min")
         df_backup = pd.DataFrame(index=times)
-        clean_sym = symbol.replace(".NS", "")
-        base = {"TATASTEEL": 197.80, "RELIANCE": 1293.0, "ITC": 285.10, "SBIN": 1017.15}.get(clean_sym, 500.0)
+        base = {"TATASTEEL": 197.80, "RELIANCE": 1293.0, "ITC": 285.10, "SBIN": 1017.15}.get(symbol, 500.0)
         df_backup['Open'] = base + np.random.uniform(-0.5, 0.5, len(times))
         df_backup['High'] = df_backup['Open'] + np.random.uniform(0, 0.8, len(times))
         df_backup['Low'] = df_backup['Open'] - np.random.uniform(0, 0.8, len(times))
         df_backup['Close'] = (df_backup['High'] + df_backup['Low']) / 2
         df_backup['Volume'] = np.random.randint(15000, 50000, len(times))
-        return df_backup, "SIMULATION"
+        return df_backup, "SIM"
 
 # -----------------------------------------------------------------
-# SIDEBAR CONTROL & MINI SCANNER
+# SIDEBAR RADAR SCANNER
 # -----------------------------------------------------------------
-st.sidebar.header("🔍 Stock Search")
-custom_ticker = st.sidebar.text_input("Ticker Symbol:", "").strip().upper().replace(".NS", "")
+st.sidebar.markdown("### `📡 RADAR TERMINAL`")
+custom_ticker = st.sidebar.text_input("ENTER TICKER SYMBOL:", "").strip().upper()
 
 if custom_ticker:
     if custom_ticker not in st.session_state.watchlist:
-        if st.sidebar.button(f"[+] Add {custom_ticker}", use_container_width=True):
+        if st.sidebar.button(f"[+] ADD {custom_ticker}", use_container_width=True):
             st.session_state.watchlist.append(custom_ticker)
             st.rerun()
-    else:
-        if st.sidebar.button(f"[-] Remove {custom_ticker}", use_container_width=True):
-            st.session_state.watchlist.remove(custom_ticker)
-            st.rerun()
 
-st.sidebar.markdown("---")
-selected_focus = st.sidebar.selectbox("🎯 Select Active Focus Stock:", options=st.session_state.watchlist if st.session_state.watchlist else ["TATASTEEL"])
+selected_focus = st.sidebar.selectbox("⚡ ACTIVE INSTANCE:", options=st.session_state.watchlist)
 ticker_clean = custom_ticker if custom_ticker else selected_focus
 
-# Sidebar Live Watchlist Scanner (Compact View)
-st.sidebar.subheader("📊 Live Watchlist Scanner")
+st.sidebar.markdown("---")
+st.sidebar.markdown("#### `⚡ MULTI-STOCK MONITOR`")
 if st.session_state.watchlist:
     scanner_data = []
     for s in st.session_state.watchlist:
@@ -115,17 +131,16 @@ if st.session_state.watchlist:
         if len(s_df) >= 1:
             idx_30 = min(15, len(s_df)-1)
             s_move = get_oi_movement(int(s_df.iloc[idx_30]['Volume']*0.48) - int(s_df.iloc[0]['Volume']*0.42), s_df.iloc[idx_30]['Close'] - s_df.iloc[0]['Close'])
-            scanner_data.append({"Stock": s, "Price": f"{s_df.iloc[-1]['Close']:.2f}", "OI Setup": s_move})
+            scanner_data.append({"STOCK": s, "LAST PRICE": f"{s_df.iloc[-1]['Close']:.2f}", "OI MATRIX": s_move})
     st.sidebar.dataframe(pd.DataFrame(scanner_data), hide_index=True, use_container_width=True)
 
-# Fetch Active Data
 df, data_status = fetch_realtime_nse_data(ticker_clean)
 
 # -----------------------------------------------------------------
-# MAIN DASHBOARD - SINGLE PAGE STRUCTURE
+# MAIN TERMINAL DASHBOARD
 # -----------------------------------------------------------------
 if len(df) >= 1:
-    # Calculations
+    # Math Pipeline
     df['VWAP'] = ((df['High'] + df['Low'] + df['Close']) / 3 * df['Volume']).cumsum() / df['Volume'].cumsum()
     current_vwap = df.iloc[-1]['VWAP']
     df['RSI'] = RSIIndicator(close=df['Close'], window=14).rsi()
@@ -146,126 +161,141 @@ if len(df) >= 1:
     live_price = df.iloc[-1]['Close']
     day_open = df.iloc[0]['Open']
     day_change = live_price - day_open
-    dc_color = "#00E676" if day_change >= 0 else "#FF1744"
+    dc_color = "#00ff88" if day_change >= 0 else "#ff2a5f"
     
     oi_change = int(df.iloc[idx_930]['Volume'] * 0.48) - int(df.iloc[idx_915]['Volume'] * 0.42)
     movement_type = get_oi_movement(oi_change, c_930 - c_915)
     levels = calculate_pivots(float(df.iloc[0:idx_930+1]['High'].max()), float(df.iloc[0:idx_930+1]['Low'].min()), float(c_930))
 
-    # Header Row (Title & Ultra Ticker Side-By-Side)
-    head_col1, head_col2 = st.columns([1.2, 1])
+    # Top Header Panel (Clean & Ultra Pro)
+    head_col1, head_col2 = st.columns([1.5, 1])
     with head_col1:
-        st.title(f"⚡ {ticker_clean} Real-Time Dashboard")
+        st.markdown(f"<h2 style='margin: 0px; letter-spacing: -1px;'>INSTITUTIONAL QUANT TERMINAL // <span style='color:#888;'>{ticker_clean}</span></h2>", unsafe_allow_html=True)
     with head_col2:
         components.html(f"""
-            <div class="tradingview-widget-container" style="background-color: #131722; border-radius: 4px;">
+            <div class="tradingview-widget-container">
               <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
               {{"symbol": "NSE:{ticker_clean}", "width": "100%", "colorTheme": "dark", "isTransparent": true, "locale": "en"}}
               </script>
             </div>
-        """, height=75)
+        """, height=50)
 
-    # Main Price Display Card & KPI Blocks Row
+    # Core Institutional Stream Box
     st.markdown(f"""
-    <div style="background-color:#111111; padding: 12px; border-radius: 8px; border-left: 6px solid {dc_color}; margin-bottom: 15px;">
+    <div style="background-color:#090a0f; padding: 14px; border-radius: 6px; border: 1px solid #1c2333; margin-bottom: 15px;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
             <div>
-                <span style="color:#FFF; font-size:12px; font-weight:bold; letter-spacing:1px;">ENGINE LIVE RUNNING PRICE</span>
-                <h2 style="color:#00E676; margin:0px; font-size:36px; font-family: monospace; font-weight:bold;">INR {live_price:.2f} <span style="color:{dc_color}; font-size:18px;">{day_change:+.2f} ({((day_change/day_open)*100):+.2f}%)</span></h2>
+                <span style="color:#566275; font-size:11px; font-weight:700; letter-spacing:1.5px;">CORE PRICE ENGINE FEED</span>
+                <h1 class="mono-text" style="color:#FFFFFF; margin:0px; font-size:38px; font-weight:700;">INR {live_price:.2f} <span style="color:{dc_color}; font-size:18px; font-weight:normal;">{day_change:+.2f} ({((day_change/day_open)*100):+.2f}%)</span></h1>
             </div>
-            <div style="display: flex; gap: 20px; background-color:#1a1a1a; padding:10px 20px; border-radius:6px; border:2px solid #444;">
-                <div><span style="color:#fff; font-size:12px; font-weight:bold;">VWAP</span><br><b style="color:#00B0FF; font-size:16px; font-family: monospace;">{current_vwap:.2f}</b></div>
-                <div><span style="color:#fff; font-size:12px; font-weight:bold;">RSI (14)</span><br><b style="color:#FFD600; font-size:16px; font-family: monospace;">{current_rsi:.2f}</b></div>
-                <div><span style="color:#fff; font-size:12px; font-weight:bold;">EMA 9/21</span><br><b style="color:#00E676; font-size:16px; font-family: monospace;">{current_ema9:.1f}/{current_ema21:.1f}</b></div>
-                <div><span style="color:#fff; font-size:12px; font-weight:bold;">ATR (14)</span><br><b style="color:#FFD600; font-size:16px; font-family: monospace;">{current_atr:.2f}</b></div>
+            <div style="display: flex; gap: 25px; background-color:#121620; padding:10px 20px; border-radius:4px; border:1px solid #252e3d;">
+                <div><span style="color:#7889a3; font-size:11px; font-weight:600;">VWAP TRACKER</span><br><b class="mono-text" style="color:#00b0ff; font-size:16px;">{current_vwap:.2f}</b></div>
+                <div><span style="color:#7889a3; font-size:11px; font-weight:600;">MOMENTUM RSI</span><br><b class="mono-text" style="color:#ffcc00; font-size:16px;">{current_rsi:.2f}</b></div>
+                <div><span style="color:#7889a3; font-size:11px; font-weight:600;">EMA 9 / 21</span><br><b class="mono-text" style="color:#00ff88; font-size:16px;">{current_ema9:.1f}/{current_ema21:.1f}</b></div>
+                <div><span style="color:#7889a3; font-size:11px; font-weight:600;">ATR MATRIX</span><br><b class="mono-text" style="color:#ffcc00; font-size:16px;">{current_atr:.2f}</b></div>
             </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Split Screen Layout: Left (Chart & Pivots) | Right (Strategy Analysis)
+    # Master Split Screen Row
     layout_col1, layout_col2 = st.columns([1, 1])
 
     with layout_col1:
-        # Mini Chart
+        # High Density Pro Plotly Chart
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines', name='Price', line=dict(color='#00E676', width=2)))
-        fig.add_trace(go.Scatter(x=df.index, y=df['VWAP'], mode='lines', name='VWAP', line=dict(color='#FFD600', width=1.5, dash='dash')))
-        fig.update_layout(template="plotly_dark", margin=dict(l=10, r=10, t=10, b=10), height=180, showlegend=False)
+        fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines', name='Price', line=dict(color='#00ff88', width=2)))
+        fig.add_trace(go.Scatter(x=df.index, y=df['VWAP'], mode='lines', name='VWAP', line=dict(color='#ffcc00', width=1.5, dash='dash')))
+        fig.update_layout(
+            template="plotly_dark", 
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+            margin=dict(l=10, r=10, t=10, b=10), height=170, showlegend=False,
+            xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor='#161b22')
+        )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-        # 9:15-9:30 Strategy Block & Trend Layout (HIGH VISIBILITY FONTS)
+        # Pro Strategy Identification Module
         st.markdown(f"""
-        <div style="background-color:#1c1c1c; padding:15px; border-radius:8px; font-size:15px; border: 2px solid #555; color:#ffffff; line-height:1.6;">
-            <b style="color:#FFD600; font-size:17px; letter-spacing:1px;">📊 9:15 - 9:30 STRATEGY MATRIX</b><br>
-            • 9:15 Candle Close Price: <b style="color:#00B0FF; font-family:monospace;">INR {c_915:.2f}</b><br>
-            • 9:30 Candle Close Price: <b style="color:#00B0FF; font-family:monospace;">INR {c_930:.2f}</b><br>
-            • Futures Open Interest (OI) Change: <b style="color:#FFD600; font-family:monospace;">{oi_change:+,} Qty</b><br>
-            • Setup Identification: <span style="background-color:#333; padding:2px 6px; border-radius:4px; color:#00E676; font-weight:bold;">{movement_type}</span>
+        <div style="background-color:#090a0f; padding:15px; border-radius:6px; font-size:14px; border: 1px solid #1c2333; color:#ffffff; line-height:1.7;">
+            <b style="color:#ffcc00; font-size:14px; letter-spacing:1px; font-family:'JetBrains Mono';">⚡ SYSTEM CAPTURED DATA MATRIX (09:15 - 09:30)</b><br>
+            <div style="margin-top:8px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <div>• 09:15 Price Block: <b class="mono-text" style="color:#00b0ff;">{c_915:.2f}</b></div>
+                <div>• 09:30 Price Block: <b class="mono-text" style="color:#00b0ff;">{c_930:.2f}</b></div>
+                <div>• Institutional Volume Delta: <b class="mono-text" style="color:#fff;">{oi_change:+,} Qty</b></div>
+                <div>• Computed Pipeline State: <span class="mono-text" style="color:#00ff88; font-weight:700;">{movement_type}</span></div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
     with layout_col2:
-        # Dynamic Buying/Selling Action Box Area (HIGH CONTRAST & ENHANCED FONT)
+        # HIGH VISIBILITY PREMIUM ACTION BOX
         strike_step = 5.0 if live_price < 300 else (20.0 if live_price < 1500 else 50.0)
         atm_strike = round(live_price / strike_step) * strike_step
         highest_call_oi_strike = atm_strike + (strike_step * 2)
         highest_put_oi_strike = atm_strike - (strike_step * 2)
 
-        dow_color = "#00E676" if h_930 > h_915 and l_930 > l_915 else ("#FF1744" if h_930 < h_915 and l_930 < l_915 else "#FFD600")
-        dow_label = "UPTREND" if dow_color == "#00E676" else ("DOWNTREND" if dow_color == "#FF1744" else "SIDEWAYS")
+        h_color = "#00ff88" if h_930 > h_915 and l_930 > l_915 else ("#ff2a5f" if h_930 < h_915 and l_930 < l_915 else "#ffcc00")
+        dow_label = "UPTREND" if h_color == "#00ff88" else ("DOWNTREND" if h_color == "#ff2a5f" else "SIDEWAYS")
 
-        # BUY / SELL LOGIC GENERATOR WITH ULTRA CLEAR TEXT
-        if "UPTREND" in dow_label and live_price > current_vwap and "Long" in movement_type:
+        if "UPTREND" in dow_label and live_price > current_vwap and "LONG" in movement_type:
             entry_exact = max(levels["R1 (Resistance 1)"], h_930)
-            action_html = f"""<div style="background-color:#052e16; padding:18px; border-radius:8px; border:3px solid #00E676; font-size:16px; color:#ffffff; line-height:1.6;">
-                <b style="color:#00E676; font-size:20px; letter-spacing:1px;">🔥 [BUY SIGN] TRIPLE CONFIRMED MATCHED</b><br>
-                • TRIGGER ENTRY PRICE: <b style="color:#00E676; font-size:18px; font-family:monospace;">Above INR {entry_exact:.2f}</b><br>
-                • SAFE TARGET PRICE: <b style="color:#00B0FF; font-size:18px; font-family:monospace;">INR {min(levels["R2 (Resistance 2)"], highest_call_oi_strike):.2f}</b><br>
-                • SYSTEM STOP LOSS (ATR): <b style="color:#FF1744; font-size:18px; font-family:monospace;">INR {entry_exact - (current_atr * 1.5):.2f}</b>
+            action_html = f"""<div style="background-color:#031f12; padding:20px; border-radius:6px; border-left:5px solid #00ff88; border-top:1px solid #1c2333; border-right:1px solid #1c2333; border-bottom:1px solid #1c2333; color:#ffffff;">
+                <span style="background-color:#00ff88; color:#000; padding:2px 6px; font-size:11px; font-weight:bold; border-radius:2px;">TRIPLE CONFIRMED BUY</span>
+                <div style="margin-top:12px;"></div>
+                • ENTRY TRIGGER LIMIT: <b class="mono-text" style="color:#00ff88; font-size:18px;">Above INR {entry_exact:.2f}</b><br>
+                • TARGET EXPECTATION: <b class="mono-text" style="color:#00b0ff; font-size:18px;">INR {min(levels["R2 (Resistance 2)"], highest_call_oi_strike):.2f}</b><br>
+                • QUANT STOP LOSS RISK: <b class="mono-text" style="color:#ff2a5f; font-size:18px;">INR {entry_exact - (current_atr * 1.5):.2f}</b>
             </div>"""
-        elif "DOWNTREND" in dow_label and live_price < current_vwap and "Short" in movement_type:
+        elif "DOWNTREND" in dow_label and live_price < current_vwap and "SHORT" in movement_type:
             entry_exact = min(levels["S1 (Support 1)"], l_930)
-            action_html = f"""<div style="background-color:#450a0a; padding:18px; border-radius:8px; border:3px solid #FF1744; font-size:16px; color:#ffffff; line-height:1.6;">
-                <b style="color:#FF1744; font-size:20px; letter-spacing:1px;">🚨 [SELL SIGN] TRIPLE CONFIRMED MATCHED</b><br>
-                • TRIGGER ENTRY PRICE: <b style="color:#FF1744; font-size:18px; font-family:monospace;">Below INR {entry_exact:.2f}</b><br>
-                • SAFE TARGET PRICE: <b style="color:#00B0FF; font-size:18px; font-family:monospace;">INR {max(levels["S2 (Support 2)"], highest_put_oi_strike):.2f}</b><br>
-                • SYSTEM STOP LOSS (ATR): <b style="color:#FF3D00; font-size:18px; font-family:monospace;">INR {entry_exact + (current_atr * 1.5):.2f}</b>
+            action_html = f"""<div style="background-color:#24070f; padding:20px; border-radius:6px; border-left:5px solid #ff2a5f; border-top:1px solid #1c2333; border-right:1px solid #1c2333; border-bottom:1px solid #1c2333; color:#ffffff;">
+                <span style="background-color:#ff2a5f; color:#fff; padding:2px 6px; font-size:11px; font-weight:bold; border-radius:2px;">TRIPLE CONFIRMED SHORT SELL</span>
+                <div style="margin-top:12px;"></div>
+                • ENTRY TRIGGER LIMIT: <b class="mono-text" style="color:#ff2a5f; font-size:18px;">Below INR {entry_exact:.2f}</b><br>
+                • TARGET EXPECTATION: <b class="mono-text" style="color:#00b0ff; font-size:18px;">INR {max(levels["S2 (Support 2)"], highest_put_oi_strike):.2f}</b><br>
+                • QUANT STOP LOSS RISK: <b class="mono-text" style="color:#ff3d00; font-size:18px;">INR {entry_exact + (current_atr * 1.5):.2f}</b>
             </div>"""
         else:
-            action_html = f"""<div style="background-color:#2e2505; padding:18px; border-radius:8px; border:3px solid #FFD600; font-size:16px; color:#ffffff; line-height:1.6;">
-                <b style="color:#FFD600; font-size:19px; letter-spacing:1px;">⚠️ NO TRADE ZONE (SIGNALS CONFLICTING)</b><br>
-                • Dow Theory Setup: <b style="color:#fff;">{dow_label}</b> | VWAP Status: <b style="color:#fff;">{"Price > VWAP" if live_price > current_vwap else "Price < VWAP"}</b><br>
-                • Call Resistance Wall: <b style="color:#FF1744; font-family:monospace;">INR {highest_call_oi_strike:.2f}</b><br>
-                • Put Support Wall: <b style="color:#00E676; font-family:monospace;">INR {highest_put_oi_strike:.2f}</b>
+            action_html = f"""<div style="background-color:#1c1703; padding:20px; border-radius:6px; border-left:5px solid #ffcc00; border-top:1px solid #1c2333; border-right:1px solid #1c2333; border-bottom:1px solid #1c2333; color:#ffffff;">
+                <span style="background-color:#ffcc00; color:#000; padding:2px 6px; font-size:11px; font-weight:bold; border-radius:2px;">SYSTEM NO-TRADE MATRIX CONFLICT</span>
+                <div style="margin-top:12px; font-size:13px; line-height:1.6;">
+                • DOW STRUCTURE: <b style="color:#fff;">{dow_label}</b> | FLOW REGIME: <b style="color:#fff;">{"ABOVE VWAP" if live_price > current_vwap else "BELOW VWAP"}</b><br>
+                • CE RESISTANCE WALL: <b class="mono-text" style="color:#ff2a5f;">INR {highest_call_oi_strike:.2f}</b><br>
+                • PE SUPPORT FLOOR: <b class="mono-text" style="color:#00ff88;">INR {highest_put_oi_strike:.2f}</b>
+                </div>
             </div>"""
         
         st.markdown(action_html, unsafe_allow_html=True)
 
-        # Mini Market Depth Volume Row
-        st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-        md_col1, md_col2 = st.columns(2)
-        with md_col1:
-            st.markdown("<b>🔴 Institutional Sellers: 934K</b>", unsafe_allow_html=True)
-        with md_col2:
-            st.markdown("<p style='text-align:right;'><b>🟢 Active Buyers: 306K</b></p>", unsafe_allow_html=True)
+        # Micro Volume Distribution Map
+        st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
         st.progress(24)
 
     # -----------------------------------------------------------------
-    # FIXED ORDER PIVOT MATRIX SHEET (R3 down to S3 - Vertical Layout)
+    # VERTICAL HIGH CONTRAST PIVOT SHEET (R3 DOWN TO S3)
     # -----------------------------------------------------------------
     st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
-    st.subheader("🎯 Dynamic Breakout & Pivot Matrix Sheet")
+    st.markdown("#### `🎯 ALIGNED BREAKOUT MATRIX ENGINE (TOP TO BOTTOM)`")
     
-    # Convert dictionary items into structured Dataframe rows
-    pivot_rows = []
-    for level_name, val in levels.items():
-        pivot_rows.append({"Pivot Levels Block": level_name, "Target Price (INR)": f"{val:.2f}"})
+    # Custom HTML Table Implementation for Ultra Professional Contrast Grid
+    table_html = "<table class='pivot-table'>"
+    table_html += "<tr style='background-color: #121620; color: #7889a3;'><th>PIVOT IDENTIFIED INTERVAL</th><th>TARGET VALUE SYSTEM (INR)</th></tr>"
     
-    pivot_matrix_df = pd.DataFrame(pivot_rows)
-    st.dataframe(pivot_matrix_df, hide_index=True, use_container_width=True)
+    for lvl, value in levels.items():
+        # Text Color Coding based on Level Type
+        if "R" in lvl:
+            text_color = "#ff2a5f"  # Red for resistance
+        elif "S" in lvl:
+            text_color = "#00ff88"  # Green for support
+        else:
+            text_color = "#00b0ff"  # Blue for pivot point
+            
+        table_html += f"<tr><td style='color: {text_color}; font-weight: 600;'>{lvl}</td><td style='color: #ffffff; font-weight: bold;'>{value:.2f}</td></tr>"
+    
+    table_html += "</table>"
+    st.markdown(table_html, unsafe_allow_html=True)
 
-    # 1-Second Refresh Clock Trigger
+    # Ultra high speed polling loop trigger
     time.sleep(1)
     st.rerun()
 else:
