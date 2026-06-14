@@ -38,7 +38,6 @@ st.markdown("""
         .mono-text {
             font-family: 'JetBrains Mono', monospace !important;
         }
-        /* Custom styled table for pivots */
         .pivot-table {
             width: 100%;
             border-collapse: collapse;
@@ -167,7 +166,7 @@ if len(df) >= 1:
     movement_type = get_oi_movement(oi_change, c_930 - c_915)
     levels = calculate_pivots(float(df.iloc[0:idx_930+1]['High'].max()), float(df.iloc[0:idx_930+1]['Low'].min()), float(c_930))
 
-    # Top Header Panel (Clean & Ultra Pro)
+    # Top Header Panel
     head_col1, head_col2 = st.columns([1.5, 1])
     with head_col1:
         st.markdown(f"<h2 style='margin: 0px; letter-spacing: -1px;'>INSTITUTIONAL QUANT TERMINAL // <span style='color:#888;'>{ticker_clean}</span></h2>", unsafe_allow_html=True)
@@ -180,7 +179,7 @@ if len(df) >= 1:
             </div>
         """, height=50)
 
-    # Core Institutional Stream Box
+    # Core Price Engine Box
     st.markdown(f"""
     <div style="background-color:#090a0f; padding: 14px; border-radius: 6px; border: 1px solid #1c2333; margin-bottom: 15px;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
@@ -202,7 +201,7 @@ if len(df) >= 1:
     layout_col1, layout_col2 = st.columns([1, 1])
 
     with layout_col1:
-        # High Density Pro Plotly Chart
+        # Plotly Chart
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines', name='Price', line=dict(color='#00ff88', width=2)))
         fig.add_trace(go.Scatter(x=df.index, y=df['VWAP'], mode='lines', name='VWAP', line=dict(color='#ffcc00', width=1.5, dash='dash')))
@@ -214,7 +213,7 @@ if len(df) >= 1:
         )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-        # Pro Strategy Identification Module
+        # System Captured Data Matrix
         st.markdown(f"""
         <div style="background-color:#090a0f; padding:15px; border-radius:6px; font-size:14px; border: 1px solid #1c2333; color:#ffffff; line-height:1.7;">
             <b style="color:#ffcc00; font-size:14px; letter-spacing:1px; font-family:'JetBrains Mono';">⚡ SYSTEM CAPTURED DATA MATRIX (09:15 - 09:30)</b><br>
@@ -228,7 +227,7 @@ if len(df) >= 1:
         """, unsafe_allow_html=True)
 
     with layout_col2:
-        # HIGH VISIBILITY PREMIUM ACTION BOX
+        # FIXED: THE BUY/SELL BOX IS NOW FULLY PERSISTENT OUTSIDE ANY CONDITIONAL BLOCKS
         strike_step = 5.0 if live_price < 300 else (20.0 if live_price < 1500 else 50.0)
         atm_strike = round(live_price / strike_step) * strike_step
         highest_call_oi_strike = atm_strike + (strike_step * 2)
@@ -237,6 +236,7 @@ if len(df) >= 1:
         h_color = "#00ff88" if h_930 > h_915 and l_930 > l_915 else ("#ff2a5f" if h_930 < h_915 and l_930 < l_915 else "#ffcc00")
         dow_label = "UPTREND" if h_color == "#00ff88" else ("DOWNTREND" if h_color == "#ff2a5f" else "SIDEWAYS")
 
+        # Dynamic Recommendation Box Generation Logic
         if "UPTREND" in dow_label and live_price > current_vwap and "LONG" in movement_type:
             entry_exact = max(levels["R1 (Resistance 1)"], h_930)
             action_html = f"""<div style="background-color:#031f12; padding:20px; border-radius:6px; border-left:5px solid #00ff88; border-top:1px solid #1c2333; border-right:1px solid #1c2333; border-bottom:1px solid #1c2333; color:#ffffff;">
@@ -256,18 +256,21 @@ if len(df) >= 1:
                 • QUANT STOP LOSS RISK: <b class="mono-text" style="color:#ff3d00; font-size:18px;">INR {entry_exact + (current_atr * 1.5):.2f}</b>
             </div>"""
         else:
+            # Re-calculating temporary levels to make sure the user ALWAYS gets prices to look at
+            calc_entry_b = max(levels["R1 (Resistance 1)"], h_930)
+            calc_entry_s = min(levels["S1 (Support 1)"], l_930)
             action_html = f"""<div style="background-color:#1c1703; padding:20px; border-radius:6px; border-left:5px solid #ffcc00; border-top:1px solid #1c2333; border-right:1px solid #1c2333; border-bottom:1px solid #1c2333; color:#ffffff;">
                 <span style="background-color:#ffcc00; color:#000; padding:2px 6px; font-size:11px; font-weight:bold; border-radius:2px;">SYSTEM NO-TRADE MATRIX CONFLICT</span>
-                <div style="margin-top:12px; font-size:13px; line-height:1.6;">
-                • DOW STRUCTURE: <b style="color:#fff;">{dow_label}</b> | FLOW REGIME: <b style="color:#fff;">{"ABOVE VWAP" if live_price > current_vwap else "BELOW VWAP"}</b><br>
-                • CE RESISTANCE WALL: <b class="mono-text" style="color:#ff2a5f;">INR {highest_call_oi_strike:.2f}</b><br>
-                • PE SUPPORT FLOOR: <b class="mono-text" style="color:#00ff88;">INR {highest_put_oi_strike:.2f}</b>
+                <div style="margin-top:12px; font-size:14px; line-height:1.6;">
+                • DOW TREND: <b style="color:#fff;">{dow_label}</b> | FLOW REGIME: <b style="color:#fff;">{"ABOVE VWAP" if live_price > current_vwap else "BELOW VWAP"}</b><br>
+                • <span style="color:#00ff88; font-weight:bold;">IF BREAKOUT BUY:</span> Entry Above <b class="mono-text">INR {calc_entry_b:.2f}</b> | Target: <b class="mono-text">{min(levels["R2 (Resistance 2)"], highest_call_oi_strike):.2f}</b><br>
+                • <span style="color:#ff2a5f; font-weight:bold;">IF BREAKOUT SELL:</span> Entry Below <b class="mono-text">INR {calc_entry_s:.2f}</b> | Target: <b class="mono-text">{max(levels["S2 (Support 2)"], highest_put_oi_strike):.2f}</b>
                 </div>
             </div>"""
         
         st.markdown(action_html, unsafe_allow_html=True)
 
-        # Micro Volume Distribution Map
+        # Volume Distribution
         st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
         st.progress(24)
 
@@ -277,25 +280,23 @@ if len(df) >= 1:
     st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
     st.markdown("#### `🎯 ALIGNED BREAKOUT MATRIX ENGINE (TOP TO BOTTOM)`")
     
-    # Custom HTML Table Implementation for Ultra Professional Contrast Grid
     table_html = "<table class='pivot-table'>"
     table_html += "<tr style='background-color: #121620; color: #7889a3;'><th>PIVOT IDENTIFIED INTERVAL</th><th>TARGET VALUE SYSTEM (INR)</th></tr>"
     
     for lvl, value in levels.items():
-        # Text Color Coding based on Level Type
         if "R" in lvl:
-            text_color = "#ff2a5f"  # Red for resistance
+            text_color = "#ff2a5f"
         elif "S" in lvl:
-            text_color = "#00ff88"  # Green for support
+            text_color = "#00ff88"
         else:
-            text_color = "#00b0ff"  # Blue for pivot point
+            text_color = "#00b0ff"
             
         table_html += f"<tr><td style='color: {text_color}; font-weight: 600;'>{lvl}</td><td style='color: #ffffff; font-weight: bold;'>{value:.2f}</td></tr>"
     
     table_html += "</table>"
     st.markdown(table_html, unsafe_allow_html=True)
 
-    # Ultra high speed polling loop trigger
+    # Polling loop trigger
     time.sleep(1)
     st.rerun()
 else:
