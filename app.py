@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
  
-# 🎯 HIGH-CONTRAST ANTI-BLUR TERMINAL STYLE MATRIX
+# 🎯 HIGH-CONTRAST ANTI-BLUR TERMINAL STYLE MATRIX WITH FORCE TEXT OVERRIDE
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght=400;700&family=Inter:wght=400;600&display=swap');
@@ -67,6 +67,32 @@ st.markdown("""
             color: #ffffff !important;
             opacity: 1 !important;
             font-weight: 600 !important;
+        }
+
+        /* 🌟 STYLING FOR REALTIME ADVANCED BREAKOUT SCANNED MATRIX TEXT */
+        .scanned-matrix-box {
+            background-color: #0d1117 !important;
+            padding: 18px;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+            line-height: 1.7;
+        }
+        .matrix-title {
+            font-size: 15px;
+            letter-spacing: 0.5px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 800 !important;
+        }
+        .matrix-text-white {
+            color: #ffffff !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            opacity: 1 !important;
+        }
+        .matrix-text-yellow {
+            color: #ffcc00 !important;
+            font-weight: 800 !important;
+            font-size: 14px !important;
         }
 
         /* 🛑 ANTI-FADE MATRIX */
@@ -342,7 +368,7 @@ if len(df) >= 1:
         st.markdown(depth_table, unsafe_allow_html=True)
  
     # -----------------------------------------------------------------
-    # 🎯 REALTIME ADVANCED BREAKOUT SCANNED MATRIX (HIGH CONTRAST TEXT)
+    # 🎯 REALTIME ADVANCED BREAKOUT SCANNED MATRIX (FIXED HIGH CONTRAST)
     # -----------------------------------------------------------------
     st.markdown("#### `🎯 REALTIME ADVANCED BREAKOUT SCANNED MATRIX (FUTURES + OPTIONS)`")
     
@@ -379,28 +405,28 @@ if len(df) >= 1:
         tamil_desc = "தற்போது ஸ்டாக் எந்த ஒரு முக்கிய சப்போர்ட் அல்லது ரெசிஸ்டன்ஸ் எல்லையையும் தொடவில்லை. நடுநிலையான எல்லையில் வர்த்தகம் ஆகிறது (Sideways / Consolidation)."
         trade_action = "⏳ WAIT: விலை முக்கிய சப்போர்ட் அல்லது ரெசிஸ்டன்ஸ் எல்லைக்கு அருகில் வரும் வரை பொறுமையாக காத்திருக்கவும்."
 
-    # 🌟 இங்கிருக்கும் ஒவ்வொரு எழுத்துக்களுக்கும் நிறம் மற்றும் தடிமன் (Force High Contrast Style) மாற்றப்பட்டுள்ளது
+    # HTML ஸ்ட்ரிங்கிற்குள் இருக்கும் அனைத்து கிளாஸ்களும் CSS உடன் துல்லியமாக இணைக்கப்பட்டுள்ளது
     st.markdown(f"""
-    <div style="background-color:#0d1117; padding:18px; border-radius:6px; border: 1px solid #30363d; border-left:6px solid {color_box}; line-height:1.7;">
+    <div class="scanned-matrix-box" style="border-left: 6px solid {color_box} !important;">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #30363d; padding-bottom:8px; margin-bottom:12px;">
-            <b style="color:{color_box} !important; font-size:15px; letter-spacing:0.5px; font-family:'JetBrains Mono'; font-weight:800;">{status_box}</b>
-            <span style="font-size:12px; color:#c9d1d9 !important; font-weight:700;">FUTURES OI CHANGE: <span style="color:#ffffff !important;">{fut_oi_change_pct:+.2f}%</span></span>
+            <b class="matrix-title" style="color:{color_box} !important;">{status_box}</b>
+            <span class="matrix-text-white" style="font-size:12px !important;">FUTURES OI CHANGE: <span style="color:#ffffff !important;">{fut_oi_change_pct:+.2f}%</span></span>
         </div>
-        <div style="margin:0px; font-size:14px; color:#ffffff !important; font-weight:600; opacity:1 !important;">
-            <b style="color:#ffcc00 !important; font-weight:800;">📊 தமிழ் சந்தை விளக்கம்:</b> 
-            <span style="color:#ffffff !important; opacity:1 !important;">{tamil_desc}</span>
+        <div class="matrix-text-white">
+            <span class="matrix-text-yellow">📊 தமிழ் சந்தை விளக்கம்:</span> {tamil_desc}
         </div>
-        <div style="margin-top:12px; background-color:#161b22; padding:10px 14px; border-radius:4px; font-size:14px; border:1px solid #30363d; color:{color_box} !important; font-weight:800; opacity:1 !important;">
+        <div style="margin-top:12px; background-color:#161b22; padding:10px 14px; border-radius:4px; font-size:14px; border:1px solid #30363d; color:{color_box} !important; font-weight:800;">
             {trade_action}
         </div>
     </div>
     """, unsafe_allow_html=True)
 
     # -----------------------------------------------------------------
-    # 🎯 BREAKOUT MATRIX ENGINE (PIVOT LEVELS)
+    # 🎯 BREAKOUT MATRIX ENGINE (PIVOT LEVELS - FIXED SYNTAX)
     # -----------------------------------------------------------------
     st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
     st.markdown("#### `🎯 ALIGNED BREAKOUT MATRIX ENGINE (TOP TO BOTTOM)`")
+    
     table_html = "<table class='quant-table'>"
     table_html += "<thead><tr style='background-color: #161b22;'><th style='color: #c9d1d9 !important;'>PIVOT IDENTIFIED INTERVAL</th><th style='color: #c9d1d9 !important;'>TARGET VALUE SYSTEM (INR)</th><th style='color: #c9d1d9 !important;'>REGIME STATE</th></tr></thead><tbody>"
     
@@ -416,7 +442,11 @@ if len(df) >= 1:
             regime = "MEAN PIVOT POINT"
             
         regime_state = "BELOW VWAP" if live_price < current_vwap else "ABOVE VWAP"
-        table_html += f"<tr><td style='color: {text_color} !important; font-weight: bold;'>{lvl}</td><td style='color: #ffffff !important; font-weight: bold;'>&#8377; {value:.2f}</td><td style='color: #8b949e !important;'>{regime_state} ({regime})</td></tr>"
+        
+        # 🌟 பக் இருந்த பழைய வரியை முழுமையாக நீக்கிவிட்டு புதிய சுத்தமான HTML குறியீடு மாற்றப்பட்டுள்ளது
+        table_html += "<tr><td style='color: " + str(text_color) + " !important; font-weight: bold;'>" + str(lvl) + "</td>"
+        table_html += "<td style='color: #ffffff !important; font-weight: bold;'>&#8377; " + f"{value:.2f}" + "</td>"
+        table_html += "<td style='color: #8b949e !important;'>" + str(regime_state) + " (" + str(regime) + ")</td></tr>"
     
     table_html += "</tbody></table>"
     st.markdown(table_html, unsafe_allow_html=True)
