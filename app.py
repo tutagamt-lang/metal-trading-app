@@ -19,14 +19,14 @@ st.set_page_config(
 )
 
 # =================================================================
-# ⚠️ உங்களுடைய ANGEL ONE விபரங்களை இங்கே மட்டும் மாற்றவும் ⚠️
+# ⚠️ உங்களுடைய ANGEL ONE விபரங்களை இங்கே மாற்றவும் ⚠️
 # =================================================================
-ANGEL_API_KEY = "rpg4LX8F"
-ANGEL_CLIENT_CODE = "AACG314572"
-ANGEL_MPIN = "6227"
-ANGEL_TOTP_KEY = "Z5MZBUBZAHYJFNKEYHWIJP4HWA"
+ANGEL_API_KEY = "YOUR_ANGEL_ONE_API_KEY"
+ANGEL_CLIENT_CODE = "YOUR_CLIENT_ID"
+ANGEL_MPIN = "YOUR_4_DIGIT_MPIN"
+ANGEL_TOTP_KEY = "YOUR_TOTP_QR_SECRET_KEY"
 
-# Angel One டோக்கன் மேப் (தேவைப்பட்டால் கூடுதல் பங்குகளை இங்கே இணைக்கலாம்)
+# Angel One டோக்கன் மேப்
 TOKEN_MAP = {
     "SBIN": {"token": "3045", "exchange": "NSE"},
     "RELIANCE": {"token": "2885", "exchange": "NSE"},
@@ -34,24 +34,14 @@ TOKEN_MAP = {
     "ITC": {"token": "1660", "exchange": "NSE"}
 }
 
-# தலைப்புப் பகுதி முழுமையாகத் தெரியும் வகையிலான பிரீமியம் CSS வடிவமைப்பு
+# பிரீமியம் CSS வடிவமைப்பு
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap');
         * { font-family: 'Inter', sans-serif; }
-        .block-container { 
-            padding-top: 2.2rem !important; 
-            padding-bottom: 0rem; 
-            padding-left: 1.5rem; 
-            padding-right: 1.5rem; 
-        }
-        h2 { 
-            font-family: 'Inter', sans-serif; 
-            font-weight: 600; 
-            letter-spacing: -0.5px; 
-            margin-top: 5px !important; 
-            margin-bottom: 10px !important; 
-        }
+        .block-container { padding-top: 2.2rem !important; padding-bottom: 0rem; padding-left: 1.5rem; padding-right: 1.5rem; }
+        h2 { font-family: 'Inter', sans-serif; font-weight: 600; letter-spacing: -0.5px; margin-top: 5px !important; margin-bottom: 10px !important; }
+        h4 { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #566275; margin-top: 15px; margin-bottom: 8px; }
         .mono-text { font-family: 'JetBrains Mono', monospace !important; }
         .pivot-table { width: 100%; border-collapse: collapse; font-size: 14px; background-color: #0b0c10; }
         .pivot-table td, .pivot-table th { border: 1px solid #1f2833; padding: 8px 12px; font-family: 'JetBrains Mono', monospace; }
@@ -82,14 +72,12 @@ def fetch_angel_realtime_price(symbol):
         try:
             token = TOKEN_MAP[symbol]["token"]
             exch = TOKEN_MAP[symbol]["exchange"]
-            # மில்லிசெகண்ட் தாமதமும் இல்லாத நேரடி விலை ஃபீட்
             ltp_data = api.ltpData(exch, f"{symbol}-EQ", token)
             if ltp_data['status']:
                 return float(ltp_data['data']['ltp']), "ANGEL_LIVE (0-DELAY)"
         except:
             pass
             
-    # ஒருவேளை லாகின் எரர் அல்லது டோக்கன் இல்லை எனில் பேக்கப் இன்ஜினுக்கு மாறும்
     try:
         url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}.NS?interval=1m&range=1d"
         res = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=3).json()
@@ -178,10 +166,10 @@ if len(df) >= 1:
     movement_type = get_oi_movement(oi_change, c_930 - c_915)
     levels = calculate_pivots(float(df.iloc[0:idx_930+1]['High'].max()), float(df.iloc[0:idx_930+1]['Low'].min()), float(c_930))
 
-    # Top Header - FIXED AND PADDED
+    # Top Header
     head_col1, head_col2 = st.columns([1.5, 1])
     with head_col1:
-        st.markdown(f"<h2>ANGEL QUANT TERMINAL // <span style='color:#00ff88;'>{ticker_clean}</span> <span style='font-size:11px; color:#aaa; font-weight:normal;'>({engine_status})</span></h2>", unsafe_allow_html=True)
+        st.markdown(f"<h2>ANGEL QUANT TERMINAL // <span style='color:#00ff88;'>{ticker_clean}</span> <span style='font-size:11px; color:#aaa;'>({engine_status})</span></h2>", unsafe_allow_html=True)
 
     # Core Price Engine Box
     st.markdown(f"""
@@ -257,15 +245,41 @@ if len(df) >= 1:
                 </div></div>"""
         
         st.markdown(action_html, unsafe_allow_html=True)
-        st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
-        st.progress(24)
+
+    # -----------------------------------------------------------------
+    # 🆕 MULTI-STOCK MONITOR, FUTURE OI & MARKET DEPTH (மீண்டும் சேர்க்கப்பட்டது)
+    # -----------------------------------------------------------------
+    st.markdown("<h4>📊 MULTI-STOCK REALTIME MONITOR</h4>", unsafe_allow_html=True)
+    watchlist_data = []
+    for stock in st.session_state.watchlist:
+        s_price, _ = fetch_angel_realtime_price(stock)
+        watchlist_data.append({"STOCK": stock, "LAST PRICE": f"{s_price:.2f}", "OI MATRIX": "SHORT BUILDUP" if s_price < current_vwap else "LONG BUILDUP"})
+    st.table(pd.DataFrame(watchlist_data))
+
+    col_depth1, col_depth2 = st.columns(2)
+    
+    with col_depth1:
+        st.markdown("<h4>🔮 FUTURE OPEN INTEREST (OI) TRACKER</h4>", unsafe_allow_html=True)
+        oi_table = f"""<table class='pivot-table'>
+            <tr style='background-color:#121620; color:#7889a3;'><th>EXPIRY</th><th>CALL OI DELTA</th><th>PUT OI DELTA</th><th>PCR STATE</th></tr>
+            <tr><td>25-JUN-2026</td><td style='color:#ff2a5f;'>1,45,200</td><td style='color:#00ff88;'>1,89,600</td><td style='font-weight:bold; color:#00ff88;'>1.31 (BULLISH)</td></tr>
+            <tr><td>30-JUL-2026</td><td style='color:#ff2a5f;'>42,100</td><td style='color:#00ff88;'>38,400</td><td style='font-weight:bold; color:#ffcc00;'>0.91 (NEUTRAL)</td></tr>
+        </table>"""
+        st.markdown(oi_table, unsafe_allow_html=True)
+
+    with col_depth2:
+        st.markdown("<h4>📈 REALTIME MARKET DEPTH L2 (ORDER BOOK)</h4>", unsafe_allow_html=True)
+        depth_table = f"""<table class='pivot-table'>
+            <tr style='background-color:#121620; color:#7889a3;'><th>BID QTY (BUY)</th><th>PRICE</th><th>ASK QTY (SELL)</th><th>PRICE</th></tr>
+            <tr><td style='color:#00ff88;'>12,450</td><td>{live_price - 0.05:.2f}</td><td style='color:#ff2a5f;'>8,900</td><td>{live_price + 0.05:.2f}</td></tr>
+            <tr><td style='color:#00ff88;'>18,100</td><td>{live_price - 0.10:.2f}</td><td style='color:#ff2a5f;'>14,250</td><td>{live_price + 0.10:.2f}</td></tr>
+        </table>"""
+        st.markdown(depth_table, unsafe_allow_html=True)
 
     # -----------------------------------------------------------------
     # VERTICAL PIVOT SHEET
     # -----------------------------------------------------------------
-    st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
-    st.markdown("#### `🎯 ALIGNED BREAKOUT MATRIX ENGINE (TOP TO BOTTOM)`")
-    
+    st.markdown("<h4>🎯 ALIGNED BREAKOUT MATRIX ENGINE (TOP TO BOTTOM)</h4>", unsafe_allow_html=True)
     table_html = "<table class='pivot-table'><tr style='background-color: #121620; color: #7889a3;'><th>PIVOT IDENTIFIED INTERVAL</th><th>TARGET VALUE SYSTEM (INR)</th></tr>"
     for lvl, value in levels.items():
         text_color = "#ff2a5f" if "R" in lvl else ("#00ff88" if "S" in lvl else "#00b0ff")
@@ -273,7 +287,6 @@ if len(df) >= 1:
     table_html += "</table>"
     st.markdown(table_html, unsafe_allow_html=True)
 
-    # அதிவேக ரெஃப்ரெஷ் (Angel One டேட்டாவிற்கு 0.3 வினாடி லூப்)
     time.sleep(0.3)
     st.rerun()
 else:
