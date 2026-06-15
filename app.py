@@ -9,10 +9,24 @@ from ta.trend import EMAIndicator
 import streamlit.components.v1 as components
 import time
 
-# Page Config
-st.set_page_config(layout="wide", page_title="QUANTUM-X Terminal")
+# Page Configuration
+st.set_page_config(layout="wide", page_title="QUANTUM-X Live Trading Terminal")
 
-# --- DATA ENGINE ---
+# 🎯 CSS STYLING (Anti-Gray Text Fix)
+st.markdown("""
+    <style>
+        .matrix-box { 
+            background-color: #0d1117; 
+            padding: 20px; 
+            border-radius: 6px; 
+            border: 1px solid #30363d; 
+            margin-bottom: 20px; 
+        }
+        .white-text { color: #ffffff !important; }
+    </style>
+""", unsafe_allow_html=True)
+
+# --- DATA ENGINE (Pivots Fix) ---
 def calculate_pivots(H, L, C):
     P = (H + L + C) / 3
     return {
@@ -21,26 +35,16 @@ def calculate_pivots(H, L, C):
         "S1": (2 * P) - H
     }
 
-@st.cache_data(ttl=1)
-def fetch_realtime_nse_data(symbol):
-    # ... (உங்கள் பழைய fetch logic அப்படியே இருக்கட்டும்) ...
-    pass 
-
 # --- MAIN LOGIC ---
-ticker_clean = st.sidebar.text_input("ENTER TICKER:", "RELIANCE").upper()
-df, data_status = fetch_realtime_nse_data(ticker_clean)
+# ticker_clean, df பெறுதல்... (உங்கள் பழைய லாஜிக் இங்கே வரவும்)
 
 if not df.empty:
     live_price = df.iloc[-1]['Close']
-    # பிழை ஏற்படாமல் இருக்க pivots-ஐ முதலில் கணக்கிடவும்
     pivots = calculate_pivots(df['High'].max(), df['Low'].min(), df.iloc[-1]['Close'])
     r1_val = pivots["R1"]
     s1_val = pivots["S1"]
     
-    is_near_resistance = abs(live_price - r1_val) <= (live_price * 0.006)
-    is_near_support = abs(live_price - s1_val) <= (live_price * 0.006)
-    
-    # தமிழ் விளக்கங்களைத் தனி வேரியபிள்களாகப் பிரிக்கவும் (f-string பிழை வராது)
+    # Logic Checks
     if live_price < s1_val:
         status_box = "💥 REAL BREAKDOWN"
         color_box = "#ff2a5f"
@@ -54,15 +58,15 @@ if not df.empty:
     else:
         status_box = "📡 CONSOLIDATION"
         color_box = "#00b0ff"
-        tamil_desc = "விலை தற்போதைக்கு நடுநிலையாக உள்ளது."
+        tamil_desc = "விலை தற்போதைக்கு நடுநிலையான எல்லையில் உள்ளது."
         trade_action = "⏳ WAIT: காத்திருக்கவும்."
 
-    # UI Display
+    # 🌟 UI DISPLAY (Fixed Gray Text)
     st.markdown(f"""
-    <div style="border-left: 6px solid {color_box}; padding: 20px; background: #0d1117;">
-        <h3 style="color: {color_box};">{status_box}</h3>
-        <p style="color: #ffffff;">{tamil_desc}</p>
-        <div style="background: #161b22; padding: 10px; color: {color_box}; font-weight: bold;">
+    <div class="matrix-box" style="border-left: 6px solid {color_box};">
+        <h3 style="color: {color_box}; margin-bottom: 10px;">{status_box}</h3>
+        <p class="white-text" style="font-size: 14px;">📊 <b>தமிழ் விளக்கம்:</b> {tamil_desc}</p>
+        <div style="background: #161b22; padding: 12px; color: {color_box}; font-weight: bold; border-radius: 4px;">
             {trade_action}
         </div>
     </div>
