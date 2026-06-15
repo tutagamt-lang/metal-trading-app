@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -12,6 +13,7 @@ st.markdown("""
     <style>
         .matrix-box { background-color: #0d1117; padding: 20px; border-radius: 6px; border: 1px solid #30363d; margin-bottom: 20px; }
         .text-white { color: #ffffff !important; }
+        .action-box { background-color: #161b22; padding: 15px; border-radius: 4px; border: 1px solid #30363d; margin-top: 10px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -29,11 +31,11 @@ def fetch_realtime_nse_data(symbol):
     except:
         return pd.DataFrame()
 
-# 4. Main Execution
+# 4. Sidebar Ticker
 ticker = st.sidebar.text_input("ENTER TICKER:", "RELIANCE").upper()
 df = fetch_realtime_nse_data(ticker)
 
-# பிழை வராமல் இருக்க df-ஐ சரிபார்த்தல்
+# 5. Main Logic & Display
 if not df.empty:
     live_price = df.iloc[-1]['Close']
     H = df['High'].max()
@@ -43,29 +45,35 @@ if not df.empty:
     r1_val = (2 * P) - L
     s1_val = (2 * P) - H
     
-    # Logic
+    # Logic setup
     if live_price < s1_val:
         status = "💥 REAL BREAKDOWN"
         color = "#ff2a5f"
         desc = "விலை முக்கிய சப்போர்ட் எல்லையை உடைத்து கீழே இறங்கிவிட்டது."
+        action = "⚡ SELL ACTION: Short பொசிஷன் எடுக்கலாம்!"
     elif live_price > r1_val:
         status = "🔥 REAL BREAKOUT"
         color = "#00ff88"
         desc = "விலை முக்கிய ரெசிஸ்டன்ஸ் எல்லையை உடைத்து மேலே ஏறியுள்ளது."
+        action = "⚡ BUY ACTION: Long பொசிஷன் எடுக்கலாம்!"
     else:
         status = "📡 CONSOLIDATION"
         color = "#00b0ff"
         desc = "சந்தையில் பெரிய மாற்றம் இல்லை, காத்திருக்கவும்."
+        action = "⏳ WAIT: பொறுமையாக இருக்கவும்."
 
-    # Display
+    # Final Display
     st.markdown(f"""
     <div class="matrix-box" style="border-left: 6px solid {color};">
-        <h3 style="color: {color};">{status}</h3>
+        <h3 style="color: {color}; margin-top: 0;">{status}</h3>
         <p class="text-white">📊 {desc}</p>
+        <div class="action-box" style="color: {color}; font-weight: bold;">
+            {action}
+        </div>
     </div>
     """, unsafe_allow_html=True)
     
     time.sleep(1)
     st.rerun()
 else:
-    st.warning("தரவு கிடைக்கவில்லை அல்லது தவறான Ticker. தயவுசெய்து சரிபார்க்கவும்.")
+    st.error("தரவு கிடைக்கவில்லை. தயவுசெய்து Ticker-ஐச் சரிபார்க்கவும்.")
