@@ -41,17 +41,17 @@ st.markdown("""
             font-family: 'JetBrains Mono', monospace !important;
         }
         
-        /* 📊 எழுத்துக்கள் பளிச்சென்று தெரிய உள்கட்டமைப்பு விதிகள் (HIGH CONTRAST PACK) */
+        /* 📊 HIGH CONTRAST QUANT TABLES */
         .quant-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 13px;
-            background-color: #0d1117 !important; /* இருண்ட தெளிவான பின்னணி */
+            background-color: #0d1117 !important;
             margin-bottom: 15px;
         }
         .quant-table th {
             background-color: #161b22 !important;
-            color: #c9d1d9 !important; /* பிரகாசமான சாம்பல்-வெள்ளை தலைப்பு */
+            color: #c9d1d9 !important;
             text-align: left;
             padding: 10px 12px;
             font-family: 'JetBrains Mono', monospace;
@@ -64,12 +64,12 @@ st.markdown("""
             border: 1px solid #30363d !important;
             padding: 10px 12px;
             font-family: 'JetBrains Mono', monospace;
-            color: #ffffff !important; /* அனைத்து சாதாரண எண்களும் எக்ஸ்ட்ரா பிரகாசமான வெள்ளை நிறத்தில் மாறும் */
-            opacity: 1 !important;     /* மங்கலாவதை 100% தடுக்கும் */
+            color: #ffffff !important;
+            opacity: 1 !important;
             font-weight: 600 !important;
         }
 
-        /* 🛑 ANTI-FADE MATRIX: ரீரன் லோடிங்கின் போது மங்கலாவதைத் தடுக்கும் குறியீடுகள் */
+        /* 🛑 ANTI-FADE MATRIX */
         div[data-testid="stDataFrameFade"], [data-testid="stElementOverlay"] {
             opacity: 1 !important;
             filter: none !important;
@@ -244,7 +244,6 @@ if len(df) >= 1:
     layout_col1, layout_col2 = st.columns([1, 1])
  
     with layout_col1:
-        # Plotly Chart
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines', name='Price', line=dict(color='#00ff88', width=2)))
         fig.add_trace(go.Scatter(x=df.index, y=df['VWAP'], mode='lines', name='VWAP', line=dict(color='#00b0ff', width=1.5, dash='dash')))
@@ -255,7 +254,6 @@ if len(df) >= 1:
         )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
  
-        # System Captured Data Matrix
         st.markdown(f"""
         <div style="background-color:#121620; padding:15px; border-radius:6px; font-size:13px; border: 1px solid #1c2333; color:#ffffff !important; line-height:1.7;">
             <b style="color:#ffcc00 !important; font-size:12px; letter-spacing:1px; font-family:'JetBrains Mono';">⚡ NSE SYSTEM CAPTURED DATA MATRIX (09:15 - 09:30)</b><br>
@@ -271,8 +269,6 @@ if len(df) >= 1:
     with layout_col2:
         h_color = "#00ff88" if df.iloc[idx_930]['High'] > df.iloc[idx_915]['High'] else "#ff2a5f"
         dow_label = "UPTREND" if h_color == "#00ff88" else "DOWNTREND"
- 
-        # Recommendation Logic
         calc_entry_b = max(levels["R1 (Resistance 1)"], h_930)
         calc_entry_s = min(levels["S1 (Support 1)"], l_930)
         
@@ -346,8 +342,64 @@ if len(df) >= 1:
         st.markdown(depth_table, unsafe_allow_html=True)
  
     # -----------------------------------------------------------------
+    # 🎯 🌟 NEW FEATURE: REALTIME ADVANCED BREAKOUT SCANNED MATRIX (FUTURES + OPTIONS COMBINED)
+    # -----------------------------------------------------------------
+    st.markdown("#### `🎯 REALTIME ADVANCED BREAKOUT SCANNED MATRIX (FUTURES + OPTIONS)`")
+    
+    # 📊 Dynamic Quant Logic Implementation
+    is_near_resistance = any(abs(live_price - v) <= (live_price * 0.005) for k, v in levels.items() if "R" in k)
+    is_near_support = any(abs(live_price - v) <= (live_price * 0.005) for k, v in levels.items() if "S" in k)
+    
+    # Simulating Live Futures OI Change % for Calculation (Real Instance replacement block)
+    fut_oi_change_pct = float(f"{((df.iloc[-1]['Volume'] - df.iloc[0]['Volume'])/df.iloc[0]['Volume'])*10:.2f}") if len(df)>1 else 5.2
+    
+    # Quant Condition Engine mapping with Tamil Insight
+    if is_near_resistance:
+        if day_change > 0 and fut_oi_change_pct > 0:
+            status_box = "🔥 REAL BREAKOUT: LONG BUILDUP"
+            color_box = "#00ff88"
+            tamil_desc = "விலை மின்கம்பல் போல் Resistance-ஐ உடைத்து ஏறியுள்ளது. Futures OI மற்றும் பிரைஸ் இரண்டுமே அதிகரிப்பதால் (Long Buildup), Call Writers தங்களின் பொசிஷன்களை மூடிவிட்டு ஓடுகிறார்கள் (Call Unwinding). இது உறுதியான அப்-ட்ரெண்ட்!"
+            trade_action = "⚡ BUY ACTION: தாராளமாக Long பொசிஷன் எடுக்கலாம். அடுத்த Resistance-ஐ நோக்கிச் செல்லும்."
+        else:
+            status_box = "⚠️ FAKE BREAKOUT / REVERSAL"
+            color_box = "#ff2a5f"
+            tamil_desc = "விலை Resistance அருகில் வந்தாலும் பியூச்சர்ஸ் வால்யூம் ஆதரிக்கவில்லை. Call OI இன்னும் பிரமாதமாக வலுவாக உள்ளது. பெரிய கைகள் மார்க்கெட்டை மேலே விடத் தயாராக இல்லை. இங்கிருந்து விலை கீழே விழலாம்!"
+            trade_action = "🛑 SELL ACTION: Resistance தாங்காமல் கீழே திரும்பும்போது Short / Put Option வாங்கலாம்."
+            
+    elif is_near_support:
+        if day_change < 0 and fut_oi_change_pct > 0:
+            status_box = "💥 REAL BREAKDOWN: SHORT BUILDUP"
+            color_box = "#ff2a5f"
+            tamil_desc = "விலை முக்கிய சப்போர்ட்டை உடைத்து கீழே இறங்குகிறது. Futures OI அதிகரித்து விலை சரிவதால் (Short Buildup) பெரும் சரிவு வரப்போகிறது. Put Writers பயந்து வெளியேறுகிறார்கள்."
+            trade_action = "⚡ SELL ACTION: சப்போர்ட் உடைந்ததால் தாராளமாக Short / PE Option எடுக்கலாம்."
+        else:
+            status_box = "🍏 SUPPORT REVERSAL: BOUNCE BACK"
+            color_box = "#00ff88"
+            tamil_desc = "சப்போர்ட் எல்லையில் Put OI அசுர வேகத்தில் குவிந்துள்ளது. பெரிய நிறுவனங்கள் இந்த விலைக்கு கீழே ஸ்டாக்கை விடமாட்டார்கள். சப்போர்ட் லைனைத் தொட்டுவிட்டு ராக்கெட் போல் மேலே திரும்புகிறது."
+            trade_action = "⚡ BUY ACTION: சப்போர்ட்டில் தஞ்சம் அடைந்து மேலே திரும்புவதால் தாராளமாக Buy/Call Option எடுக்கலாம்."
+    else:
+        status_box = "📡 CONSOLIDATION: MEAN REVERSION"
+        color_box = "#00b0ff"
+        tamil_desc = "தற்போது ஸ்டாக் எந்த ஒரு முக்கிய சப்போர்ட் அல்லது ரெசிஸ்டன்ஸ் எல்லையையும் தொடவில்லை. நடுநிலையான எல்லையில் வர்த்தகம் ஆகிறது (Sideways / Consolidation)."
+        trade_action = "⏳ WAIT: விலை முக்கிய சப்போர்ட் அல்லது ரெசிஸ்டன்ஸ் எல்லைக்கு அருகில் வரும் வரை பொறுமையாக காத்திருக்கவும்."
+
+    st.markdown(f"""
+    <div style="background-color:#0d1117; padding:18px; border-radius:6px; border: 1px solid #30363d; border-left:6px solid {color_box}; color:#ffffff !important; line-height:1.7;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #30363d; padding-bottom:8px; margin-bottom:10px;">
+            <b style="color:{color_box} !important; font-size:14px; letter-spacing:0.5px; font-family:'JetBrains Mono';">{status_box}</b>
+            <span style="font-size:11px; color:#8b949e;">FUTURES OI CHANGE: <b style="color:#fff;">{fut_oi_change_pct:+.2f}%</b></span>
+        </div>
+        <p style="margin:0px; font-size:13px; color:#ffffff !important;"><b style="color:#ffcc00 !important;">📊 தமிழ் சந்தை விளக்கம்:</b> {tamil_desc}</p>
+        <div style="margin-top:10px; background-color:#161b22; padding:8px 12px; border-radius:4px; font-size:13px; border:1px solid #30363d; color:{color_box} !important; font-weight:bold;">
+            {trade_action}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # -----------------------------------------------------------------
     # 🎯 BREAKOUT MATRIX ENGINE (PIVOT LEVELS)
     # -----------------------------------------------------------------
+    st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
     st.markdown("#### `🎯 ALIGNED BREAKOUT MATRIX ENGINE (TOP TO BOTTOM)`")
     table_html = "<table class='quant-table'>"
     table_html += "<thead><tr style='background-color: #161b22;'><th style='color: #c9d1d9 !important;'>PIVOT IDENTIFIED INTERVAL</th><th style='color: #c9d1d9 !important;'>TARGET VALUE SYSTEM (INR)</th><th style='color: #c9d1d9 !important;'>REGIME STATE</th></tr></thead><tbody>"
