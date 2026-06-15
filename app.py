@@ -14,10 +14,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 🎯 டேபிள்கள் மங்கலாவதை (Blur/Fade/Flicker) 100% தடுக்கும் அதிநவீன CSS
+# 🎯 அட்டவணைகள் மங்கலாவதை (Blur/Fade/Flicker) 100% தடுக்கும் அதிநவீன CSS
 st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght=400;700&family=Inter:wght=400;600&display=swap');
         * { font-family: 'Inter', sans-serif; }
         .block-container { padding-top: 2.2rem !important; padding-bottom: 0rem; padding-left: 1.5rem; padding-right: 1.5rem; }
         h2 { font-family: 'Inter', sans-serif; font-weight: 600; letter-spacing: -0.5px; margin-top: 5px !important; margin-bottom: 10px !important; }
