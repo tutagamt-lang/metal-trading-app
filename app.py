@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
  
-# 🎯 HIGH-CONTRAST ANTI-BLUR TERMINAL STYLE MATRIX WITH FORCE TEXT OVERRIDE
+# 🎯 HIGH-CONTRAST ANTI-BLUR TERMINAL STYLE MATRIX
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght=400;700&family=Inter:wght=400;600&display=swap');
@@ -67,32 +67,6 @@ st.markdown("""
             color: #ffffff !important;
             opacity: 1 !important;
             font-weight: 600 !important;
-        }
-
-        /* 🌟 STYLING FOR REALTIME ADVANCED BREAKOUT SCANNED MATRIX TEXT */
-        .scanned-matrix-box {
-            background-color: #0d1117 !important;
-            padding: 18px;
-            border-radius: 6px;
-            border: 1px solid #30363d;
-            line-height: 1.7;
-        }
-        .matrix-title {
-            font-size: 15px;
-            letter-spacing: 0.5px;
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 800 !important;
-        }
-        .matrix-text-white {
-            color: #ffffff !important;
-            font-size: 14px !important;
-            font-weight: 600 !important;
-            opacity: 1 !important;
-        }
-        .matrix-text-yellow {
-            color: #ffcc00 !important;
-            font-weight: 800 !important;
-            font-size: 14px !important;
         }
 
         /* 🛑 ANTI-FADE MATRIX */
@@ -368,7 +342,7 @@ if len(df) >= 1:
         st.markdown(depth_table, unsafe_allow_html=True)
  
     # -----------------------------------------------------------------
-    # 🎯 REALTIME ADVANCED BREAKOUT SCANNED MATRIX (FIXED HIGH CONTRAST)
+    # 🎯 REALTIME ADVANCED BREAKOUT SCANNED MATRIX (TOTAL HTML FIX)
     # -----------------------------------------------------------------
     st.markdown("#### `🎯 REALTIME ADVANCED BREAKOUT SCANNED MATRIX (FUTURES + OPTIONS)`")
     
@@ -405,24 +379,30 @@ if len(df) >= 1:
         tamil_desc = "தற்போது ஸ்டாக் எந்த ஒரு முக்கிய சப்போர்ட் அல்லது ரெசிஸ்டன்ஸ் எல்லையையும் தொடவில்லை. நடுநிலையான எல்லையில் வர்த்தகம் ஆகிறது (Sideways / Consolidation)."
         trade_action = "⏳ WAIT: விலை முக்கிய சப்போர்ட் அல்லது ரெசிஸ்டன்ஸ் எல்லைக்கு அருகில் வரும் வரை பொறுமையாக காத்திருக்கவும்."
 
-    # HTML ஸ்ட்ரிங்கிற்குள் இருக்கும் அனைத்து கிளாஸ்களும் CSS உடன் துல்லியமாக இணைக்கப்பட்டுள்ளது
-    st.markdown(f"""
-    <div class="scanned-matrix-box" style="border-left: 6px solid {color_box} !important;">
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #30363d; padding-bottom:8px; margin-bottom:12px;">
-            <b class="matrix-title" style="color:{color_box} !important;">{status_box}</b>
-            <span class="matrix-text-white" style="font-size:12px !important;">FUTURES OI CHANGE: <span style="color:#ffffff !important;">{fut_oi_change_pct:+.2f}%</span></span>
+    # 🌟 பியூர் HTML மற்றும் இன்லைன் சிஎஸ்எஸ் ஸ்டைலிங் (எந்த ஒரு எழுத்தும் இனி மங்கலாகாது)
+    scanned_matrix_html = f"""
+    <div style="background-color: #0d1117; padding: 20px; border-radius: 6px; border: 1px solid #30363d; border-left: 6px solid {color_box}; line-height: 1.8;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 15px;">
+            <span style="color: {color_box}; font-size: 16px; font-family: 'JetBrains Mono', monospace; font-weight: 800; text-transform: uppercase;">{status_box}</span>
+            <span style="font-size: 13px; color: #ffffff; font-family: 'JetBrains Mono', monospace; font-weight: 700;">FUTURES OI CHANGE: <span style="color: #ffcc00;">{fut_oi_change_pct:+.2f}%</span></span>
         </div>
-        <div class="matrix-text-white">
-            <span class="matrix-text-yellow">📊 தமிழ் சந்தை விளக்கம்:</span> {tamil_desc}
+        
+        <div style="margin-bottom: 15px; font-size: 14px; color: #ffffff;">
+            <strong style="color: #ffcc00; font-size: 14px; font-weight: 800;">📊 தமிழ் சந்தை விளக்கம்:</strong> 
+            <span style="color: #ffffff; font-weight: 600;">{tamil_desc}</span>
         </div>
-        <div style="margin-top:12px; background-color:#161b22; padding:10px 14px; border-radius:4px; font-size:14px; border:1px solid #30363d; color:{color_box} !important; font-weight:800;">
+        
+        <div style="background-color: #161b22; padding: 12px 16px; border-radius: 4px; font-size: 14px; border: 1px solid #30363d; color: {color_box}; font-weight: 800; letter-spacing: 0.3px;">
             {trade_action}
         </div>
+        
     </div>
-    """, unsafe_allow_html=True)
+    """
+    st.markdown(scanned_matrix_html, unsafe_allow_html=True)
 
     # -----------------------------------------------------------------
-    # 🎯 BREAKOUT MATRIX ENGINE (PIVOT LEVELS - FIXED SYNTAX)
+    # 🎯 BREAKOUT MATRIX ENGINE (PIVOT LEVELS)
     # -----------------------------------------------------------------
     st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
     st.markdown("#### `🎯 ALIGNED BREAKOUT MATRIX ENGINE (TOP TO BOTTOM)`")
@@ -443,7 +423,6 @@ if len(df) >= 1:
             
         regime_state = "BELOW VWAP" if live_price < current_vwap else "ABOVE VWAP"
         
-        # 🌟 பக் இருந்த பழைய வரியை முழுமையாக நீக்கிவிட்டு புதிய சுத்தமான HTML குறியீடு மாற்றப்பட்டுள்ளது
         table_html += "<tr><td style='color: " + str(text_color) + " !important; font-weight: bold;'>" + str(lvl) + "</td>"
         table_html += "<td style='color: #ffffff !important; font-weight: bold;'>&#8377; " + f"{value:.2f}" + "</td>"
         table_html += "<td style='color: #8b949e !important;'>" + str(regime_state) + " (" + str(regime) + ")</td></tr>"
