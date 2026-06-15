@@ -14,26 +14,30 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 🎯 அட்டவணைகள் மங்கலாவதை (Blur/Fade/Flicker) 100% தடுக்கும் அதிநவீன CSS
+# 🎯 Streamlit அனிமேஷன்கள் மற்றும் Flicker-ஐ முழுமையாக முடக்கும் CSS
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght=400;700&family=Inter:wght=400;600&display=swap');
         * { font-family: 'Inter', sans-serif; }
         .block-container { padding-top: 2.2rem !important; padding-bottom: 0rem; padding-left: 1.5rem; padding-right: 1.5rem; }
         h2 { font-family: 'Inter', sans-serif; font-weight: 600; letter-spacing: -0.5px; margin-top: 5px !important; margin-bottom: 10px !important; }
-        h4 { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #566275; margin-top: 15px; margin-bottom: 8px; }
+        h4 { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #566275; margin-top: 20px; margin-bottom: 8px; font-weight: bold; }
         .mono-text { font-family: 'JetBrains Mono', monospace !important; }
         
         /* பிரீமியம் பிளாட்ஃபார்ம் டேபிள் வடிவமைப்பு */
-        .pivot-table { width: 100%; border-collapse: collapse; font-size: 14px; background-color: #0b0c10; margin-bottom: 10px; }
+        .pivot-table { width: 100%; border-collapse: collapse; font-size: 14px; background-color: #0b0c10; margin-bottom: 15px; }
         .pivot-table td, .pivot-table th { border: 1px solid #1f2833; padding: 10px 12px; font-family: 'JetBrains Mono', monospace; text-align: left; }
 
-        /* Streamlit-ன் டிஃபால்ட் அனிமேஷன்கள் அனைத்தையும் செயலிழக்கச் செய்தல் */
+        /* மங்கலாவதை (Blur/Fade-out) தடுக்கும் மிக முக்கிய CSS */
         div[data-testid="stStatusWidget"], [data-testid="stElementOverlay"] {
             visibility: hidden !important;
             display: none !important;
         }
         div[data-testid="stVerticalBlock"] > div {
+            animation: none !important;
+            transition: none !important;
+        }
+        .stMarkdown, .stPlotlyChart {
             animation: none !important;
             transition: none !important;
         }
@@ -104,47 +108,37 @@ ticker_clean = custom_ticker if custom_ticker else selected_focus
 st.markdown(f"<h2>QUANTUM-X NSE TERMINAL // <span style='color:#00ff88;'>{ticker_clean}</span></h2>", unsafe_allow_html=True)
 
 # -----------------------------------------------------------------
-# LAYOUT PLACEHOLDERS (டேபிள்கள் உடையாமல் இருக்க நிலையான இடங்கள்)
-# -----------------------------------------------------------------
-main_price_box = st.empty()
-layout_col1, layout_col2 = st.columns([1, 1])
-
-with layout_col1:
-    live_chart_box = st.empty()
-    matrix_data_box = st.empty()
-
-with layout_col2:
-    trading_signal_box = st.empty()
-
-watchlist_header = st.empty()
-watchlist_table_box = st.empty()
-
-col_depth1, col_depth2 = st.columns(2)
-with col_depth1:
-    oi_header = st.empty()
-    oi_table_box = st.empty()
-with col_depth2:
-    depth_header = st.empty()
-    depth_table_box = st.empty()
-
-pivot_header = st.empty()
-pivot_table_box = st.empty()
-
-# Header-களை நிலையாக அச்சிடுதல் (இதுவும் மங்கலாவதைத் தடுக்கும்)
-watchlist_header.markdown("<h4>📊 NSE WATCHLIST MONITOR</h4>", unsafe_allow_html=True)
-oi_header.markdown("<h4>🔮 FUTURE OPEN INTEREST (OI) TRACKER</h4>", unsafe_allow_html=True)
-depth_header.markdown("<h4>📈 REALTIME MARKET DEPTH L2 (ORDER BOOK)</h4>", unsafe_allow_html=True)
-pivot_header.markdown("<h4>🎯 ALIGNED PIVOT MATRIX ENGINE (TOP TO BOTTOM)</h4>", unsafe_allow_html=True)
-
-# -----------------------------------------------------------------
 # 🎯 REALTIME REFRESH LOOP (FRAGMENT - 0.5s)
 # -----------------------------------------------------------------
+# லேயவுட் பாக்ஸ்கள் அனைத்தும் Fragment-க்கு உள்ளே மாற்றப்பட்டுள்ளது!
 @st.fragment(run_every=0.5)
 def start_live_stream(ticker):
+    # இங்கேயே பிளேஸ்ஹோல்டர்களை உருவாக்குவதால் மங்கலாகும் பிரச்சனை 100% தடுக்கப்படுகிறது
+    main_price_box = st.empty()
+    layout_col1, layout_col2 = st.columns([1, 1])
+
+    with layout_col1:
+        live_chart_box = st.empty()
+        matrix_data_box = st.empty()
+
+    with layout_col2:
+        trading_signal_box = st.empty()
+
+    watchlist_box = st.empty()
+    
+    col_depth1, col_depth2 = st.columns(2)
+    with col_depth1:
+        oi_box = st.empty()
+    with col_depth2:
+        depth_box = st.empty()
+
+    pivot_box = st.empty()
+
+    # தரவை எடுத்தல்
     df, live_price, data_status = fetch_nse_realtime_data(ticker)
 
     if len(df) >= 1:
-        # கணக்கீடுகள்
+        # தொழில்நுட்பக் கணக்கீடுகள்
         df['VWAP'] = ((df['High'] + df['Low'] + df['Close']) / 3 * df['Volume']).cumsum() / df['Volume'].cumsum()
         current_vwap = df.iloc[-1]['VWAP']
         df['RSI'] = RSIIndicator(close=df['Close'], window=14).rsi()
@@ -170,7 +164,7 @@ def start_live_stream(ticker):
         movement_type = get_oi_movement(oi_change, c_930 - c_915)
         levels = calculate_pivots(float(df.iloc[0:idx_930+1]['High'].max()), float(df.iloc[0:idx_930+1]['Low'].min()), float(c_930))
 
-        # 1. Main Price Box Update
+        # 1. Main Price Box
         main_price_box.markdown(f"""
         <div style="background-color:#090a0f; padding: 14px; border-radius: 6px; border: 1px solid #1c2333; margin-bottom: 5px;">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
@@ -188,14 +182,14 @@ def start_live_stream(ticker):
         </div>
         """, unsafe_allow_html=True)
 
-        # 2. Chart Update
+        # 2. Chart
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines', line=dict(color='#00ff88', width=2)))
         fig.add_trace(go.Scatter(x=df.index, y=df['VWAP'], mode='lines', line=dict(color='#ffcc00', width=1.5, dash='dash')))
         fig.update_layout(template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=10, r=10, t=5, b=5), height=140, showlegend=False, xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor='#161b22'))
         live_chart_box.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-        # 3. Captured Data Matrix Update
+        # 3. Captured Data Matrix
         matrix_data_box.markdown(f"""
         <div style="background-color:#090a0f; padding:12px; border-radius:6px; font-size:14px; border: 1px solid #1c2333; color:#ffffff; line-height:1.7;">
             <b style="color:#ffcc00; font-size:13px; letter-spacing:1px; font-family:'JetBrains Mono';">⚡ NSE SYSTEM CAPTURED DATA MATRIX (09:15 - 09:30)</b><br>
@@ -208,7 +202,7 @@ def start_live_stream(ticker):
         </div>
         """, unsafe_allow_html=True)
 
-        # 4. Trading Signal Update
+        # 4. Trading Signal
         h_color = "#00ff88" if h_930 > h_915 and l_930 > l_915 else ("#ff2a5f" if h_930 < h_915 and l_930 < l_915 else "#ffcc00")
         dow_label = "UPTREND" if h_color == "#00ff88" else ("DOWNTREND" if h_color == "#ff2a5f" else "SIDEWAYS")
         
@@ -238,41 +232,41 @@ def start_live_stream(ticker):
                 </div></div>"""
         trading_signal_box.markdown(action_html, unsafe_allow_html=True)
 
-        # 5. Watchlist HTML Table (Zero Blur)
-        wl_html = "<table class='pivot-table'><tr style='background-color:#121620; color:#7889a3;'><th>STOCK (NSE)</th><th>LAST PRICE (₹)</th><th>REGIME STATE</th></tr>"
+        # 5. Watchlist (Zero Blur)
+        wl_html = "<h4>📊 NSE WATCHLIST MONITOR</h4><table class='pivot-table'><tr style='background-color:#121620; color:#7889a3;'><th>STOCK (NSE)</th><th>LAST PRICE (₹)</th><th>REGIME STATE</th></tr>"
         for stock in st.session_state.watchlist:
             _, s_price, _ = fetch_nse_realtime_data(stock)
             reg_state = "BELOW VWAP" if s_price < current_vwap else "ABOVE VWAP"
             reg_color = "#ff2a5f" if s_price < current_vwap else "#00ff88"
             wl_html += f"<tr><td><b>{stock}</b></td><td>{s_price:.2f}</td><td style='color:{reg_color};'>{reg_state}</td></tr>"
         wl_html += "</table>"
-        watchlist_table_box.markdown(wl_html, unsafe_allow_html=True)
+        watchlist_box.markdown(wl_html, unsafe_allow_html=True)
 
-        # 6. Future OI HTML Table (Zero Blur)
-        oi_table = f"""<table class='pivot-table'>
+        # 6. Future OI Delta Table (Zero Blur)
+        oi_table = f"""<h4>🔮 FUTURE OPEN INTEREST (OI) TRACKER</h4><table class='pivot-table'>
             <tr style='background-color:#121620; color:#7889a3;'><th>EXPIRY</th><th>CALL OI DELTA</th><th>PUT OI DELTA</th><th>PCR STATE</th></tr>
             <tr><td>25-JUN-2026</td><td style='color:#ff2a5f;'>1,45,200</td><td style='color:#00ff88;'>1,89,600</td><td style='font-weight:bold; color:#00ff88;'>1.31 (BULLISH)</td></tr>
             <tr><td>30-JUL-2026</td><td style='color:#ff2a5f;'>42,100</td><td style='color:#00ff88;'>38,400</td><td style='font-weight:bold; color:#ffcc00;'>0.91 (NEUTRAL)</td></tr>
         </table>"""
-        oi_table_box.markdown(oi_table, unsafe_allow_html=True)
+        oi_box.markdown(oi_table, unsafe_allow_html=True)
 
-        # 7. Market Depth HTML Table (Zero Blur)
-        depth_table = f"""<table class='pivot-table'>
+        # 7. Market Depth L2 (Zero Blur)
+        depth_table = f"""<h4>📈 REALTIME MARKET DEPTH L2 (ORDER BOOK)</h4><table class='pivot-table'>
             <tr style='background-color:#121620; color:#7889a3;'><th>BID QTY (BUY)</th><th>PRICE</th><th>ASK QTY (SELL)</th><th>PRICE</th></tr>
             <tr><td style='color:#00ff88;'>12,450</td><td>{live_price - 0.05:.2f}</td><td style='color:#ff2a5f;'>8,900</td><td>{live_price + 0.05:.2f}</td></tr>
             <tr><td style='color:#00ff88;'>18,100</td><td>{live_price - 0.10:.2f}</td><td style='color:#ff2a5f;'>14,250</td><td>{live_price + 0.10:.2f}</td></tr>
         </table>"""
-        depth_table_box.markdown(depth_table, unsafe_allow_html=True)
+        depth_box.markdown(depth_table, unsafe_allow_html=True)
 
-        # 8. Pivot Levels HTML Table (Zero Blur)
-        table_html = "<table class='pivot-table'><tr style='background-color: #121620; color: #7889a3;'><th>PIVOT IDENTIFIED INTERVAL</th><th>TARGET VALUE SYSTEM (₹)</th></tr>"
+        # 8. Aligned Pivot Matrix Engine (Zero Blur)
+        table_html = "<h4>🎯 ALIGNED PIVOT MATRIX ENGINE (TOP TO BOTTOM)</h4><table class='pivot-table'><tr style='background-color: #121620; color: #7889a3;'><th>PIVOT IDENTIFIED INTERVAL</th><th>TARGET VALUE SYSTEM (₹)</th></tr>"
         for lvl, value in levels.items():
             text_color = "#ff2a5f" if "R" in lvl else ("#00ff88" if "S" in lvl else "#00b0ff")
             table_html += f"<tr><td style='color: {text_color}; font-weight: 600;'>{lvl}</td><td style='color: #ffffff; font-weight: bold;'>{value:.2f}</td></tr>"
         table_html += "</table>"
-        pivot_table_box.markdown(table_html, unsafe_allow_html=True)
+        pivot_box.markdown(table_html, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------
-# START LIVE PIPELINE
+# RUN TERMINAL
 # -----------------------------------------------------------------
 start_live_stream(ticker_clean)
