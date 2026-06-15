@@ -6,7 +6,6 @@ import plotly.graph_objects as go
 from ta.volatility import AverageTrueRange
 from ta.momentum import RSIIndicator
 from ta.trend import EMAIndicator
-import streamlit.components.v1 as components
 import time
 
 # 1. Page Configuration for Pro Institutional Layout
@@ -16,12 +15,11 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 🎯 LIGHT-MODE HIGH-CONTRAST TERMINAL STYLE (FOR MAXIMUM CLARITY)
+# 🎯 LIGHT-MODE HIGH-CONTRAST TERMINAL STYLE (STABLE CSS)
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght=400;700&family=Inter:wght=400;600;700&display=swap');
         
-        /* Global Page Background & Core Text overrides to Light Mode */
         .stApp { background-color: #F8FAFC !important; color: #0F172A !important; }
         * { font-family: 'Inter', sans-serif; }
         .block-container { padding-top: 1.5rem !important; padding-bottom: 0rem; }
@@ -30,12 +28,12 @@ st.markdown("""
         h4 { font-weight: 700; color: #1E3A8A !important; font-family: 'JetBrains Mono', monospace !important; margin-top: 20px !important; }
         .mono-text { font-family: 'JetBrains Mono', monospace !important; font-weight: 700 !important; }
         
-        /* 📊 CRYSTAL CLEAR TABLES - BLACK TEXT ON WHITE BACKGROUND */
+        /* 📊 CRYSTAL CLEAR TABLES */
         .quant-table { width: 100%; border-collapse: collapse; font-size: 15px; background-color: #FFFFFF !important; margin-bottom: 15px; border: 2px solid #0F172A !important; }
         .quant-table th { background-color: #0F172A !important; color: #FFFFFF !important; text-align: left; padding: 12px 14px; font-family: 'JetBrains Mono', monospace; border: 2px solid #0F172A !important; font-size: 13px; font-weight: 700 !important; text-transform: uppercase; }
         .quant-table td { border: 2px solid #E2E8F0 !important; padding: 12px 14px; font-family: 'JetBrains Mono', monospace; color: #0F172A !important; font-weight: 700 !important; font-size: 15px; background-color: #FFFFFF !important; }
 
-        /* 🛑 SYSTEM PANEL BOXES (Enhanced Readability) */
+        /* 🛑 SYSTEM PANEL BOXES */
         .matrix-box { background-color: #FFFFFF; padding: 22px; border-radius: 6px; border: 2px solid #0F172A; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
         
         /* Sidebar Styling Fixes */
@@ -43,7 +41,7 @@ st.markdown("""
         section[data-testid="stSidebar"] * { color: #FFFFFF !important; }
         section[data-testid="stSidebar"] input { color: #000000 !important; }
         
-        /* Anti-flicker adjustments */
+        /* Status Widget Override */
         div[data-testid="stStatusWidget"] { visibility: hidden !important; display: none !important; }
     </style>
 """, unsafe_allow_html=True)
@@ -61,7 +59,6 @@ def get_oi_movement(oi_change, price_diff):
     else: return "SHORT COVERING"
 
 def calculate_pivots(H, L, C, O):
-    # Custom Intraday Pivot Formula
     P = (H + L + C + O) / 4
     R1 = (2 * P) - L
     S1 = (2 * P) - H
@@ -154,12 +151,11 @@ if len(df) >= 1:
     df_15min = df.between_time("09:15", "09:30")
     
     if not df_15min.empty:
-        o_anchor = float(df_15min.iloc[0]['Open'])      # 09:15 Opening Price
-        c_anchor = float(df_15min.iloc[-1]['Close'])    # 09:30 Closing Price
-        h_anchor = float(df_15min['High'].max())        # Absolute High between 09:15 - 09:30
-        l_anchor = float(df_15min['Low'].min())         # Absolute Low between 09:15 - 09:30
+        o_anchor = float(df_15min.iloc[0]['Open'])
+        c_anchor = float(df_15min.iloc[-1]['Close'])
+        h_anchor = float(df_15min['High'].max())
+        l_anchor = float(df_15min['Low'].min())
     else:
-        # Fallback values if live dataframe indexing hasn't reached 9:30 AM yet
         o_anchor = float(df.iloc[0]['Open'])
         c_anchor = float(df.iloc[min(15, len(df)-1)]['Close'])
         h_anchor = float(df.iloc[0:16]['High'].max())
@@ -175,7 +171,6 @@ if len(df) >= 1:
     oi_change = int(df.iloc[idx_15]['Volume'] * 0.48) - int(df.iloc[idx_0]['Volume'] * 0.42)
     movement_type = get_oi_movement(oi_change, c_anchor - o_anchor)
     
-    # 🎯 Triggering the exact Intraday formula requested
     levels = calculate_pivots(h_anchor, l_anchor, c_anchor, o_anchor)
 
     strike_step = 5.0 if live_price < 300 else (20.0 if live_price < 1500 else 50.0)
@@ -183,18 +178,7 @@ if len(df) >= 1:
     max_pain = atm_strike  
 
     # Title Sections
-    head_col1, head_col2 = st.columns([1.5, 1])
-    with head_col1:
-        st.markdown(f"<h2>QUANTUM-X NSE TERMINAL // <span style='color:#1E4A8A;'>{ticker_clean}</span></h2>", unsafe_allow_html=True)
-    with head_col2:
-        tv_widget_html = f"""
-        <div class="tradingview-widget-container" style="margin-top: 5px;">
-          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
-          {{"symbol": "NSE:{ticker_clean}", "width": "100%", "colorTheme": "light", "isTransparent": true, "locale": "en"}}
-          </script>
-        </div>
-        """
-        components.html(tv_widget_html, height=50)
+    st.markdown(f"<h2>QUANTUM-X NSE TERMINAL // <span style='color:#1E4A8A;'>{ticker_clean}</span></h2>", unsafe_allow_html=True)
 
     # Price Feed Ribbon 
     st.markdown(f"""
@@ -218,6 +202,7 @@ if len(df) >= 1:
     layout_col1, layout_col2 = st.columns([1, 1])
 
     with layout_col1:
+        # Fixed: Config parameter with unique key to prevent duplicate element IDs during re-runs
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines', name='Price', line=dict(color='#10B981', width=2.5)))
         fig.add_trace(go.Scatter(x=df.index, y=df['VWAP'], mode='lines', name='VWAP', line=dict(color='#2563EB', width=2, dash='dash')))
@@ -226,32 +211,18 @@ if len(df) >= 1:
             margin=dict(l=10, r=10, t=10, b=10), height=140, showlegend=False,
             xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor='#E2E8F0')
         )
-        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key=f"chart_{ticker_clean}")
 
-        # 📊 UPDATED: SEPARATED INDIVIDUAL OPEN, HIGH, LOW, CLOSE LABELS VISUALLY
+        # 📊 DETAILED INDEPENDENT LABELS FOR CAPTURED ANCHOR VALUES (09:15 - 09:30)
         st.markdown(f"""
         <div style="background-color:#FFFFFF; padding:15px; border-radius:6px; font-size:14px; border: 2px solid #0F172A; color:#0F172A !important; line-height:1.8;">
             <b style="color:#1E3A8A !important; font-size:13px; letter-spacing:1px; font-family:'JetBrains Mono';">⚡ NSE SYSTEM CAPTURED DATA MATRIX (09:15 - 09:30 Anchor)</b><br>
             <div style="margin-top:8px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <div style="background-color:#F8FAFC; padding:6px; border:1px solid #E2E8F0; border-radius:4px;">• <b>OPEN:</b> <span class="mono-text" style="color:#0F172A;">&#8377; {o_anchor:.2f}</span></div>
-                <div style="background-color:#F8FAFC; padding:6px; border:1px solid #E2E8F0; border-radius:4px;">• <b>HIGH:</b> <span class="mono-text" style="color:#059669;">&#8377; {h_anchor:.2f}</span></div>
-                <div style="background-color:#F8FAFC; padding:6px; border:1px solid #E2E8F0; border-radius:4px;">• <b>LOW:</b> <span class="mono-text" style="color:#DC2626;">&#8377; {l_anchor:.2f}</span></div>
-                <div style="background-color:#F8FAFC; padding:6px; border:1px solid #E2E8F0; border-radius:4px;">• <b>CLOSE:</b> <span class="mono-text" style="color:#2563EB;">&#8377; {c_anchor:.2f}</span></div>
+                <div style="background-color:#F8FAFC; padding:6px; border:1px solid #E2E8F0; border-radius:4px;">• <b>OPEN:</b> <span class="mono-text" style="color:#0F172A;">₹ {o_anchor:.2f}</span></div>
+                <div style="background-color:#F8FAFC; padding:6px; border:1px solid #E2E8F0; border-radius:4px;">• <b>HIGH:</b> <span class="mono-text" style="color:#059669;">₹ {h_anchor:.2f}</span></div>
+                <div style="background-color:#F8FAFC; padding:6px; border:1px solid #E2E8F0; border-radius:4px;">• <b>LOW:</b> <span class="mono-text" style="color:#DC2626;">₹ {l_anchor:.2f}</span></div>
+                <div style="background-color:#F8FAFC; padding:6px; border:1px solid #E2E8F0; border-radius:4px;">• <b>CLOSE:</b> <span class="mono-text" style="color:#2563EB;">₹ {c_anchor:.2f}</span></div>
                 <div style="grid-column: span 2; font-size:13px; padding-top:4px; color:#475569;">📊 Volume Flow State: <span class="mono-text" style="color:#0F172A; font-weight:700;">{movement_type} ({oi_change:+,} Qty)</span></div>
             </div>
         </div>
         """, unsafe_allow_html=True)
-
-    with layout_col2:
-        dow_label = "UPTREND" if c_anchor > o_anchor else "DOWNTREND"
-        calc_entry_b = max(levels["R1 (Resistance 1)"], h_anchor)
-        calc_entry_s = min(levels["S1 (Support 1)"], l_anchor)
-        flow_label = "ABOVE VWAP" if live_price > current_vwap else "BELOW VWAP"
-        
-        st.markdown(f"""
-        <div style="background-color:#FFFFFF; padding:18px; border-radius:6px; border: 2px solid #0F172A; border-left:8px solid #D97706; color:#0F172A !important; height: 215px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);">
-            <span style="background-color:#D97706; color:#FFFFFF; padding:4px 8px; font-size:12px; font-weight:bold; border-radius:2px; font-family:'JetBrains Mono';">SYSTEM CONFLICT MATRIX</span>
-            <div style="margin-top:12px; font-size:14px; line-height:1.8; font-family:'JetBrains Mono'; color:#0F172A;">
-                • RANGE TREND: <b style="color:#B45309 !important;">{dow_label}</b> | FLOW: <b style="color:#DC2626 !important;">{flow_label}</b><br>
-                • <span style="color:#059669 !important; font-weight:bold;">IF BREAKOUT BUY:</span> Entry Above <b class="mono-text" style="color:#0F172A !important; background-color:#F1F5F9; padding:2px 4px;">&#8377; {calc_entry_b:.2f}</b><br>
-                • <span style="color:#DC2626 !important; font-weight:bold;">IF BREAKOUT SELL:</span> Entry Below <b class="mono-text" style="color:#0F172A !important; background-color:#F1F5F9; padding:2px 4px;">&#8377; {calc_
