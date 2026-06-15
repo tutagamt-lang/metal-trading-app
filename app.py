@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
  
-# FIXED CSS: Added premium anti-blur & anti-flicker patches directly into style tag
+# FIXED CSS: Anti-blur patches + Your existing UI theme layout
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght=400;700&family=Inter:wght=400;600&display=swap');
@@ -52,8 +52,8 @@ st.markdown("""
             font-family: 'JetBrains Mono', monospace;
         }
 
-        /* 🎯 ANTI-BLUR & ANTI-FLICKER CORE CSS MATRIX */
-        /* பக்கத்தில் உள்ள டேபிள்கள் மற்றும் எலிமெண்ட்கள் புதுப்பிக்கும்போது மங்கலாவதை முற்றிலும் தடுக்கிறது */
+        /* 🎯 ANTI-BLUR & ANTI-FLICKER MATRIX */
+        /* டேபிள் டேட்டா அப்டேட் ஆகும்போது மங்கலாவதை (Fade/Blur) முற்றிலும் தடுக்கிறது */
         div[data-testid="stDataFrameFade"], [data-testid="stElementOverlay"] {
             opacity: 1 !important;
             filter: none !important;
@@ -62,7 +62,7 @@ st.markdown("""
             visibility: hidden !important;
         }
         
-        /* Streamlit-ன் டிஃபால்ட் லோடிங் மற்றும் ரீரன் அனிமேஷன்களை முடக்குகிறது */
+        /* ரீரன் (Rerun) அனிமேஷன்களை முடக்குகிறது */
         div[data-testid="stVerticalBlock"] > div {
             animation: none !important;
             transition: none !important;
@@ -73,7 +73,7 @@ st.markdown("""
             filter: none !important;
         }
         
-        /* ரீரன் ஆகும் போது மேல் வலதுபுறம் வரும் லோடிங் ஸ்பின்னரை மறைக்க */
+        /* மேல் வலதுபுறம் தோன்றும் 'Running...' ஸ்பின்னரை மறைக்கிறது */
         div[data-testid="stStatusWidget"] {
             visibility: hidden !important;
             display: none !important;
@@ -318,4 +318,13 @@ if len(df) >= 1:
         else:
             text_color = "#00b0ff"
             
-        table_html += f"<tr><td style='color: {text_color}; font-weight: 600;'>{lvl}</td><td style='color:
+        table_html += f"<tr><td style='color: {text_color}; font-weight: 600;'>{lvl}</td><td style='color: #ffffff; font-weight: bold;'>{value:.2f}</td></tr>"
+    
+    table_html += "</table>"
+    st.markdown(table_html, unsafe_allow_html=True)
+ 
+    # Polling loop trigger
+    time.sleep(1)
+    st.rerun()
+else:
+    st.error("Engine pipeline error. Retrying connection...")
