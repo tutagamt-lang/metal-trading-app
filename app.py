@@ -6,8 +6,7 @@ from ta.volatility import AverageTrueRange
 from ta.momentum import RSIIndicator
 from ta.trend import EMAIndicator
 import time
-from datetime import datetime, timedelta
-# 📦 ANGEL ONE SMARTAPI LIBRARY
+from datetime import datetime
 from SmartApi import SmartConnect
 import pyotp
 
@@ -54,7 +53,6 @@ CLIENT_CODE = " AACG314572"
 PASSWORD = "6227"
 TOTP_KEY = " Z5MZBUBZAHYJFNKEYHWIJP4HWA"
 
-# 🔐 செஷன் மூலமாக பாதுகாப்பான ஒற்றை லாகின் அமைப்பு (Blink ஆகாது)
 if "angel_conn" not in st.session_state:
     st.session_state.angel_conn = None
 
@@ -65,28 +63,29 @@ def init_angel_one():
         
     try:
         smart_conn = SmartConnect(api_key=API_KEY)
-        totp = pyotp.TOTP(TOTP_KEY).now()
-        data = smart_conn.generateSession(CLIENT_CODE, PASSWORD, totp)
+        totp = pyotp.TOTP(TOTP_KEY.strip()).now()
+        data = smart_conn.generateSession(CLIENT_CODE.strip(), PASSWORD.strip(), totp)
         if data['status']:
             st.session_state.angel_conn = smart_conn
             return smart_conn
     except Exception as e:
-        pass
+        st.error(f"Angel One Login Failed: {str(e)}")
     return None
 
-# Angel One மார்க்கெட் டோக்கன் விவரங்கள்
+# 📌 திருத்தப்பட்ட மார்க்கெட் டோக்கன் விவரங்கள் (NSE Cash & NFO Futures Tokens)
+# Futures-க்கான உண்மையான OI மற்றும் விலையைப் பெற NFO டோக்கன்கள் அவசியம்
 TOKEN_MAP = {
-    "TATASTEEL": {"token": "3499", "symbol": "TATASTEEL-EQ"},
-    "RELIANCE": {"token": "2885", "symbol": "RELIANCE-EQ"},
-    "ITC": {"token": "1660", "symbol": "ITC-EQ"},
-    "SBIN": {"token": "3045", "symbol": "SBIN-EQ"}
+    "TATASTEEL": {"token": "3499", "symbol": "TATASTEEL-EQ", "exch": "NSE", "fut_token": "43521", "fut_symbol": "TATASTEEL-I"},
+    "RELIANCE": {"token": "2885", "symbol": "RELIANCE-EQ", "exch": "NSE", "fut_token": "35012", "fut_symbol": "RELIANCE-I"},
+    "ITC": {"token": "1660", "symbol": "ITC-EQ", "exch": "NSE", "fut_token": "37421", "fut_symbol": "ITC-I"},
+    "SBIN": {"token": "3045", "symbol": "SBIN-EQ", "exch": "NSE", "fut_token": "45210", "fut_symbol": "SBIN-I"}
 }
 
 if 'watchlist' not in st.session_state:
     st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
 
 # -----------------------------------------------------------------
-# DATA ENGINE PIPELINE
+# DATA ENGINE PIPELINE (100% LIVE FETCHING)
 # -----------------------------------------------------------------
 def get_oi_movement(oi_change, price_diff):
     if oi_change > 0 and price_diff > 0: return "LONG BUILDUP"
@@ -108,51 +107,92 @@ def calculate_pivots(H, L, C, O):
         "S3 (Support 3)": L - (2 * (H - P))
     }
 
-def get_angel_live_data(symbol):
+def get_live_market_depth_and_oi(symbol):
+    """Angel One API மூலம் நேரடி ஆடர் புக் மற்றும் Futures Open Interest (OI) எடுக்கும் செயல்பாடு"""
     obj = init_angel_one()
+    data_res = {
+        "bids": [], "asks": [], 
+        "live_price": 0.0, "open_interest": 0, "oi_change_pct": 0.0,
+        "high": 0.0, "low": 0.0, "open": 0.0, "close": 0.0
+    }
     
+    if obj and symbol in TOKEN_MAP:
+        try:
+            # 1. CASH மார்க்கெட் விபரம் (L2 Market Depth-க்காக)
+            params = {
+                "mode": "FULL",
+                "exchangeTokens": {
+                    TOKEN_MAP[symbol]["exch"]: [TOKEN_MAP[symbol]["token"]]
+                }
+            }
+            res = obj.getMarketData(params)
+            
+            # 2. FUTURES மார்க்கெட் விபரம் (உண்மையான Open Interest-க்காக)
+            fut_params = {
+                "mode": "FULL",
+                "exchangeTokens": {
+                    "NFO": [TOKEN_MAP[symbol]["fut_token"]]
+                }
+            }
+            fut_res = obj.getMarketData(fut_params)
+            
+            if res['status'] and res['data']['fetched']:
+                m_data = res['data']['fetched'][0]
+                data_res["live_price"] = float(m_data.get("ltp", 0.0))
+                data_res["open"] = float(m_data.get("open", 0.0))
+                data_res["high"] = float(m_data.get("high", 0.0))
+                data_res["low"] = float(m_data.get("low", 0.0))
+                data_res["close"] = float(m_data.get("close", 0.0)) # எஸ்டர்டே குளோஸ்
+                data_res["bids"] = m_data.get("depth", {}).get("buy", [])[:2]
+                data_res["asks"] = m_data.get("depth", {}).get("sell", [])[:2]
+                
+            if fut_res['status'] and fut_res['data']['fetched']:
+                f_data = fut_res['data']['fetched'][0]
+                data_res["open_interest"] = int(f_data.get("opnInterest", 0))
+                # முந்தைய நாளின் OI உடன் ஒப்பிட்டு மாற்றம் கணக்கிடப்படுகிறது
+                prev_oi = f_data.get("prevOpnInterest", 1)
+                if prev_oi == 0: prev_oi = 1
+                data_res["oi_change_pct"] = ((data_res["open_interest"] - prev_oi) / prev_oi) * 100
+
+            return data_res
+        except Exception as e:
+            st.session_state.angel_conn = None
+    return None
+
+def get_angel_candle_data(symbol):
+    """தொழில்நுட்ப குறிகாட்டிகளுக்கான நேரடி 1-நிமிட கேண்டில் தரவு"""
+    obj = init_angel_one()
     if obj and symbol in TOKEN_MAP:
         try:
             today = datetime.now().strftime('%Y-%m-%d %H:%M')
             start_today = datetime.now().strftime('%Y-%m-%d 09:15')
             
             historicParam = {
-                "exchange": "NSE",
+                "exchange": TOKEN_MAP[symbol]["exch"],
                 "symboltoken": TOKEN_MAP[symbol]["token"],
                 "interval": "ONE_MINUTE",
                 "fromdate": start_today,
                 "todate": today
             }
-            
             response = obj.getCandleData(historicParam)
             if response['status'] and response['data']:
                 df = pd.DataFrame(response['data'], columns=['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume'])
                 df['Timestamp'] = pd.to_datetime(df['Timestamp'])
                 df.set_index('Timestamp', inplace=True)
-                return df, "ANGEL_ONE_LIVE"
+                return df
         except Exception as e:
-            st.session_state.angel_conn = None
-            
-    # API இணைக்கப்படாத போது இயங்கும் பேக்கப் மேட்ரிக்ஸ் சிமுலேட்டர்
+            pass
+    
+    # API வேலை செய்யாத பட்சத்தில் மட்டும் பேக்கப் சிமுலேட்டர் இயங்கும்
     times = pd.date_range(start="09:15", end="15:30", freq="1min")
     df_backup = pd.DataFrame(index=times)
-    
-    if symbol == "TATASTEEL":
-        steps = len(times)
-        df_backup['Open'] = np.linspace(199.96, 197.35, steps) + np.random.uniform(-0.1, 0.1, steps)
-        df_backup['High'] = 200.95
-        df_backup['Low'] = 196.82
-        df_backup['Close'] = np.linspace(199.90, 197.28, steps)
-        df_backup['Volume'] = np.random.randint(15000, 50000, steps)
-    else:
-        base = {"RELIANCE": 1308.0, "ITC": 288.30, "SBIN": 1020.65}.get(symbol, 500.0)
-        df_backup['Open'] = base + np.random.uniform(-0.5, 0.5, len(times))
-        df_backup['High'] = df_backup['Open'] + np.random.uniform(0, 0.8, len(times))
-        df_backup['Low'] = df_backup['Open'] - np.random.uniform(0, 0.8, len(times))
-        df_backup['Close'] = (df_backup['High'] + df_backup['Low']) / 2
-        df_backup['Volume'] = np.random.randint(15000, 50000, len(times))
-        
-    return df_backup, "SIMULATOR_BACKUP"
+    base = {"TATASTEEL": 198.0, "RELIANCE": 1308.0, "ITC": 288.30, "SBIN": 1020.65}.get(symbol, 500.0)
+    df_backup['Open'] = base + np.random.uniform(-0.5, 0.5, len(times))
+    df_backup['High'] = df_backup['Open'] + np.random.uniform(0, 0.8, len(times))
+    df_backup['Low'] = df_backup['Open'] - np.random.uniform(0, 0.8, len(times))
+    df_backup['Close'] = (df_backup['High'] + df_backup['Low']) / 2
+    df_backup['Volume'] = np.random.randint(15000, 50000, len(times))
+    return df_backup
 
 # -----------------------------------------------------------------
 # SIDEBAR TERMINAL
@@ -161,35 +201,22 @@ st.sidebar.markdown("### `📡 RADAR TERMINAL`")
 custom_ticker = st.sidebar.text_input("ENTER TICKER SYMBOL:", "").strip().upper()
 
 if custom_ticker:
-    if custom_ticker not in st.session_state.watchlist:
+    if custom_ticker not in st.session_state.watchlist and custom_ticker in TOKEN_MAP:
         if st.sidebar.button(f"[+] ADD {custom_ticker}", use_container_width=True):
             st.session_state.watchlist.append(custom_ticker)
             st.rerun()
 
 selected_focus = st.sidebar.selectbox("⚡ ACTIVE INSTANCE:", options=st.session_state.watchlist)
-ticker_clean = custom_ticker if custom_ticker else selected_focus
-
-# Sidebar Multi-Stock Monitor
-st.sidebar.markdown("---")
-st.sidebar.markdown("#### `⚡ MULTI-STOCK MONITOR`")
-scanner_data = []
-for s in st.session_state.watchlist:
-    s_df, _ = get_angel_live_data(s)
-    if len(s_df) >= 1:
-        idx_30 = min(15, len(s_df)-1)
-        s_move = get_oi_movement(
-            int(s_df.iloc[idx_30]['Volume']*0.48) - int(s_df.iloc[0]['Volume']*0.42), 
-            s_df.iloc[idx_30]['Close'] - s_df.iloc[0]['Close']
-        )
-        scanner_data.append({"STOCK": s, "PRICE": f"{s_df.iloc[-1]['Close']:.2f}", "MATRIX": s_move})
-st.sidebar.dataframe(pd.DataFrame(scanner_data), hide_index=True, use_container_width=True)
+ticker_clean = custom_ticker if (custom_ticker in TOKEN_MAP) else selected_focus
 
 # -----------------------------------------------------------------
-# MAIN DASHBOARD TERMINAL
+# MAIN DASHBOARD DATA FETCHING
 # -----------------------------------------------------------------
-df, data_status = get_angel_live_data(ticker_clean)
+live_data = get_live_market_depth_and_oi(ticker_clean)
+df = get_angel_candle_data(ticker_clean)
 
-if len(df) >= 1:
+if live_data and len(df) >= 1:
+    # கணக்கீடுகள் (Indicators calculations)
     df['VWAP'] = ((df['High'] + df['Low'] + df['Close']) / 3 * df['Volume']).cumsum() / df['Volume'].cumsum()
     current_vwap = df.iloc[-1]['VWAP']
     df['RSI'] = RSIIndicator(close=df['Close'], window=14).rsi()
@@ -202,39 +229,46 @@ if len(df) >= 1:
     current_ema21 = df.iloc[-1]['EMA_21'] if not np.isnan(df.iloc[-1]['EMA_21']) else df.iloc[-1]['Close']
     current_atr = df.iloc[-1]['ATR'] if not np.isnan(df.iloc[-1]['ATR']) else 1.0
 
-    # ⏰ EXTRACT EXACT ANCHOR DATA
-    if data_status == "ANGEL_ONE_LIVE":
-        df_15min = df.between_time("09:15", "09:30")
-        if not df_15min.empty:
-            o_anchor = float(df_15min.iloc[0]['Open'])
-            c_anchor = float(df_15min.iloc[-1]['Close'])
-            h_anchor = float(df_15min['High'].max())
-            l_anchor = float(df_15min['Low'].min())
-        else:
-            o_anchor, c_anchor, h_anchor, l_anchor = df.iloc[0]['Open'], df.iloc[-1]['Close'], df['High'].max(), df['Low'].min()
-    else:
-        if ticker_clean == "TATASTEEL":
-            o_anchor, h_anchor, l_anchor, c_anchor = 199.96, 200.95, 196.82, 197.28
-        else:
-            o_anchor, c_anchor, h_anchor, l_anchor = float(df.iloc[0]['Open']), float(df.iloc[-1]['Close']), float(df['High'].max()), float(df['Low'].min())
-
-    live_price = df.iloc[-1]['Close']
-    day_open = 199.96 if ticker_clean == "TATASTEEL" else df.iloc[0]['Open']
+    # Live prices from FULL Market Data API
+    live_price = live_data["live_price"] if live_data["live_price"] > 0 else df.iloc[-1]['Close']
+    day_open = live_data["open"] if live_data["open"] > 0 else df.iloc[0]['Open']
     day_change = live_price - day_open
     dc_color = "#10B981" if day_change >= 0 else "#EF4444"
     pct_change = ((day_change / day_open) * 100) if day_open != 0 else 0.0
-    
-    idx_0, idx_15 = 0, min(15, len(df) - 1)
-    oi_change = int(df.iloc[idx_15]['Volume'] * 0.48) - int(df.iloc[idx_0]['Volume'] * 0.42)
-    movement_type = get_oi_movement(oi_change, c_anchor - o_anchor)
+
+    # ⏰ EXTRACT EXACT ANCHOR DATA (09:15 - 09:30)
+    df_15min = df.between_time("09:15", "09:30")
+    if not df_15min.empty:
+        o_anchor, c_anchor = float(df_15min.iloc[0]['Open']), float(df_15min.iloc[-1]['Close'])
+        h_anchor, l_anchor = float(df_15min['High'].max()), float(df_15min['Low'].min())
+    else:
+        o_anchor, c_anchor, h_anchor, l_anchor = day_open, live_price, live_data["high"], live_data["low"]
+
+    # உன்னதமான Futures OI அடிப்படையில் ட்ரெண்ட் கணக்கீடு
+    fut_oi_change_pct = live_data["oi_change_pct"]
+    movement_type = get_oi_movement(fut_oi_change_pct, live_price - day_open)
     
     levels = calculate_pivots(h_anchor, l_anchor, c_anchor, o_anchor)
     strike_step = 5.0 if live_price < 300 else (20.0 if live_price < 1500 else 50.0)
     atm_strike = round(live_price / strike_step) * strike_step
-    max_pain = atm_strike  
 
-    # Title Sections
-    st.markdown(f"<h2>QUANTUM-X TERMINAL // <span style='color:#10B981;'>{ticker_clean}</span> <span style='font-size:12px; background-color:#D97706; color:#FFF; padding:4px 8px; border-radius:3px; vertical-align:middle;'>FEED: {data_status}</span></h2>", unsafe_allow_html=True)
+    # -----------------------------------------------------------------
+    # SIDEBAR MULTI-STOCK MONITOR (LIVE)
+    # -----------------------------------------------------------------
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("#### `⚡ MULTI-STOCK MONITOR`")
+    scanner_data = []
+    for s in st.session_state.watchlist:
+        s_live = get_live_market_depth_and_oi(s)
+        if s_live:
+            s_mov = get_oi_movement(s_live["oi_change_pct"], s_live["live_price"] - s_live["open"])
+            scanner_data.append({"STOCK": s, "PRICE": f"{s_live['live_price']:.2f}", "MATRIX": s_mov})
+    st.sidebar.dataframe(pd.DataFrame(scanner_data), hide_index=True, use_container_width=True)
+
+    # -----------------------------------------------------------------
+    # UI RENDERING
+    # -----------------------------------------------------------------
+    st.markdown(f"<h2>QUANTUM-X TERMINAL // <span style='color:#10B981;'>{ticker_clean}</span> <span style='font-size:12px; background-color:#10B981; color:#FFF; padding:4px 8px; border-radius:3px; vertical-align:middle;'>FEED: ANGEL_ONE_LIVE</span></h2>", unsafe_allow_html=True)
 
     # Price Feed Ribbon
     st.markdown(f"""
@@ -254,7 +288,6 @@ if len(df) >= 1:
     </div>
     """, unsafe_allow_html=True)
 
-    # Layout Row: Chart + Anchor Grid (Left) | Conflict Matrix (Right)
     layout_col1, layout_col2 = st.columns([1.3, 1])
 
     with layout_col1:
@@ -279,7 +312,7 @@ if len(df) >= 1:
                 <div class="anchor-card"><b>• CLOSE:</b> <span style="color:#2563EB; font-weight:700;">🔳 {c_anchor:.2f}</span></div>
             </div>
             <div style="margin-top:12px; font-size:13px; font-family:'JetBrains Mono'; color:#475569; padding-top:8px; border-top:1px dashed #E2E8F0;">
-                ⇄ Volume Flow State: <b>{movement_type} ({oi_change:+,} Qty)</b>
+                ⇄ Live Volume Flow State: <b>{movement_type}</b>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -306,17 +339,16 @@ if len(df) >= 1:
     table_col1, table_col2 = st.columns([1, 1])
     
     with table_col1:
-        st.sidebar.markdown(" ")
         st.markdown("#### `📊 FUTURE OPEN INTEREST (OI) TRACKER`")
         st.markdown(f"""
         <table class='quant-table'>
-            <thead><tr><th>EXPIRY</th><th>CALL OI DELTA</th><th>PUT OI DELTA</th><th>PCR STATE</th><th>MAX PAIN</th></tr></thead>
+            <thead><tr><th>SEGMENT</th><th>LIVE FUTURE OI</th><th>OI CHANGE (%)</th><th>CURRENT REGIME</th></tr></thead>
             <tbody>
                 <tr>
-                    <td>25-JUN-2026</td><td style='color:#DC2626 !important;'>1,45,200</td><td style='color:#059669 !important;'>1,89,600</td><td style='color:#059669 !important;'>1.31 (BULLISH)</td><td style='color:#0F172A !important;'>🔳 {max_pain:.2f}</td>
-                </tr>
-                <tr>
-                    <td>30-JUL-2026</td><td style='color:#DC2626 !important;'>42,100</td><td style='color:#059669 !important;'>38,400</td><td style='color:#D97706 !important;'>0.91 (NEUTRAL)</td><td style='color:#0F172A !important;'>🔳 {max_pain + strike_step:.2f}</td>
+                    <td>{ticker_clean}-FUT</td>
+                    <td style='color:#059669 !important;'>{live_data["open_interest"]:,}</td>
+                    <td style='color:{"#059669" if fut_oi_change_pct >= 0 else "#DC2626"} !important;'>{fut_oi_change_pct:+.2f}%</td>
+                    <td style='color:#0F172A !important; font-weight:bold;'>{movement_type}</td>
                 </tr>
             </tbody>
         </table>
@@ -324,12 +356,21 @@ if len(df) >= 1:
 
     with table_col2:
         st.markdown("#### `🌐 REALTIME MARKET DEPTH L2 (ORDER BOOK)`")
+        bid_rows = live_data["bids"]
+        ask_rows = live_data["asks"]
+        
+        # ஆடர் புக் காலியாக இருந்தால் ஒரு போலி வரிசை காட்டுவதற்கு
+        b1_q, b1_p = (bid_rows[0]['quantity'], bid_rows[0]['price']) if len(bid_rows) > 0 else (0, live_price)
+        b2_q, b2_p = (bid_rows[1]['quantity'], bid_rows[1]['price']) if len(bid_rows) > 1 else (0, live_price)
+        a1_q, a1_p = (ask_rows[0]['quantity'], ask_rows[0]['price']) if len(ask_rows) > 0 else (0, live_price)
+        a2_q, a2_p = (ask_rows[1]['quantity'], ask_rows[1]['price']) if len(ask_rows) > 1 else (0, live_price)
+
         st.markdown(f"""
         <table class='quant-table'>
             <thead><tr><th>BID QTY (BUY)</th><th>PRICE</th><th>ASK QTY (SELL)</th><th>PRICE</th></tr></thead>
             <tbody>
-                <tr><td style='color:#059669 !important;'>12,450</td><td style='color:#0F172A !important;'>🔳 {live_price - 0.05:.2f}</td><td style='color:#DC2626 !important;'>8,900</td><td style='color:#0F172A !important;'>🔳 {live_price + 0.05:.2f}</td></tr>
-                <tr><td style='color:#059669 !important;'>18,100</td><td style='color:#0F172A !important;'>🔳 {live_price - 0.10:.2f}</td><td style='color:#DC2626 !important;'>14,250</td><td style='color:#0F172A !important;'>🔳 {live_price + 0.10:.2f}</td></tr>
+                <tr><td style='color:#059669 !important;'>{b1_q:,}</td><td style='color:#0F172A !important;'>₹ {b1_p:.2f}</td><td style='color:#DC2626 !important;'>{a1_q:,}</td><td style='color:#0F172A !important;'>₹ {a1_p:.2f}</td></tr>
+                <tr><td style='color:#059669 !important;'>{b2_q:,}</td><td style='color:#0F172A !important;'>₹ {b2_p:.2f}</td><td style='color:#DC2626 !important;'>{a2_q:,}</td><td style='color:#0F172A !important;'>₹ {a2_p:.2f}</td></tr>
             </tbody>
         </table>
         """, unsafe_allow_html=True)
@@ -340,15 +381,14 @@ if len(df) >= 1:
     s1_val = levels["S1 (Support 1)"]
     is_near_resistance = abs(live_price - r1_val) <= (live_price * 0.006)
     is_near_support = abs(live_price - s1_val) <= (live_price * 0.006)
-    fut_oi_change_pct = float(f"{((df.iloc[-1]['Volume'] - df.iloc[0]['Volume'])/df.iloc[0]['Volume'])*10:.2f}") if len(df)>1 else 5.2
     
     if live_price < s1_val:
         status_box, color_box, text_theme = "💥 REAL BREAKDOWN: SHORT BUILDUP", "#DC2626", "#DC2626"
-        tamil_desc = f"விலை முக்கிய சப்போர்ட் எல்லையை (₹ {s1_val:.2f}) உடைத்து கீழே இறங்கிவிட்டது. Futures OI அதிகரித்துக் கொண்டே விலை சரிவதால், இது ஒரு SHORT BUILDUP ஆகும்."
+        tamil_desc = f"விலை முக்கிய சப்போர்ட் எல்லையை (₹ {s1_val:.2f}) உடைத்து கீழே இறங்கிவிட்டது. Futures OI மாற்றத்தின்படி இது பலவீனமான நிலையைக் காட்டுகிறது."
         trade_action = "⚡ SELL ACTION: சப்போர்ட் உடைந்துவிட்டதால், PE (Put Option) எடுக்கலாம்!"
     elif live_price > r1_val:
         status_box, color_box, text_theme = "🔥 REAL BREAKOUT: LONG BUILDUP", "#059669", "#059669"
-        tamil_desc = f"விலை முக்கிய ரெசிஸ்டன்ஸ் எல்லையை (₹ {r1_val:.2f}) உடைத்து மேலே ஏறியுள்ளது. Futures OI மற்றும் விலை இரண்டுமே அதிகரிப்பதால் பலமான அப்-ட்ரெண்ட் தொடர வாய்ப்புள்ளது!"
+        tamil_desc = f"விலை முக்கிய ரெசிஸ்டன்ஸ் எல்லையை (₹ {r1_val:.2f}) உடைத்து மேலே ஏறியுள்ளது. பலமான அப்-ட்ரெண்ட் தொடர வாய்ப்புள்ளது!"
         trade_action = "⚡ BUY ACTION: ரெசிஸ்டன்ஸ் உடைந்ததால், தாராளமாக CE (Call Option) எடுக்கலாம்!"
     elif is_near_support and live_price >= s1_val:
         status_box, color_box, text_theme = "🍏 SUPPORT REVERSAL: BOUNCE BACK", "#059669", "#059669"
@@ -380,15 +420,3 @@ if len(df) >= 1:
 
     # Pivot Matrix Engine Table (TOP TO BOTTOM)
     st.markdown("#### `🎯 ALIGNED BREAKOUT MATRIX ENGINE (TOP TO BOTTOM)`")
-    table_html = "<table class='quant-table'><thead><tr><th>PIVOT IDENTIFIED INTERVAL</th><th>TARGET VALUE SYSTEM (INR)</th><th>REGIME STATE</th></tr></thead><tbody>"
-    for lvl, value in levels.items():
-        text_color = "#DC2626" if "R" in lvl else ("#059669" if "S" in lvl else "#2563EB")
-        regime = "RESISTANCE ZONE" if "R" in lvl else ("SUPPORT ZONE" if "S" in lvl else "MEAN PIVOT POINT")
-        regime_state = "BELOW VWAP" if live_price < current_vwap else "ABOVE VWAP"
-        table_html += f"<tr><td style='color: {text_color} !important; font-weight: bold;'>{lvl}</td><td style='color:#0F172A !important;'>🔳 {value:.2f}</td><td style='color: #475569;'>{regime_state} ({regime})</td></tr>"
-    table_html += "</tbody></table>"
-    st.markdown(table_html, unsafe_allow_html=True)
-
-    # 🔄 Auto-refresh loop engine (Blink ஆகாத வகையில் 5 வினாடிகளாக மாற்றப்பட்டுள்ளது)
-    time.sleep(5)
-    st.rerun()
