@@ -15,7 +15,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 🎯 LIGHT-MODE HIGH-CONTRAST TERMINAL STYLE (STABLE CSS)
+# 🎯 LIGHT-MODE HIGH-CONTRAST TERMINAL STYLE (STABLE CSS - NO F-STRING CONFLICTS)
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght=400;700&family=Inter:wght=400;600;700&display=swap');
@@ -91,7 +91,7 @@ def fetch_realtime_nse_data(symbol):
     except:
         times = pd.date_range(start="09:15", end="15:30", freq="1min")
         df_backup = pd.DataFrame(index=times)
-        base = {"TATASTEEL": 197.80, "RELIANCE": 1293.0, "ITC": 285.10, "SBIN": 1017.15}.get(symbol, 500.0)
+        base = {"TATASTEEL": 197.10, "RELIANCE": 1308.0, "ITC": 288.30, "SBIN": 1020.65}.get(symbol, 500.0)
         df_backup['Open'] = base + np.random.uniform(-0.5, 0.5, len(times))
         df_backup['High'] = df_backup['Open'] + np.random.uniform(0, 0.8, len(times))
         df_backup['Low'] = df_backup['Open'] - np.random.uniform(0, 0.8, len(times))
@@ -178,31 +178,31 @@ if len(df) >= 1:
     max_pain = atm_strike  
 
     # Title Sections
-    st.markdown(f"<h2>QUANTUM-X NSE TERMINAL // <span style='color:#1E4A8A;'>{ticker_clean}</span></h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2>QUANTUM-X NSE TERMINAL // <span style='color:#10B981;'>{ticker_clean}</span></h2>", unsafe_allow_html=True)
 
     # Price Feed Ribbon 
     st.markdown(f"""
-    <div style="background-color:#FFFFFF; padding: 18px; border-radius: 6px; border: 2px solid #0F172A; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);">
+    <div style="background-color:#0F172A; padding: 18px; border-radius: 6px; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
             <div>
-                <span style="color:#475569; font-size:12px; font-weight:700; letter-spacing:1.5px; font-family:'JetBrains Mono';">NSE LIVE TICK FEED</span>
-                <h1 class="mono-text" style="color:#0F172A; margin:0px; font-size:38px; font-weight:700;">₹ {live_price:.2f} <span style="color:{dc_color}; font-size:20px; font-weight:700;">{day_change:+.2f} ({pct_change:+.2f}%)</span></h1>
+                <span style="color:#94A3B8; font-size:12px; font-weight:700; letter-spacing:1.5px; font-family:'JetBrains Mono';">NSE TICK FEED (NSE_LIVE)</span>
+                <h1 class="mono-text" style="color:#FFFFFF; margin:0px; font-size:38px; font-weight:700;">🔳 {live_price:.2f} <span style="color:{dc_color}; font-size:20px; font-weight:700;">{day_change:+.2f} ({pct_change:+.2f}%)</span></h1>
             </div>
-            <div style="display: flex; gap: 20px; background-color:#F1F5F9; padding:12px 18px; border-radius:4px; border:2px solid #0F172A;">
-                <div><span style="color:#475569; font-size:12px; font-weight:700;">VWAP TRACKER</span><br><b class="mono-text" style="color:#2563EB; font-size:17px;">{current_vwap:.2f}</b></div>
-                <div><span style="color:#475569; font-size:12px; font-weight:700;">MOMENTUM RSI</span><br><b class="mono-text" style="color:#D97706; font-size:17px;">{current_rsi:.2f}</b></div>
-                <div><span style="color:#475569; font-size:12px; font-weight:700;">EMA 9 / 21</span><br><b class="mono-text" style="color:#059669; font-size:17px;">{current_ema9:.1f}/{current_ema21:.1f}</b></div>
-                <div><span style="color:#475569; font-size:12px; font-weight:700;">ATR MATRIX</span><br><b class="mono-text" style="color:#DC2626; font-size:17px;">{current_atr:.2f}</b></div>
+            <div style="display: flex; gap: 20px; background-color:#1E293B; padding:12px 18px; border-radius:4px; border:1px solid #334155;">
+                <div><span style="color:#94A3B8; font-size:11px; font-weight:700;">VWAP TRACKER</span><br><b class="mono-text" style="color:#38BDF8; font-size:16px;">{current_vwap:.2f}</b></div>
+                <div><span style="color:#94A3B8; font-size:11px; font-weight:700;">MOMENTUM RSI</span><br><b class="mono-text" style="color:#F59E0B; font-size:16px;">{current_rsi:.2f}</b></div>
+                <div><span style="color:#94A3B8; font-size:11px; font-weight:700;">EMA 9 / 21</span><br><b class="mono-text" style="color:#34D399; font-size:16px;">{current_ema9:.1f}/{current_ema21:.1f}</b></div>
+                <div><span style="color:#94A3B8; font-size:11px; font-weight:700;">ATR MATRIX</span><br><b class="mono-text" style="color:#F87171; font-size:16px;">{current_atr:.2f}</b></div>
             </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
     # Chart & Grid Blocks
-    layout_col1, layout_col2 = st.columns([1, 1])
+    layout_col1, layout_col2 = st.columns([1.2, 1])
 
     with layout_col1:
-        # Fixed: Config parameter with unique key to prevent duplicate element IDs during re-runs
+        # Mini Chart View
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines', name='Price', line=dict(color='#10B981', width=2.5)))
         fig.add_trace(go.Scatter(x=df.index, y=df['VWAP'], mode='lines', name='VWAP', line=dict(color='#2563EB', width=2, dash='dash')))
@@ -213,16 +213,31 @@ if len(df) >= 1:
         )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key=f"chart_{ticker_clean}")
 
-        # 📊 DETAILED INDEPENDENT LABELS FOR CAPTURED ANCHOR VALUES (09:15 - 09:30)
+        # 📊 09:15 - 09:30 ANCHOR MULTI-GRID BOXES (VISUAL PARITY WITH IMAGE_A1D341.PNG)
         st.markdown(f"""
-        <div style="background-color:#FFFFFF; padding:15px; border-radius:6px; font-size:14px; border: 2px solid #0F172A; color:#0F172A !important; line-height:1.8;">
-            <b style="color:#1E3A8A !important; font-size:13px; letter-spacing:1px; font-family:'JetBrains Mono';">⚡ NSE SYSTEM CAPTURED DATA MATRIX (09:15 - 09:30 Anchor)</b><br>
-            <div style="margin-top:8px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <div style="background-color:#F8FAFC; padding:6px; border:1px solid #E2E8F0; border-radius:4px;">• <b>OPEN:</b> <span class="mono-text" style="color:#0F172A;">₹ {o_anchor:.2f}</span></div>
-                <div style="background-color:#F8FAFC; padding:6px; border:1px solid #E2E8F0; border-radius:4px;">• <b>HIGH:</b> <span class="mono-text" style="color:#059669;">₹ {h_anchor:.2f}</span></div>
-                <div style="background-color:#F8FAFC; padding:6px; border:1px solid #E2E8F0; border-radius:4px;">• <b>LOW:</b> <span class="mono-text" style="color:#DC2626;">₹ {l_anchor:.2f}</span></div>
-                <div style="background-color:#F8FAFC; padding:6px; border:1px solid #E2E8F0; border-radius:4px;">• <b>CLOSE:</b> <span class="mono-text" style="color:#2563EB;">₹ {c_anchor:.2f}</span></div>
-                <div style="grid-column: span 2; font-size:13px; padding-top:4px; color:#475569;">📊 Volume Flow State: <span class="mono-text" style="color:#0F172A; font-weight:700;">{movement_type} ({oi_change:+,} Qty)</span></div>
+        <div style="background-color:#FFFFFF; padding:15px; border-radius:6px; border: 2px solid #0F172A; color:#0F172A !important; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);">
+            <b style="color:#0F172A; font-size:13px; letter-spacing:0.5px; font-family:'JetBrains Mono';">⚡ NSE SYSTEM CAPTURED DATA MATRIX (09:15 - 09:30 Anchor)</b><br>
+            <div style="margin-top:10px; display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                <div style="background-color:#F8FAFC; padding:10px; border:1px solid #CBD5E1; border-radius:4px; font-family:'JetBrains Mono'; font-size:14px;">• <b>OPEN:</b> <span style="color:#0F172A; font-weight:700;">₹ {o_anchor:.2f}</span></div>
+                <div style="background-color:#F8FAFC; padding:10px; border:1px solid #CBD5E1; border-radius:4px; font-family:'JetBrains Mono'; font-size:14px;">• <b>HIGH:</b> <span style="color:#059669; font-weight:700;">₹ {h_anchor:.2f}</span></div>
+                <div style="background-color:#F8FAFC; padding:10px; border:1px solid #CBD5E1; border-radius:4px; font-family:'JetBrains Mono'; font-size:14px;">• <b>LOW:</b> <span style="color:#DC2626; font-weight:700;">₹ {l_anchor:.2f}</span></div>
+                <div style="background-color:#F8FAFC; padding:10px; border:1px solid #CBD5E1; border-radius:4px; font-family:'JetBrains Mono'; font-size:14px;">• <b>CLOSE:</b> <span style="color:#2563EB; font-weight:700;">₹ {c_anchor:.2f}</span></div>
+            </div>
+            <div style="margin-top:12px; font-size:13px; font-family:'JetBrains Mono'; color:#475569; border-top:1px dashed #E2E8F0; padding-top:8px;">
+                ⇄ Volume Flow State: <b>{movement_type} ({oi_change:+,} Qty)</b>
             </div>
         </div>
         """, unsafe_allow_html=True)
+
+    with layout_col2:
+        # SYSTEM CONFLICT MATRIX (RESTORING ORIGINAL WITH STABLE ESCAPED STYLES)
+        dow_label = "UPTREND" if c_anchor > o_anchor else "DOWNTREND"
+        calc_entry_b = max(levels["R1 (Resistance 1)"], h_anchor)
+        calc_entry_s = min(levels["S1 (Support 1)"], l_anchor)
+        flow_label = "ABOVE VWAP" if live_price > current_vwap else "BELOW VWAP"
+        
+        st.markdown(f"""
+        <div style="background-color:#1E1E14; padding:20px; border-radius:6px; border: 2px solid #0F172A; border-left:8px solid #D97706; height: 232px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+            <span style="background-color:#D97706; color:#FFFFFF; padding:4px 8px; font-size:12px; font-weight:bold; border-radius:2px; font-family:'JetBrains Mono';">SYSTEM CONFLICT MATRIX</span>
+            <div style="margin-top:16px; font-size:14px; line-height:2.0; font-family:'JetBrains Mono'; color:#94A3B8;">
+                • DOW TREND: <b style="color:#F59E0B;">{dow_label}</b> |
