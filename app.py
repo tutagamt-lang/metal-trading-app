@@ -16,24 +16,32 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 🎯 HIGH-CONTRAST TERMINAL STYLE MATRIX (OPTIMIZED FOR MAXIMUM CLARITY)
+# 🎯 LIGHT-MODE HIGH-CONTRAST TERMINAL STYLE (FOR MAXIMUM CLARITY)
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght=400;700&family=Inter:wght=400;600;700&display=swap');
         
+        /* Global Page Background & Core Text overrides to Light Mode */
+        .stApp { background-color: #F8FAFC !important; color: #0F172A !important; }
         * { font-family: 'Inter', sans-serif; }
         .block-container { padding-top: 1.5rem !important; padding-bottom: 0rem; }
-        h2 { font-weight: 700; letter-spacing: -0.5px; margin: 5px 0 10px 0 !important; color: #FFFFFF !important; }
-        h4 { font-weight: 700; color: #FFFF00 !important; font-family: 'JetBrains Mono', monospace !important; margin-top: 15px !important; }
+        
+        h2 { font-weight: 700; letter-spacing: -0.5px; margin: 5px 0 10px 0 !important; color: #0F172A !important; }
+        h4 { font-weight: 700; color: #1E3A8A !important; font-family: 'JetBrains Mono', monospace !important; margin-top: 20px !important; }
         .mono-text { font-family: 'JetBrains Mono', monospace !important; font-weight: 700 !important; }
         
-        /* 📊 HIGH CONTRAST QUANT TABLES - TEXT SHARPENING */
-        .quant-table { width: 100%; border-collapse: collapse; font-size: 15px; background-color: #000000 !important; margin-bottom: 15px; border: 2px solid #ffffff !important; }
-        .quant-table th { background-color: #1f2937 !important; color: #FFFF00 !important; text-align: left; padding: 12px 14px; font-family: 'JetBrains Mono', monospace; border: 2px solid #ffffff !important; font-size: 13px; font-weight: 700 !important; text-transform: uppercase; }
-        .quant-table td { border: 2px solid #ffffff !important; padding: 12px 14px; font-family: 'JetBrains Mono', monospace; color: #FFFFFF !important; font-weight: 700 !important; font-size: 15px; }
+        /* 📊 CRYSTAL CLEAR TABLES - BLACK TEXT ON WHITE BACKGROUND */
+        .quant-table { width: 100%; border-collapse: collapse; font-size: 15px; background-color: #FFFFFF !important; margin-bottom: 15px; border: 2px solid #0F172A !important; }
+        .quant-table th { background-color: #0F172A !important; color: #FFFFFF !important; text-align: left; padding: 12px 14px; font-family: 'JetBrains Mono', monospace; border: 2px solid #0F172A !important; font-size: 13px; font-weight: 700 !important; text-transform: uppercase; }
+        .quant-table td { border: 2px solid #E2E8F0 !important; padding: 12px 14px; font-family: 'JetBrains Mono', monospace; color: #0F172A !important; font-weight: 700 !important; font-size: 15px; background-color: #FFFFFF !important; }
 
-        /* 🛑 SCANNED MATRIX PRO PANEL BOX */
-        .matrix-box { background-color: #000000; padding: 22px; border-radius: 6px; border: 2px solid #ffffff; margin-bottom: 20px; }
+        /* 🛑 SYSTEM PANEL BOXES (Enhanced Readability) */
+        .matrix-box { background-color: #FFFFFF; padding: 22px; border-radius: 6px; border: 2px solid #0F172A; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        
+        /* Sidebar Styling Fixes */
+        section[data-testid="stSidebar"] { background-color: #1E293B !important; color: #FFFFFF !important; }
+        section[data-testid="stSidebar"] * { color: #FFFFFF !important; }
+        section[data-testid="stSidebar"] input { color: #000000 !important; }
         
         /* Anti-flicker adjustments */
         div[data-testid="stStatusWidget"] { visibility: hidden !important; display: none !important; }
@@ -147,7 +155,7 @@ if len(df) >= 1:
     live_price = df.iloc[-1]['Close']
     day_open = df.iloc[0]['Open']
     day_change = live_price - day_open
-    dc_color = "#00ff88" if day_change >= 0 else "#ff2a5f"
+    dc_color = "#10B981" if day_change >= 0 else "#EF4444"
     pct_change = ((day_change / day_open) * 100) if day_open != 0 else 0.0
     
     oi_change = int(df.iloc[idx_930]['Volume'] * 0.48) - int(df.iloc[idx_915]['Volume'] * 0.42)
@@ -161,30 +169,30 @@ if len(df) >= 1:
     # Title Sections
     head_col1, head_col2 = st.columns([1.5, 1])
     with head_col1:
-        st.markdown(f"<h2>QUANTUM-X NSE TERMINAL // <span style='color:#00ff88;'>{ticker_clean}</span></h2>", unsafe_allow_html=True)
+        st.markdown(f"<h2>QUANTUM-X NSE TERMINAL // <span style='color:#1E4A8A;'>{ticker_clean}</span></h2>", unsafe_allow_html=True)
     with head_col2:
         tv_widget_html = f"""
         <div class="tradingview-widget-container" style="margin-top: 5px;">
           <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
-          {{"symbol": "NSE:{ticker_clean}", "width": "100%", "colorTheme": "dark", "isTransparent": true, "locale": "en"}}
+          {{"symbol": "NSE:{ticker_clean}", "width": "100%", "colorTheme": "light", "isTransparent": true, "locale": "en"}}
           </script>
         </div>
         """
         components.html(tv_widget_html, height=50)
 
-    # Price Feed Ribbon (Text Enhanced)
+    # Price Feed Ribbon (Text Enhanced to Premium Light Mode)
     st.markdown(f"""
-    <div style="background-color:#000000; padding: 16px; border-radius: 6px; border: 2px solid #ffffff; margin-bottom: 15px;">
+    <div style="background-color:#FFFFFF; padding: 18px; border-radius: 6px; border: 2px solid #0F172A; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
             <div>
-                <span style="color:#FFFF00; font-size:12px; font-weight:700; letter-spacing:1.5px; font-family:'JetBrains Mono';">NSE LIVE TICK FEED</span>
-                <h1 class="mono-text" style="color:#FFFFFF; margin:0px; font-size:38px; font-weight:700;">₹ {live_price:.2f} <span style="color:{dc_color}; font-size:20px; font-weight:700;">{day_change:+.2f} ({pct_change:+.2f}%)</span></h1>
+                <span style="color:#475569; font-size:12px; font-weight:700; letter-spacing:1.5px; font-family:'JetBrains Mono';">NSE LIVE TICK FEED</span>
+                <h1 class="mono-text" style="color:#0F172A; margin:0px; font-size:38px; font-weight:700;">₹ {live_price:.2f} <span style="color:{dc_color}; font-size:20px; font-weight:700;">{day_change:+.2f} ({pct_change:+.2f}%)</span></h1>
             </div>
-            <div style="display: flex; gap: 20px; background-color:#111827; padding:12px 18px; border-radius:4px; border:2px solid #ffffff;">
-                <div><span style="color:#FFFFFF; font-size:12px; font-weight:700;">VWAP TRACKER</span><br><b class="mono-text" style="color:#00b0ff; font-size:17px;">{current_vwap:.2f}</b></div>
-                <div><span style="color:#FFFFFF; font-size:12px; font-weight:700;">MOMENTUM RSI</span><br><b class="mono-text" style="color:#ffcc00; font-size:17px;">{current_rsi:.2f}</b></div>
-                <div><span style="color:#FFFFFF; font-size:12px; font-weight:700;">EMA 9 / 21</span><br><b class="mono-text" style="color:#00ff88; font-size:17px;">{current_ema9:.1f}/{current_ema21:.1f}</b></div>
-                <div><span style="color:#FFFFFF; font-size:12px; font-weight:700;">ATR MATRIX</span><br><b class="mono-text" style="color:#ffaa00; font-size:17px;">{current_atr:.2f}</b></div>
+            <div style="display: flex; gap: 20px; background-color:#F1F5F9; padding:12px 18px; border-radius:4px; border:2px solid #0F172A;">
+                <div><span style="color:#475569; font-size:12px; font-weight:700;">VWAP TRACKER</span><br><b class="mono-text" style="color:#2563EB; font-size:17px;">{current_vwap:.2f}</b></div>
+                <div><span style="color:#475569; font-size:12px; font-weight:700;">MOMENTUM RSI</span><br><b class="mono-text" style="color:#D97706; font-size:17px;">{current_rsi:.2f}</b></div>
+                <div><span style="color:#475569; font-size:12px; font-weight:700;">EMA 9 / 21</span><br><b class="mono-text" style="color:#059669; font-size:17px;">{current_ema9:.1f}/{current_ema21:.1f}</b></div>
+                <div><span style="color:#475569; font-size:12px; font-weight:700;">ATR MATRIX</span><br><b class="mono-text" style="color:#DC2626; font-size:17px;">{current_atr:.2f}</b></div>
             </div>
         </div>
     </div>
@@ -195,46 +203,46 @@ if len(df) >= 1:
 
     with layout_col1:
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines', name='Price', line=dict(color='#00ff88', width=2.5)))
-        fig.add_trace(go.Scatter(x=df.index, y=df['VWAP'], mode='lines', name='VWAP', line=dict(color='#00b0ff', width=2, dash='dash')))
+        fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines', name='Price', line=dict(color='#10B981', width=2.5)))
+        fig.add_trace(go.Scatter(x=df.index, y=df['VWAP'], mode='lines', name='VWAP', line=dict(color='#2563EB', width=2, dash='dash')))
         fig.update_layout(
-            template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+            template="plotly_white", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
             margin=dict(l=10, r=10, t=10, b=10), height=140, showlegend=False,
-            xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor='#374151')
+            xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor='#E2E8F0')
         )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
         st.markdown(f"""
-        <div style="background-color:#000000; padding:15px; border-radius:6px; font-size:14px; border: 2px solid #ffffff; color:#ffffff !important; line-height:1.8;">
-            <b style="color:#FFFF00 !important; font-size:13px; letter-spacing:1px; font-family:'JetBrains Mono';">⚡ NSE SYSTEM CAPTURED DATA MATRIX (09:15 - 09:30)</b><br>
+        <div style="background-color:#FFFFFF; padding:15px; border-radius:6px; font-size:14px; border: 2px solid #0F172A; color:#0F172A !important; line-height:1.8;">
+            <b style="color:#1E3A8A !important; font-size:13px; letter-spacing:1px; font-family:'JetBrains Mono';">⚡ NSE SYSTEM CAPTURED DATA MATRIX (09:15 - 09:30)</b><br>
             <div style="margin-top:8px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <div>• 09:15 Price Block: <b class="mono-text" style="color:#00b0ff !important; font-size:15px;">&#8377; {c_915:.2f}</b></div>
-                <div>• 09:30 Price Block: <b class="mono-text" style="color:#00b0ff !important; font-size:15px;">&#8377; {c_930:.2f}</b></div>
-                <div>• Volume Delta: <b class="mono-text" style="color:#ffffff !important; font-size:15px;">{oi_change:+,} Qty</b></div>
-                <div>• Flow State: <span class="mono-text" style="color:#00ff88 !important; font-weight:700; font-size:15px;">{movement_type}</span></div>
+                <div>• 09:15 Price Block: <b class="mono-text" style="color:#2563EB !important; font-size:15px;">&#8377; {c_915:.2f}</b></div>
+                <div>• 09:30 Price Block: <b class="mono-text" style="color:#2563EB !important; font-size:15px;">&#8377; {c_930:.2f}</b></div>
+                <div>• Volume Delta: <b class="mono-text" style="color:#0F172A !important; font-size:15px;">{oi_change:+,} Qty</b></div>
+                <div>• Flow State: <span class="mono-text" style="color:#059669 !important; font-weight:700; font-size:15px;">{movement_type}</span></div>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
     with layout_col2:
-        h_color = "#00ff88" if df.iloc[idx_930]['High'] > df.iloc[idx_915]['High'] else "#ff2a5f"
-        dow_label = "UPTREND" if h_color == "#00ff88" else "DOWNTREND"
+        h_color = "#059669" if df.iloc[idx_930]['High'] > df.iloc[idx_915]['High'] else "#DC2626"
+        dow_label = "UPTREND" if h_color == "#059669" else "DOWNTREND"
         calc_entry_b = max(levels["R1 (Resistance 1)"], h_930)
         calc_entry_s = min(levels["S1 (Support 1)"], l_930)
         flow_label = "ABOVE VWAP" if live_price > current_vwap else "BELOW VWAP"
         
         st.markdown(f"""
-        <div style="background-color:#000000; padding:18px; border-radius:6px; border: 2px solid #ffffff; border-left:8px solid #ffcc00; color:#ffffff !important; height: 215px;">
-            <span style="background-color:#ffcc00; color:#000; padding:3px 8px; font-size:12px; font-weight:bold; border-radius:2px; font-family:'JetBrains Mono';">SYSTEM CONFLICT MATRIX</span>
-            <div style="margin-top:12px; font-size:14px; line-height:1.8; font-family:'JetBrains Mono';">
-                • DOW TREND: <b style="color:#FFFF00 !important;">{dow_label}</b> | FLOW: <b style="color:#ff2a5f !important;">{flow_label}</b><br>
-                • <span style="color:#00ff88 !important; font-weight:bold;">IF BREAKOUT BUY:</span> Entry Above <b class="mono-text" style="color:#FFFFFF !important; background-color:#111827; padding:2px 4px;">&#8377; {calc_entry_b:.2f}</b><br>
-                • <span style="color:#ff2a5f !important; font-weight:bold;">IF BREAKOUT SELL:</span> Entry Below <b class="mono-text" style="color:#FFFFFF !important; background-color:#111827; padding:2px 4px;">&#8377; {calc_entry_s:.2f}</b>
+        <div style="background-color:#FFFFFF; padding:18px; border-radius:6px; border: 2px solid #0F172A; border-left:8px solid #D97706; color:#0F172A !important; height: 215px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);">
+            <span style="background-color:#D97706; color:#FFFFFF; padding:4px 8px; font-size:12px; font-weight:bold; border-radius:2px; font-family:'JetBrains Mono';">SYSTEM CONFLICT MATRIX</span>
+            <div style="margin-top:12px; font-size:14px; line-height:1.8; font-family:'JetBrains Mono'; color:#0F172A;">
+                • DOW TREND: <b style="color:#B45309 !important;">{dow_label}</b> | FLOW: <b style="color:#DC2626 !important;">{flow_label}</b><br>
+                • <span style="color:#059669 !important; font-weight:bold;">IF BREAKOUT BUY:</span> Entry Above <b class="mono-text" style="color:#0F172A !important; background-color:#F1F5F9; padding:2px 4px;">&#8377; {calc_entry_b:.2f}</b><br>
+                • <span style="color:#DC2626 !important; font-weight:bold;">IF BREAKOUT SELL:</span> Entry Below <b class="mono-text" style="color:#0F172A !important; background-color:#F1F5F9; padding:2px 4px;">&#8377; {calc_entry_s:.2f}</b>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-    # Orderbook Tables (High Contrast)
+    # Orderbook Tables (High Contrast White)
     st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
     table_col1, table_col2 = st.columns([1, 1])
     
@@ -245,10 +253,10 @@ if len(df) >= 1:
             <thead><tr><th>EXPIRY</th><th>CALL OI DELTA</th><th>PUT OI DELTA</th><th>PCR STATE</th><th>MAX PAIN</th></tr></thead>
             <tbody>
                 <tr>
-                    <td>25-JUN-2026</td><td style='color:#ff3b30 !important;'>1,45,200</td><td style='color:#4cd964 !important;'>1,89,600</td><td style='color:#4cd964 !important;'>1.31 (BULLISH)</td><td style='color:#ffffff !important;'>&#8377; {max_pain:.2f}</td>
+                    <td>25-JUN-2026</td><td style='color:#DC2626 !important;'>1,45,200</td><td style='color:#059669 !important;'>1,89,600</td><td style='color:#059669 !important;'>1.31 (BULLISH)</td><td style='color:#0F172A !important;'>&#8377; {max_pain:.2f}</td>
                 </tr>
                 <tr>
-                    <td>30-JUL-2026</td><td style='color:#ff3b30 !important;'>42,100</td><td style='color:#4cd964 !important;'>38,400</td><td style='color:#ffcc00 !important;'>0.91 (NEUTRAL)</td><td style='color:#ffffff !important;'>&#8377; {max_pain + strike_step:.2f}</td>
+                    <td>30-JUL-2026</td><td style='color:#DC2626 !important;'>42,100</td><td style='color:#059669 !important;'>38,400</td><td style='color:#D97706 !important;'>0.91 (NEUTRAL)</td><td style='color:#0F172A !important;'>&#8377; {max_pain + strike_step:.2f}</td>
                 </tr>
             </tbody>
         </table>
@@ -260,13 +268,13 @@ if len(df) >= 1:
         <table class='quant-table'>
             <thead><tr><th>BID QTY (BUY)</th><th>PRICE</th><th>ASK QTY (SELL)</th><th>PRICE</th></tr></thead>
             <tbody>
-                <tr><td style='color:#4cd964 !important;'>12,450</td><td style='color:#ffffff !important;'>&#8377; {live_price - 0.05:.2f}</td><td style='color:#ff3b30 !important;'>8,900</td><td style='color:#ffffff !important;'>&#8377; {live_price + 0.05:.2f}</td></tr>
-                <tr><td style='color:#4cd964 !important;'>18,100</td><td style='color:#ffffff !important;'>&#8377; {live_price - 0.10:.2f}</td><td style='color:#ff3b30 !important;'>14,250</td><td style='color:#ffffff !important;'>&#8377; {live_price + 0.10:.2f}</td></tr>
+                <tr><td style='color:#059669 !important;'>12,450</td><td style='color:#0F172A !important;'>&#8377; {live_price - 0.05:.2f}</td><td style='color:#DC2626 !important;'>8,900</td><td style='color:#0F172A !important;'>&#8377; {live_price + 0.05:.2f}</td></tr>
+                <tr><td style='color:#059669 !important;'>18,100</td><td style='color:#0F172A !important;'>&#8377; {live_price - 0.10:.2f}</td><td style='color:#DC2626 !important;'>14,250</td><td style='color:#0F172A !important;'>&#8377; {live_price + 0.10:.2f}</td></tr>
             </tbody>
         </table>
         """, unsafe_allow_html=True)
 
-    # Intelligent Signals Box (High Contrast text)
+    # Intelligent Signals Box (Light Mode Sharp Text)
     st.markdown("#### `🎯 REALTIME ADVANCED BREAKOUT SCANNED MATRIX`")
     r1_val = levels["R1 (Resistance 1)"]
     s1_val = levels["S1 (Support 1)"]
@@ -275,36 +283,36 @@ if len(df) >= 1:
     fut_oi_change_pct = float(f"{((df.iloc[-1]['Volume'] - df.iloc[0]['Volume'])/df.iloc[0]['Volume'])*10:.2f}") if len(df)>1 else 5.2
     
     if live_price < s1_val:
-        status_box, color_box = "💥 REAL BREAKDOWN: SHORT BUILDUP", "#ff2a5f"
+        status_box, color_box, text_theme = "💥 REAL BREAKDOWN: SHORT BUILDUP", "#DC2626", "#DC2626"
         tamil_desc = f"விலை முக்கிய சப்போர்ட் எல்லையை (₹ {s1_val:.2f}) உடைத்து கீழே இறங்கிவிட்டது. Futures OI அதிகரித்துக் கொண்டே விலை சரிவதால், இது ஒரு SHORT BUILDUP ஆகும். Put Option எழுதியவர்கள் தங்களின் பொசிஷன்களை மூடுவததால் (Put Unwinding) மார்க்கெட் இன்னும் வேகமாகச் சரியும்!"
         trade_action = "⚡ SELL ACTION: சப்போர்ட் உடைந்துவிட்டதால், Short பொசிஷன் அல்லது PE (Put Option) எடுக்கலாம்!"
     elif live_price > r1_val:
-        status_box, color_box = "🔥 REAL BREAKOUT: LONG BUILDUP", "#00ff88"
+        status_box, color_box, text_theme = "🔥 REAL BREAKOUT: LONG BUILDUP", "#059669", "#059669"
         tamil_desc = f"விலை முக்கிய ரெசிஸ்டன்ஸ் எல்லையை (₹ {r1_val:.2f}) உடைத்து மேலே ஏறியுள்ளது. Futures OI மற்றும் விலை இரண்டுமே அதிகரிப்பதால் (Long Buildup), Call Writers தங்களின் பொசிஷன்களை மூடிவிட்டு ஓடுகிறார்கள் (Call Unwinding). இது பலமான அப்-ட்ரெண்ட்!"
         trade_action = "⚡ BUY ACTION: ரெசிஸ்டன்ஸ் உடைந்ததால், தாராளமாக Long பொசிஷன் அல்லது CE (Call Option) எடுக்கலாம்!"
     elif is_near_support and live_price >= s1_val:
-        status_box, color_box = "🍏 SUPPORT REVERSAL: BOUNCE BACK", "#00ff88"
+        status_box, color_box, text_theme = "🍏 SUPPORT REVERSAL: BOUNCE BACK", "#059669", "#059669"
         tamil_desc = f"விலை சப்போர்ட் எல்லைக்கு (₹ {s1_val:.2f}) அருகில் வந்து, அதை உடைக்காமல் மேலே திரும்புகிறது. இந்த எல்லையில் Put OI அசுர வேகத்தில் குவிந்துள்ளதால், பெரிய நிறுவனங்கள் இந்த விலைக்கு கீழே ஸ்டாக்கை விடமாட்டார்கள். இங்கிருந்து ராக்கெட் போல் மேலே ஏறும்."
         trade_action = "⚡ BUY ACTION: சப்போர்ட்டில் தஞ்சம் அடைந்து மேலே திரும்புதால் தாராளமாக Buy/Call Option எடுக்கலாம்."
     elif is_near_resistance and live_price <= r1_val:
-        status_box, color_box = "⚠️ RESISTANCE REVERSAL / FAKE BREAKOUT", "#ff2a5f"
+        status_box, color_box, text_theme = "⚠️ RESISTANCE REVERSAL / FAKE BREAKOUT", "#DC2626", "#DC2626"
         tamil_desc = f"விலை ரெசிஸ்டன்ஸ் எல்லைக்கு (₹ {r1_val:.2f}) அருகில் வந்தாலும் அதை உடைக்க முடியாமல் திணறுகிறது. Call OI இன்னும் பிரமாதமாக வலுவாக உள்ளது. பெரிய கைகள் மார்க்கெட்டை மேலே விடத் தயாராக இல்லை. இங்கிருந்து விலை கீழே விழும்!"
         trade_action = "🛑 SELL ACTION: Resistance தாங்காமல் கீழே திரும்பும்போது Short / Put Option வாங்கலாம்."
     else:
-        status_box, color_box = "📡 CONSOLIDATION: MEAN REVERSION", "#00b0ff"
+        status_box, color_box, text_theme = "📡 CONSOLIDATION: MEAN REVERSION", "#2563EB", "#2563EB"
         tamil_desc = "தற்போது ஸ்டாக் எந்த ஒரு முக்கிய சப்போர்ட் அல்லது ரெசிஸ்டன்ஸ் எல்லையையும் தொடவில்லை. நடுநிலையான எல்லையில் வர்த்தகம் ஆகிறது (Sideways / Consolidation)."
         trade_action = "⏳ WAIT: விலை முக்கிய சப்போர்ட் அல்லது ரெசிஸ்டன்ஸ் எல்லைக்கு அருகில் வரும் வரை பொறுமையாக காத்திருக்கவும்."
 
     st.markdown(f"""
     <div class="matrix-box" style="border-left: 8px solid {color_box};">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ffffff; padding-bottom: 10px; margin-bottom: 15px;">
-            <span style="color: {color_box}; font-size: 18px; font-family: monospace; font-weight: bold;">{status_box}</span>
-            <span style="font-size: 14px; color: #ffffff; font-family: monospace; font-weight: bold;">FUTURES OI CHANGE: <span style="color: #ffcc00;">{fut_oi_change_pct:+.2f}%</span></span>
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #E2E8F0; padding-bottom: 10px; margin-bottom: 15px;">
+            <span style="color: {text_theme}; font-size: 18px; font-family: monospace; font-weight: bold;">{status_box}</span>
+            <span style="font-size: 14px; color: #0F172A; font-family: monospace; font-weight: bold;">FUTURES OI CHANGE: <span style="color: #D97706;">{fut_oi_change_pct:+.2f}%</span></span>
         </div>
-        <div style="margin-bottom: 15px; font-size: 15px; color: #ffffff; line-height:1.7;">
-            <strong style="color: #ffcc00; font-size:16px;">📊 தமிழ் சந்தை விளக்கம்:</strong> <span style="font-weight:600;">{tamil_desc}</span>
+        <div style="margin-bottom: 15px; font-size: 15px; color: #334155; line-height:1.7;">
+            <strong style="color: #1E3A8A; font-size:16px;">📊 தமிழ் சந்தை விளக்கம்:</strong> <span style="font-weight:600; color:#0F172A;">{tamil_desc}</span>
         </div>
-        <div style="background-color: #1f2937; padding: 14px 18px; border-radius: 4px; font-size: 15px; border: 2px solid #ffffff; color: #FFFFFF; font-weight: bold;">
+        <div style="background-color: #F8FAFC; padding: 14px 18px; border-radius: 4px; font-size: 15px; border: 2px solid #0F172A; color: {text_theme}; font-weight: bold;">
             {trade_action}
         </div>
     </div>
@@ -314,10 +322,10 @@ if len(df) >= 1:
     st.markdown("#### `🎯 ALIGNED BREAKOUT MATRIX ENGINE (TOP TO BOTTOM)`")
     table_html = "<table class='quant-table'><thead><tr><th>PIVOT IDENTIFIED INTERVAL</th><th>TARGET VALUE SYSTEM (INR)</th><th>REGIME STATE</th></tr></thead><tbody>"
     for lvl, value in levels.items():
-        text_color = "#ff3b30" if "R" in lvl else ("#4cd964" if "S" in lvl else "#00b0ff")
+        text_color = "#DC2626" if "R" in lvl else ("#059669" if "S" in lvl else "#2563EB")
         regime = "RESISTANCE ZONE" if "R" in lvl else ("SUPPORT ZONE" if "S" in lvl else "MEAN PIVOT POINT")
         regime_state = "BELOW VWAP" if live_price < current_vwap else "ABOVE VWAP"
-        table_html += f"<tr><td style='color: {text_color} !important; font-weight: bold;'>{lvl}</td><td style='color:#ffffff !important;'>&#8377; {value:.2f}</td><td style='color: #ffffff;'>{regime_state} ({regime})</td></tr>"
+        table_html += f"<tr><td style='color: {text_color} !important; font-weight: bold;'>{lvl}</td><td style='color:#0F172A !important;'>&#8377; {value:.2f}</td><td style='color: #475569;'>{regime_state} ({regime})</td></tr>"
     table_html += "</tbody></table>"
     st.markdown(table_html, unsafe_allow_html=True)
 
