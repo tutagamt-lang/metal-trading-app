@@ -69,6 +69,17 @@ st.markdown("""
             font-weight: 600 !important;
         }
 
+        /* 🛑 SCANNED MATRIX PRO PANEL BOX */
+        .matrix-box {
+            background-color: #0d1117; 
+            padding: 20px; 
+            border-radius: 6px; 
+            border: 1px solid #30363d; 
+            font-family: 'Inter', sans-serif; 
+            line-height: 1.8; 
+            margin-bottom: 20px;
+        }
+
         /* 🛑 ANTI-FADE MATRIX */
         div[data-testid="stDataFrameFade"], [data-testid="stElementOverlay"] {
             opacity: 1 !important;
@@ -177,7 +188,6 @@ df, data_status = fetch_realtime_nse_data(ticker_clean)
 # MAIN TERMINAL DASHBOARD
 # -----------------------------------------------------------------
 if len(df) >= 1:
-    # Advanced Math Core Pipeline
     df['VWAP'] = ((df['High'] + df['Low'] + df['Close']) / 3 * df['Volume']).cumsum() / df['Volume'].cumsum()
     current_vwap = df.iloc[-1]['VWAP']
     df['RSI'] = RSIIndicator(close=df['Close'], window=14).rsi()
@@ -204,7 +214,6 @@ if len(df) >= 1:
     movement_type = get_oi_movement(oi_change, c_930 - c_915)
     levels = calculate_pivots(float(h_930), float(l_930), float(c_930))
  
-    # Option Chain Quant Calculations
     strike_step = 5.0 if live_price < 300 else (20.0 if live_price < 1500 else 50.0)
     atm_strike = round(live_price / strike_step) * strike_step
     max_pain = atm_strike  
@@ -342,7 +351,7 @@ if len(df) >= 1:
         st.markdown(depth_table, unsafe_allow_html=True)
  
     # -----------------------------------------------------------------
-    # 🎯 REALTIME ADVANCED BREAKOUT SCANNED MATRIX (OI + BREAKDOWN UPDATED)
+    # 🎯 REALTIME ADVANCED BREAKOUT SCANNED MATRIX (FIXED ENGINE)
     # -----------------------------------------------------------------
     st.markdown("#### `🎯 REALTIME ADVANCED BREAKOUT SCANNED MATRIX (FUTURES + OPTIONS)`")
     
@@ -353,22 +362,84 @@ if len(df) >= 1:
     is_near_support = abs(live_price - s1_val) <= (live_price * 0.006)
     fut_oi_change_pct = float(f"{((df.iloc[-1]['Volume'] - df.iloc[0]['Volume'])/df.iloc[0]['Volume'])*10:.2f}") if len(df)>1 else 5.2
     
-    # 🌟 PRIORITY 1: விலை சப்போர்ட்டை உடைத்து கீழே இருந்தால் (198.87 < 199.86)
+    # கண்டிஷன் லாஜிக் மற்றும் தமிழ் விளக்கங்கள் (No Quotes Bugs inside Strings)
     if live_price < s1_val:
         status_box = "💥 REAL BREAKDOWN: SHORT BUILDUP"
         color_box = "#ff2a5f"
-        tamil_desc = f"விலை முக்கிய சப்போர்ட் எல்லையை (₹ {s1_val:.2f}) உடைத்து கீழே இறங்கிவிட்டது. Futures OI அதிகரித்துக் கொண்டே விலை சரிவதால், இது ஒரு 'SHORT BUILDUP' ஆகும். Put Option எழுதியவர்கள் (Put Writers) பயந்து தங்களின் பொசிஷன்களை மூடுவதால் (Put Unwinding) மார்க்கெட் இன்னும் வேகமாகச் சரியும்!"
+        tamil_desc = f"விலை முக்கிய சப்போர்ட் எல்லையை (₹ {s1_val:.2f}) உடைத்து கீழே இறங்கிவிட்டது. Futures OI அதிகரித்துக் கொண்டே விலை சரிவதால், இது ஒரு SHORT BUILDUP ஆகும். Put Option எழுதியவர்கள் தங்களின் பொசிஷன்களை மூடுவதால் (Put Unwinding) மார்க்கெட் இன்னும் வேகமாகச் சரியும்!"
         trade_action = "⚡ SELL ACTION: சப்போர்ட் உடைந்துவிட்டதால், தாராளமாக Short பொசிஷன் அல்லது PE (Put Option) எடுக்கலாம்!"
 
-    # 🌟 PRIORITY 2: விலை ரெசிஸ்டன்ஸை உடைத்து மேலே இருந்தால்
     elif live_price > r1_val:
         status_box = "🔥 REAL BREAKOUT: LONG BUILDUP"
         color_box = "#00ff88"
         tamil_desc = f"விலை முக்கிய ரெசிஸ்டன்ஸ் எல்லையை (₹ {r1_val:.2f}) உடைத்து மேலே ஏறியுள்ளது. Futures OI மற்றும் விலை இரண்டுமே அதிகரிப்பதால் (Long Buildup), Call Writers தங்களின் பொசிஷன்களை மூடிவிட்டு ஓடுகிறார்கள் (Call Unwinding). இது பலமான அப்-ட்ரெண்ட்!"
         trade_action = "⚡ BUY ACTION: ரெசிஸ்டன்ஸ் உடைந்ததால், தாராளமாக Long பொசிஷன் அல்லது CE (Call Option) எடுக்கலாம்!"
 
-    # PRIORITY 3: விலை சப்போர்ட் லைனுக்கு அருகில் வந்து மேலே திரும்பினால் (Bounce Back)
     elif is_near_support and live_price >= s1_val:
         status_box = "🍏 SUPPORT REVERSAL: BOUNCE BACK"
         color_box = "#00ff88"
-        tamil_desc = f"விலை சப்போர்ட் எல்லைக்கு (₹ {s1_val:.2f}) அருகில் வந்து, அதை உடைக்காமல் மேலே திரும்புகிறது. இந்த எல்லையில் Put OI அசுர வேகத்தில் குவிந்துள்ளதால்
+        tamil_desc = f"விலை சப்போர்ட் எல்லைக்கு (₹ {s1_val:.2f}) அருகில் வந்து, அதை உடைக்காமல் மேலே திரும்புகிறது. இந்த எல்லையில் Put OI அசுர வேகத்தில் குவிந்துள்ளதால், பெரிய நிறுவனங்கள் இந்த விலைக்கு கீழே ஸ்டாக்கை விடமாட்டார்கள். இங்கிருந்து ராக்கெட் போல் மேலே ஏறும்."
+        trade_action = "⚡ BUY ACTION: சப்போர்ட்டில் தஞ்சம் அடைந்து மேலே திரும்புதால் தாராளமாக Buy/Call Option எடுக்கலாம்."
+
+    elif is_near_resistance and live_price <= r1_val:
+        status_box = "⚠️ RESISTANCE REVERSAL / FAKE BREAKOUT"
+        color_box = "#ff2a5f"
+        tamil_desc = f"விலை ரெசிஸ்டன்ஸ் எல்லைக்கு (₹ {r1_val:.2f}) அருகில் வந்தாலும் அதை உடைக்க முடியாமல் திணறுகிறது. Call OI இன்னும் பிரமாதமாக வலுவாக உள்ளது. பெரிய கைகள் மார்க்கெட்டை மேலே விடத் தயாராக இல்லை. இங்கிருந்து விலை கீழே விழும்!"
+        trade_action = "🛑 SELL ACTION: Resistance தாங்காமல் கீழே திரும்பும்போது Short / Put Option வாங்கலாம்."
+
+    else:
+        status_box = "📡 CONSOLIDATION: MEAN REVERSION"
+        color_box = "#00b0ff"
+        tamil_desc = "தற்போது ஸ்டாக் எந்த ஒரு முக்கிய சப்போர்ட் அல்லது ரெசிஸ்டன்ஸ் எல்லையையும் தொடவில்லை. நடுநிலையான எல்லையில் வர்த்தகம் ஆகிறது (Sideways / Consolidation)."
+        trade_action = "⏳ WAIT: விலை முக்கிய சப்போர்ட் அல்லது ரெசிஸ்டன்ஸ் எல்லைக்கு அருகில் வரும் வரை பொறுமையாக காத்திருக்கவும்."
+
+    # 🌟 பியூர் வடிவமைப்பு: Streamlit-க்கு உகந்த உயர்-மாறுபட்ட (High-Contrast Markdown Box)
+    st.markdown(f"""
+    <div class="matrix-box" style="border-left: 6px solid {color_box};">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 15px;">
+            <span style="color: {color_box}; font-size: 16px; font-family: monospace; font-weight: bold; text-transform: uppercase;">{status_box}</span>
+            <span style="font-size: 13px; color: #ffffff; font-family: monospace; font-weight: bold;">FUTURES OI CHANGE: <span style="color: #ffcc00;">{fut_oi_change_pct:+.2f}%</span></span>
+        </div>
+        <div style="margin-bottom: 15px; font-size: 14px; color: #ffffff;">
+            <strong style="color: #ffcc00; font-size: 14px; font-weight: bold;">📊 தமிழ் சந்தை விளக்கம்:</strong> 
+            <span style="color: #ffffff; font-weight: 500;">{tamil_desc}</span>
+        </div>
+        <div style="background-color: #161b22; padding: 12px 16px; border-radius: 4px; font-size: 14px; border: 1px solid #30363d; color: {color_box}; font-weight: bold; letter-spacing: 0.3px;">
+            {trade_action}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # -----------------------------------------------------------------
+    # 🎯 BREAKOUT MATRIX ENGINE (PIVOT LEVELS)
+    # -----------------------------------------------------------------
+    st.markdown("#### `🎯 ALIGNED BREAKOUT MATRIX ENGINE (TOP TO BOTTOM)`")
+    
+    table_html = "<table class='quant-table'>"
+    table_html += "<thead><tr style='background-color: #161b22;'><th style='color: #c9d1d9 !important;'>PIVOT IDENTIFIED INTERVAL</th><th style='color: #c9d1d9 !important;'>TARGET VALUE SYSTEM (INR)</th><th style='color: #c9d1d9 !important;'>REGIME STATE</th></tr></thead><tbody>"
+    
+    for lvl, value in levels.items():
+        if "R" in lvl:
+            text_color = "#ff2a5f"
+            regime = "RESISTANCE ZONE"
+        elif "S" in lvl:
+            text_color = "#00ff88"
+            regime = "SUPPORT ZONE"
+        else:
+            text_color = "#00b0ff"
+            regime = "MEAN PIVOT POINT"
+            
+        regime_state = "BELOW VWAP" if live_price < current_vwap else "ABOVE VWAP"
+        
+        table_html += f"<tr><td style='color: {text_color} !important; font-weight: bold;'>{lvl}</td>"
+        table_html += f"<td style='color: #ffffff !important; font-weight: bold;'>&#8377; {value:.2f}</td>"
+        table_html += f"<td style='color: #8b949e !important;'>{regime_state} ({regime})</td></tr>"
+    
+    table_html += "</tbody></table>"
+    st.markdown(table_html, unsafe_allow_html=True)
+ 
+    # Polling Execution Loop
+    time.sleep(1)
+    st.rerun()
+else:
+    st.error("Engine pipeline error. Retrying connection...")
