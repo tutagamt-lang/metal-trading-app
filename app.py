@@ -179,17 +179,10 @@ sidebar_placeholder = st.sidebar.empty()
 # -----------------------------------------------------------------
 # MAIN TERMINAL PLACEHOLDER (High-Performance Engine)
 # -----------------------------------------------------------------
+# டூப்ளிகேட் எரர் வராமல் தடுக்க முழு UI-யும் ஒரே ஒரு மாஸ்டர் பிளேஸ்ஹோல்டருக்குள் வைக்கப்படுகிறது
 main_container = st.empty()
 
-# -----------------------------------------------------------------
-# LIVE POLLING EXECUTION LOOP (FIXED - NO DUPLICATE ELEMENT ID)
-# -----------------------------------------------------------------
-# லூப் ரன் ஆகும்போது டூப்ளிகேட் ஐடி பிழையைத் தடுக்க தனித்துவமான லூப் கவுண்டர்
-loop_count = 0
-
 while True:
-    loop_count += 1
-    
     # 1. Update Sidebar Multi-Stock Monitor Data
     if st.session_state.watchlist:
         scanner_data = []
@@ -239,20 +232,20 @@ while True:
         atm_strike = round(live_price / strike_step) * strike_step
         max_pain = atm_strike  
         
-        # ஆப் பிளிங்கிங் ஆகாமல் தடுக்க மெயின் கண்டெய்னரை மட்டும் ரிஃப்ரெஷ் செய்கிறோம்
+        # மாஸ்டர் கண்டெய்னரை மட்டும் லூப்பில் புதுப்பிப்பதால் எவ்வித பிழையும் வராது
         with main_container.container():
             head_col1, head_col2 = st.columns([1.5, 1])
             with head_col1:
                 st.markdown(f"<h2>QUANTUM-X NSE TERMINAL // <span style='color:#00ff88;'>{ticker_clean}</span></h2>", unsafe_allow_html=True)
             with head_col2:
-                # TradingView Widget-க்கு தனித்துவமான கீ (Unique Key) கொடுக்கப்பட்டுள்ளது
+                # எரர் வராமல் இருக்க key பாராமீட்டர் நீக்கப்பட்டுள்ளது
                 components.html(f"""
                     <div class="tradingview-widget-container" style="margin-top: 5px;">
                       <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
                       {{"symbol": "NSE:{ticker_clean}", "width": "100%", "colorTheme": "dark", "isTransparent": true, "locale": "en"}}
                       </script>
                     </div>
-                """, height=50, key=f"tv_widget_{loop_count}")
+                """, height=50)
 
             # Core Price Engine Feed
             st.markdown(f"""
@@ -266,179 +259,4 @@ while True:
                         <div><span style="color:#7889a3; font-size:11px; font-weight:600;">VWAP TRACKER</span><br><b class="mono-text" style="color:#00b0ff; font-size:16px;">{current_vwap:.2f}</b></div>
                         <div><span style="color:#7889a3; font-size:11px; font-weight:600;">MOMENTUM RSI</span><br><b class="mono-text" style="color:#ffcc00; font-size:16px;">{current_rsi:.2f}</b></div>
                         <div><span style="color:#7889a3; font-size:11px; font-weight:600;">EMA 9 / 21</span><br><b class="mono-text" style="color:#00ff88; font-size:16px;">{current_ema9:.1f}/{current_ema21:.1f}</b></div>
-                        <div><span style="color:#7889a3; font-size:11px; font-weight:600;">ATR MATRIX</span><br><b class="mono-text" style="color:#ffcc00; font-size:16px;">{current_atr:.2f}</b></div>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            # Master Split Layout
-            layout_col1, layout_col2 = st.columns([1, 1])
-
-            with layout_col1:
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines', name='Price', line=dict(color='#00ff88', width=2)))
-                fig.add_trace(go.Scatter(x=df.index, y=df['VWAP'], mode='lines', name='VWAP', line=dict(color='#00b0ff', width=1.5, dash='dash')))
-                fig.update_layout(
-                    template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                    margin=dict(l=10, r=10, t=10, b=10), height=150, showlegend=False,
-                    xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor='#161b22')
-                )
-                # Plotly Chart-க்கு டூப்ளிகேட் வராமல் இருக்க பிரத்யேக கீ கொடுக்கப்பட்டுள்ளது
-                st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key=f"chart_{loop_count}")
-
-                st.markdown(f"""
-                <div style="background-color:#121620; padding:15px; border-radius:6px; font-size:13px; border: 1px solid #1c2333; color:#ffffff !important; line-height:1.7;">
-                    <b style="color:#ffcc00 !important; font-size:12px; letter-spacing:1px; font-family:'JetBrains Mono';">⚡ NSE SYSTEM CAPTURED DATA MATRIX (09:15 - 09:30)</b><br>
-                    <div style="margin-top:8px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                        <div>• 09:15 Price Block: <b class="mono-text" style="color:#00b0ff !important;">&#8377; {c_915:.2f}</b></div>
-                        <div>• 09:30 Price Block: <b class="mono-text" style="color:#00b0ff !important;">&#8377; {c_930:.2f}</b></div>
-                        <div>• Volume Delta: <b class="mono-text" style="color:#ffffff !important;">{oi_change:+,} Qty</b></div>
-                        <div>• Computed Flow State: <span class="mono-text" style="color:#00ff88 !important; font-weight:700;">{movement_type}</span></div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            with layout_col2:
-                h_color = "#00ff88" if df.iloc[idx_930]['High'] > df.iloc[idx_915]['High'] else "#ff2a5f"
-                dow_label = "UPTREND" if h_color == "#00ff88" else "DOWNTREND"
-                calc_entry_b = max(levels["R1 (Resistance 1)"], h_930)
-                calc_entry_s = min(levels["S1 (Support 1)"], l_930)
-                
-                st.markdown(f"""
-                <div style="background-color:#141105; padding:18px; border-radius:6px; border: 1px solid #1c2333; border-left:5px solid #ffcc00; color:#ffffff !important;">
-                    <span style="background-color:#ffcc00; color:#000; padding:2px 6px; font-size:11px; font-weight:bold; border-radius:2px;">SYSTEM NO-TRADE MATRIX CONFLICT</span>
-                    <div style="margin-top:10px; font-size:13px; line-height:1.6;">
-                    • DOW TREND: <b style="color:#ffffff !important;">{dow_label}</b> | FLOW: <b style="color:#ff2a5f !important;">{"ABOVE VWAP" if live_price > current_vwap else "BELOW VWAP"}</b><br>
-                    • <span style="color:#00ff88 !important; font-weight:bold;">IF BREAKOUT BUY:</span> Entry Above <b class="mono-text" style="color:#ffffff !important;">&#8377; {calc_entry_b:.2f}</b><br>
-                    • <span style="color:#ff2a5f !important; font-weight:bold;">IF BREAKOUT SELL:</span> Entry Below <b class="mono-text" style="color:#ffffff !important;">&#8377; {calc_entry_s:.2f}</b>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            # Future open interest Matrix
-            st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
-            table_col1, table_col2 = st.columns([1, 1])
-            
-            with table_col1:
-                st.markdown("#### `📊 FUTURE OPEN INTEREST (OI) TRACKER`")
-                oi_table = f"""
-                <table class='quant-table'>
-                    <thead>
-                        <tr><th>EXPIRY</th><th>CALL OI DELTA</th><th>PUT OI DELTA</th><th>PCR STATE</th><th>MAX PAIN</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td style="color: #ffffff !important;">25-JUN-2026</td>
-                            <td style='color:#ff2a5f !important; font-weight:bold;'>1,45,200</td>
-                            <td style='color:#00ff88 !important; font-weight:bold;'>1,89,600</td>
-                            <td style='color:#00ff88 !important; font-weight:bold;'>1.31 (BULLISH)</td>
-                            <td style='color:#ffffff !important; font-weight:bold;'>&#8377; {max_pain:.2f}</td>
-                        </tr>
-                        <tr>
-                            <td style="color: #ffffff !important;">30-JUL-2026</td>
-                            <td style='color:#ff2a5f !important; font-weight:bold;'>42,100</td>
-                            <td style='color:#00ff88 !important; font-weight:bold;'>38,400</td>
-                            <td style='color:#ffcc00 !important; font-weight:bold;'>0.91 (NEUTRAL)</td>
-                            <td style='color:#ffffff !important; font-weight:bold;'>&#8377; {max_pain + strike_step:.2f}</td>
-                        </tr>
-                    </tbody>
-                </table>
-                """
-                st.markdown(oi_table, unsafe_allow_html=True)
-
-            with table_col2:
-                st.markdown("#### `🌐 REALTIME MARKET DEPTH L2 (ORDER BOOK)`")
-                depth_table = f"""
-                <table class='quant-table'>
-                    <thead>
-                        <tr><th>BID QTY (BUY)</th><th>PRICE</th><th>ASK QTY (SELL)</th><th>PRICE</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td style='color:#00ff88 !important; font-weight:bold;'>12,450</td>
-                            <td style="color: #ffffff !important;">&#8377; {live_price - 0.05:.2f}</td>
-                            <td style='color:#ff2a5f !important; font-weight:bold;'>8,900</td>
-                            <td style="color: #ffffff !important;">&#8377; {live_price + 0.05:.2f}</td>
-                        </tr>
-                        <tr>
-                            <td style='color:#00ff88 !important; font-weight:bold;'>18,100</td>
-                            <td style="color: #ffffff !important;">&#8377; {live_price - 0.10:.2f}</td>
-                            <td style='color:#ff2a5f !important; font-weight:bold;'>14,250</td>
-                            <td style="color: #ffffff !important;">&#8377; {live_price + 0.10:.2f}</td>
-                        </tr>
-                    </tbody>
-                </table>
-                """
-                st.markdown(depth_table, unsafe_allow_html=True)
-
-            # Realtime Advanced Breakout Scanned Matrix
-            st.markdown("#### `🎯 REALTIME ADVANCED BREAKOUT SCANNED MATRIX (FUTURES + OPTIONS)`")
-            
-            r1_val = levels["R1 (Resistance 1)"]
-            s1_val = levels["S1 (Support 1)"]
-            
-            is_near_resistance = abs(live_price - r1_val) <= (live_price * 0.006)
-            is_near_support = abs(live_price - s1_val) <= (live_price * 0.006)
-            fut_oi_change_pct = float(f"{((df.iloc[-1]['Volume'] - df.iloc[0]['Volume'])/df.iloc[0]['Volume'])*10:.2f}") if len(df)>1 else 5.2
-            
-            if live_price < s1_val:
-                status_box = "💥 REAL BREAKDOWN: SHORT BUILDUP"
-                color_box = "#ff2a5f"
-                tamil_desc = f"விலை முக்கிய சப்போர்ட் எல்லையை (₹ {s1_val:.2f}) உடைத்து கீழே இறங்கிவிட்டது. Futures OI அதிகரித்துக் கொண்டே விலை சரிவதால், இது ஒரு SHORT BUILDUP ஆகும். Put Option எழுதியவர்கள் தங்களின் பொசிஷன்களை மூடுவததால் (Put Unwinding) மார்க்கெட் இன்னும் வேகமாகச் சரியும்!"
-                trade_action = "⚡ SELL ACTION: சப்போர்ட் உடைந்துவிட்டதால், தாராளமாக Short பொசிஷன் அல்லது PE (Put Option) எடுக்கலாம்!"
-            elif live_price > r1_val:
-                status_box = "🔥 REAL BREAKOUT: LONG BUILDUP"
-                color_box = "#00ff88"
-                tamil_desc = f"விலை முக்கிய ரெசிஸ்டன்ஸ் எல்லையை (₹ {r1_val:.2f}) உடைத்து மேலே ஏறியுள்ளது. Futures OI மற்றும் விலை இரண்டுமே அதிகரிப்பதால் (Long Buildup), Call Writers தங்களின் பொசிஷன்களை மூடிவிட்டு ஓடுகிறார்கள் (Call Unwinding). இது பலமான அப்-ட்ரெண்ட்!"
-                trade_action = "⚡ BUY ACTION: ரெசிஸ்டன்ஸ் உடைந்ததால், தாராளமாக Long பொசிஷன் அல்லது CE (Call Option) எடுக்கலாம்!"
-            elif is_near_support and live_price >= s1_val:
-                status_box = "🍏 SUPPORT REVERSAL: BOUNCE BACK"
-                color_box = "#00ff88"
-                tamil_desc = f"விலை சப்போர்ட் எல்லைக்கு (₹ {s1_val:.2f}) அருகில் வந்து, அதை உடைக்காமல் மேலே திரும்புகிறது. இந்த எல்லையில் Put OI அசுர வேகத்தில் குவிந்துள்ளதால், பெரிய நிறுவனங்கள் இந்த விலைக்கு கீழே ஸ்டாக்கை விடமாட்டார்கள். இங்கிருந்து ராக்கெட் போல் மேலே ஏறும்."
-                trade_action = "⚡ BUY ACTION: சப்போர்ட்டில் தஞ்சம் அடைந்து மேலே திரும்புதால் தாராளமாக Buy/Call Option எடுக்கலாம்."
-            elif is_near_resistance and live_price <= r1_val:
-                status_box = "⚠️ RESISTANCE REVERSAL / FAKE BREAKOUT"
-                color_box = "#ff2a5f"
-                tamil_desc = f"விலை ரெசிஸ்டன்ஸ் எல்லைக்கு (₹ {r1_val:.2f}) அருகில் வந்தாலும் அதை உடைக்க முடியாமல் திணறுகிறது. Call OI இன்னும் பிரமாதமாக வலுவாக உள்ளது. பெரிய கைகள் மார்க்கெட்டை மேலே விடத் தயாராக இல்லை. இங்கிருந்து விலை கீழே விழும்!"
-                trade_action = "🛑 SELL ACTION: Resistance தாங்காமல் கீழே திரும்பும்போது Short / Put Option வாங்கலாம்."
-            else:
-                status_box = "📡 CONSOLIDATION: MEAN REVERSION"
-                color_box = "#00b0ff"
-                tamil_desc = "தற்போது ஸ்டாக் எந்த ஒரு முக்கிய சப்போர்ட் அல்லது ரெசிஸ்டன்ஸ் எல்லையையும் தொடவில்லை. நடுநிலையான எல்லையில் வர்த்தகம் ஆகிறது (Sideways / Consolidation)."
-                trade_action = "⏳ WAIT: விலை முக்கிய சப்போர்ட் அல்லது ரெசிஸ்டன்ஸ் எல்லைக்கு அருகில் வரும் வரை பொறுமையாக காத்திருக்கவும்."
-
-            st.markdown(f"""
-            <div class="matrix-box" style="border-left: 6px solid {color_box};">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 15px;">
-                    <span style="color: {color_box}; font-size: 16px; font-family: monospace; font-weight: bold; text-transform: uppercase;">{status_box}</span>
-                    <span style="font-size: 13px; color: #ffffff; font-family: monospace; font-weight: bold;">FUTURES OI CHANGE: <span style="color: #ffcc00;">{fut_oi_change_pct:+.2f}%</span></span>
-                </div>
-                <div style="margin-bottom: 15px; font-size: 14px; color: #ffffff;">
-                    <strong style="color: #ffcc00; font-size: 14px; font-weight: bold;">📊 தமிழ் சந்தை விளக்கம்:</strong> 
-                    <span style="color: #ffffff; font-weight: 500;">{tamil_desc}</span>
-                </div>
-                <div style="background-color: #161b22; padding: 12px 16px; border-radius: 4px; font-size: 14px; border: 1px solid #30363d; color: {color_box}; font-weight: bold; letter-spacing: 0.3px;">
-                    {trade_action}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            # Breakout Matrix Engine (Pivot levels)
-            st.markdown("#### `🎯 ALIGNED BREAKOUT MATRIX ENGINE (TOP TO BOTTOM)`")
-            table_html = "<table class='quant-table'><thead><tr style='background-color: #161b22;'><th style='color: #c9d1d9 !important;'>PIVOT IDENTIFIED INTERVAL</th><th>TARGET VALUE SYSTEM (INR)</th><th>REGIME STATE</th></tr></thead><tbody>"
-            
-            for lvl, value in levels.items():
-                text_color = "#ff2a5f" if "R" in lvl else ("#00ff88" if "S" in lvl else "#00b0ff")
-                regime = "RESISTANCE ZONE" if "R" in lvl else ("SUPPORT ZONE" if "S" in lvl else "MEAN PIVOT POINT")
-                regime_state = "BELOW VWAP" if live_price < current_vwap else "ABOVE VWAP"
-                
-                table_html += f"<tr><td style='color: {text_color} !important; font-weight: bold;'>{lvl}</td>"
-                table_html += f"<td style='color: #ffffff !important; font-weight: bold;'>&#8377; {value:.2f}</td>"
-                table_html += f"<td style='color: #8b949e !important;'>{regime_state} ({regime})</td></tr>"
-            
-            table_html += "</tbody></table>"
-            st.markdown(table_html, unsafe_allow_html=True)
-
-    # 4. Loop Execution Delay (1 Second Interval)
-    time.sleep(1)
+                        <div><span style="color:#7889a3; font-size:11px
