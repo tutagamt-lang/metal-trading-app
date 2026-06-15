@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
  
-# 🎯 ANTI-BLUR & INSTITUTIONAL DARK THEME CSS
+# 🎯 HIGH-CONTRAST ANTI-BLUR TERMINAL STYLE MATRIX
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght=400;700&family=Inter:wght=400;600&display=swap');
@@ -41,31 +41,35 @@ st.markdown("""
             font-family: 'JetBrains Mono', monospace !important;
         }
         
-        /* 📊 HIGH-CONTRAST QUANT TABLES */
+        /* 📊 எழுத்துக்கள் பளிச்சென்று தெரிய உள்கட்டமைப்பு விதிகள் (HIGH CONTRAST PACK) */
         .quant-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 13px;
-            background-color: #090a0f;
+            background-color: #0d1117 !important; /* இருண்ட தெளிவான பின்னணி */
             margin-bottom: 15px;
         }
         .quant-table th {
-            background-color: #121620;
-            color: #7889a3;
+            background-color: #161b22 !important;
+            color: #c9d1d9 !important; /* பிரகாசமான சாம்பல்-வெள்ளை தலைப்பு */
             text-align: left;
             padding: 10px 12px;
             font-family: 'JetBrains Mono', monospace;
-            border: 1px solid #1c2333;
+            border: 1px solid #30363d !important;
             font-size: 11px;
             letter-spacing: 0.5px;
+            font-weight: 700 !important;
         }
         .quant-table td {
-            border: 1px solid #1c2333;
+            border: 1px solid #30363d !important;
             padding: 10px 12px;
             font-family: 'JetBrains Mono', monospace;
+            color: #ffffff !important; /* அனைத்து சாதாரண எண்களும் எக்ஸ்ட்ரா பிரகாசமான வெள்ளை நிறத்தில் மாறும் */
+            opacity: 1 !important;     /* மங்கலாவதை 100% தடுக்கும் */
+            font-weight: 600 !important;
         }
 
-        /* 🛑 CRITICAL: ANTI-BLUR MATRIX (டேட்டா மாறும்போது மங்கலாவதை முற்றிலும் தடுக்கும்) */
+        /* 🛑 ANTI-FADE MATRIX: ரீரன் லோடிங்கின் போது மங்கலாவதைத் தடுக்கும் குறியீடுகள் */
         div[data-testid="stDataFrameFade"], [data-testid="stElementOverlay"] {
             opacity: 1 !important;
             filter: none !important;
@@ -203,7 +207,7 @@ if len(df) >= 1:
     # Option Chain Quant Calculations
     strike_step = 5.0 if live_price < 300 else (20.0 if live_price < 1500 else 50.0)
     atm_strike = round(live_price / strike_step) * strike_step
-    max_pain = atm_strike  # Quant Model Max Pain Point
+    max_pain = atm_strike  
     
     # Header Panel
     head_col1, head_col2 = st.columns([1.5, 1])
@@ -253,13 +257,13 @@ if len(df) >= 1:
  
         # System Captured Data Matrix
         st.markdown(f"""
-        <div style="background-color:#121620; padding:15px; border-radius:6px; font-size:13px; border: 1px solid #1c2333; color:#ffffff; line-height:1.7;">
-            <b style="color:#ffcc00; font-size:12px; letter-spacing:1px; font-family:'JetBrains Mono';">⚡ NSE SYSTEM CAPTURED DATA MATRIX (09:15 - 09:30)</b><br>
+        <div style="background-color:#121620; padding:15px; border-radius:6px; font-size:13px; border: 1px solid #1c2333; color:#ffffff !important; line-height:1.7;">
+            <b style="color:#ffcc00 !important; font-size:12px; letter-spacing:1px; font-family:'JetBrains Mono';">⚡ NSE SYSTEM CAPTURED DATA MATRIX (09:15 - 09:30)</b><br>
             <div style="margin-top:8px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <div>• 09:15 Price Block: <b class="mono-text" style="color:#00b0ff;">₹ {c_915:.2f}</b></div>
-                <div>• 09:30 Price Block: <b class="mono-text" style="color:#00b0ff;">₹ {c_930:.2f}</b></div>
-                <div>• Volume Delta: <b class="mono-text" style="color:#fff;">{oi_change:+,} Qty</b></div>
-                <div>• Computed Flow State: <span class="mono-text" style="color:#00ff88; font-weight:700;">{movement_type}</span></div>
+                <div>• 09:15 Price Block: <b class="mono-text" style="color:#00b0ff !important;">&#8377; {c_915:.2f}</b></div>
+                <div>• 09:30 Price Block: <b class="mono-text" style="color:#00b0ff !important;">&#8377; {c_930:.2f}</b></div>
+                <div>• Volume Delta: <b class="mono-text" style="color:#ffffff !important;">{oi_change:+,} Qty</b></div>
+                <div>• Computed Flow State: <span class="mono-text" style="color:#00ff88 !important; font-weight:700;">{movement_type}</span></div>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -273,18 +277,18 @@ if len(df) >= 1:
         calc_entry_s = min(levels["S1 (Support 1)"], l_930)
         
         st.markdown(f"""
-        <div style="background-color:#141105; padding:18px; border-radius:6px; border-left:5px solid #ffcc00; border: 1px solid #1c2333; border-left:5px solid #ffcc00; color:#ffffff;">
+        <div style="background-color:#141105; padding:18px; border-radius:6px; border: 1px solid #1c2333; border-left:5px solid #ffcc00; color:#ffffff !important;">
             <span style="background-color:#ffcc00; color:#000; padding:2px 6px; font-size:11px; font-weight:bold; border-radius:2px;">SYSTEM NO-TRADE MATRIX CONFLICT</span>
             <div style="margin-top:10px; font-size:13px; line-height:1.6;">
-            • DOW TREND: <b style="color:#fff;">{dow_label}</b> | FLOW: <b style="color:#ff2a5f;">{"ABOVE VWAP" if live_price > current_vwap else "BELOW VWAP"}</b><br>
-            • <span style="color:#00ff88; font-weight:bold;">IF BREAKOUT BUY:</span> Entry Above <b class="mono-text">₹ {calc_entry_b:.2f}</b><br>
-            • <span style="color:#ff2a5f; font-weight:bold;">IF BREAKOUT SELL:</span> Entry Below <b class="mono-text">₹ {calc_entry_s:.2f}</b>
+            • DOW TREND: <b style="color:#ffffff !important;">{dow_label}</b> | FLOW: <b style="color:#ff2a5f !important;">{"ABOVE VWAP" if live_price > current_vwap else "BELOW VWAP"}</b><br>
+            • <span style="color:#00ff88 !important; font-weight:bold;">IF BREAKOUT BUY:</span> Entry Above <b class="mono-text" style="color:#ffffff !important;">&#8377; {calc_entry_b:.2f}</b><br>
+            • <span style="color:#ff2a5f !important; font-weight:bold;">IF BREAKOUT SELL:</span> Entry Below <b class="mono-text" style="color:#ffffff !important;">&#8377; {calc_entry_s:.2f}</b>
             </div>
         </div>
         """, unsafe_allow_html=True)
  
     # -----------------------------------------------------------------
-    # 📊 NEW SPLIT ROW FOR OI TRACKER & REALTIME MARKET DEPTH L2
+    # 📊 FUTURE OPEN INTEREST (OI) TRACKER & MARKET DEPTH L2
     # -----------------------------------------------------------------
     st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
     table_col1, table_col2 = st.columns([1, 1])
@@ -293,9 +297,25 @@ if len(df) >= 1:
         st.markdown("#### `📊 FUTURE OPEN INTEREST (OI) TRACKER`")
         oi_table = f"""
         <table class='quant-table'>
-            <tr><th>EXPIRY</th><th>CALL OI DELTA</th><th>PUT OI DELTA</th><th>PCR STATE</th><th>MAX PAIN</th></tr>
-            <tr><td>25-JUN-2026</td><td style='color:#ff2a5f;'>1,45,200</td><td style='color:#00ff88;'>1,89,600</td><td style='color:#00ff88; font-weight:bold;'>1.31 (BULLISH)</td><td style='color:#fff;'>{max_pain:.2f}</td></tr>
-            <tr><td>30-JUL-2026</td><td style='color:#ff2a5f;'>42,100</td><td style='color:#00ff88;'>38,400</td><td style='color:#ffcc00; font-weight:bold;'>0.91 (NEUTRAL)</td><td style='color:#fff;'>{max_pain + strike_step:.2f}</td></tr>
+            <thead>
+                <tr><th>EXPIRY</th><th>CALL OI DELTA</th><th>PUT OI DELTA</th><th>PCR STATE</th><th>MAX PAIN</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="color: #ffffff !important;">25-JUN-2026</td>
+                    <td style='color:#ff2a5f !important; font-weight:bold;'>1,45,200</td>
+                    <td style='color:#00ff88 !important; font-weight:bold;'>1,89,600</td>
+                    <td style='color:#00ff88 !important; font-weight:bold;'>1.31 (BULLISH)</td>
+                    <td style='color:#ffffff !important; font-weight:bold;'>&#8377; {max_pain:.2f}</td>
+                </tr>
+                <tr>
+                    <td style="color: #ffffff !important;">30-JUL-2026</td>
+                    <td style='color:#ff2a5f !important; font-weight:bold;'>42,100</td>
+                    <td style='color:#00ff88 !important; font-weight:bold;'>38,400</td>
+                    <td style='color:#ffcc00 !important; font-weight:bold;'>0.91 (NEUTRAL)</td>
+                    <td style='color:#ffffff !important; font-weight:bold;'>&#8377; {max_pain + strike_step:.2f}</td>
+                </tr>
+            </tbody>
         </table>
         """
         st.markdown(oi_table, unsafe_allow_html=True)
@@ -304,9 +324,23 @@ if len(df) >= 1:
         st.markdown("#### `🌐 REALTIME MARKET DEPTH L2 (ORDER BOOK)`")
         depth_table = f"""
         <table class='quant-table'>
-            <tr><th>BID QTY (BUY)</th><th>PRICE</th><th>ASK QTY (SELL)</th><th>PRICE</th></tr>
-            <tr><td style='color:#00ff88;'>12,450</td><td>{live_price - 0.05:.2f}</td><td style='color:#ff2a5f;'>8,900</td><td>{live_price + 0.05:.2f}</td></tr>
-            <tr><td style='color:#00ff88;'>18,100</td><td>{live_price - 0.10:.2f}</td><td style='color:#ff2a5f;'>14,250</td><td>{live_price + 0.10:.2f}</td></tr>
+            <thead>
+                <tr><th>BID QTY (BUY)</th><th>PRICE</th><th>ASK QTY (SELL)</th><th>PRICE</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style='color:#00ff88 !important; font-weight:bold;'>12,450</td>
+                    <td style="color: #ffffff !important;">&#8377; {live_price - 0.05:.2f}</td>
+                    <td style='color:#ff2a5f !important; font-weight:bold;'>8,900</td>
+                    <td style="color: #ffffff !important;">&#8377; {live_price + 0.05:.2f}</td>
+                </tr>
+                <tr>
+                    <td style='color:#00ff88 !important; font-weight:bold;'>18,100</td>
+                    <td style="color: #ffffff !important;">&#8377; {live_price - 0.10:.2f}</td>
+                    <td style='color:#ff2a5f !important; font-weight:bold;'>14,250</td>
+                    <td style="color: #ffffff !important;">&#8377; {live_price + 0.10:.2f}</td>
+                </tr>
+            </tbody>
         </table>
         """
         st.markdown(depth_table, unsafe_allow_html=True)
@@ -316,7 +350,7 @@ if len(df) >= 1:
     # -----------------------------------------------------------------
     st.markdown("#### `🎯 ALIGNED BREAKOUT MATRIX ENGINE (TOP TO BOTTOM)`")
     table_html = "<table class='quant-table'>"
-    table_html += "<tr><th>PIVOT IDENTIFIED INTERVAL</th><th>TARGET VALUE SYSTEM (INR)</th><th>REGIME STATE</th></tr>"
+    table_html += "<thead><tr style='background-color: #161b22;'><th style='color: #c9d1d9 !important;'>PIVOT IDENTIFIED INTERVAL</th><th style='color: #c9d1d9 !important;'>TARGET VALUE SYSTEM (INR)</th><th style='color: #c9d1d9 !important;'>REGIME STATE</th></tr></thead><tbody>"
     
     for lvl, value in levels.items():
         if "R" in lvl:
@@ -330,9 +364,9 @@ if len(df) >= 1:
             regime = "MEAN PIVOT POINT"
             
         regime_state = "BELOW VWAP" if live_price < current_vwap else "ABOVE VWAP"
-        table_html += f"<tr><td style='color: {text_color}; font-weight: 600;'>{lvl}</td><td style='color: #ffffff; font-weight: bold;'>₹ {value:.2f}</td><td style='color: #7889a3;'>{regime_state} ({regime})</td></tr>"
+        table_html += f"<tr><td style='color: {text_color} !important; font-weight: bold;'>{lvl}</td><td style='color: #ffffff !important; font-weight: bold;'>&#8377; {value:.2f}</td><td style='color: #8b949e !important;'>{regime_state} ({regime})</td></tr>"
     
-    table_html += "</table>"
+    table_html += "</tbody></table>"
     st.markdown(table_html, unsafe_allow_html=True)
  
     # Polling Execution Loop
