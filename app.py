@@ -2,75 +2,70 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import requests
-import plotly.graph_objects as go
-from ta.volatility import AverageTrueRange
-from ta.momentum import RSIIndicator
-from ta.trend import EMAIndicator
-import streamlit.components.v1 as components
 import time
 
-# Page Configuration
-st.set_page_config(layout="wide", page_title="QUANTUM-X Live Trading Terminal")
+# 1. Page Configuration
+st.set_page_config(layout="wide", page_title="QUANTUM-X Terminal")
 
-# 🎯 CSS STYLING (Anti-Gray Text Fix)
+# 2. CSS - எழுத்துக்களை தெளிவாக மாற்ற
 st.markdown("""
     <style>
-        .matrix-box { 
-            background-color: #0d1117; 
-            padding: 20px; 
-            border-radius: 6px; 
-            border: 1px solid #30363d; 
-            margin-bottom: 20px; 
-        }
-        .white-text { color: #ffffff !important; }
+        .matrix-box { background-color: #0d1117; padding: 20px; border-radius: 6px; border: 1px solid #30363d; margin-bottom: 20px; }
+        .text-white { color: #ffffff !important; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- DATA ENGINE (Pivots Fix) ---
-def calculate_pivots(H, L, C):
-    P = (H + L + C) / 3
-    return {
-        "R1": (2 * P) - L,
-        "P": P,
-        "S1": (2 * P) - H
-    }
+# 3. Data Fetching
+@st.cache_data(ttl=1)
+def fetch_realtime_nse_data(symbol):
+    try:
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}.NS?interval=1m&range=1d"
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(url, headers=headers, timeout=5)
+        result = response.json()['chart']['result'][0]
+        indicators = result['indicators']['quote'][0]
+        df = pd.DataFrame({'Close': indicators['close'], 'High': indicators['high'], 'Low': indicators['low']})
+        return df.dropna()
+    except:
+        return pd.DataFrame()
 
-# --- MAIN LOGIC ---
-# ticker_clean, df பெறுதல்... (உங்கள் பழைய லாஜிக் இங்கே வரவும்)
+# 4. Main Execution
+ticker = st.sidebar.text_input("ENTER TICKER:", "RELIANCE").upper()
+df = fetch_realtime_nse_data(ticker)
 
+# பிழை வராமல் இருக்க df-ஐ சரிபார்த்தல்
 if not df.empty:
     live_price = df.iloc[-1]['Close']
-    pivots = calculate_pivots(df['High'].max(), df['Low'].min(), df.iloc[-1]['Close'])
-    r1_val = pivots["R1"]
-    s1_val = pivots["S1"]
+    H = df['High'].max()
+    L = df['Low'].min()
+    C = live_price
+    P = (H + L + C) / 3
+    r1_val = (2 * P) - L
+    s1_val = (2 * P) - H
     
-    # Logic Checks
+    # Logic
     if live_price < s1_val:
-        status_box = "💥 REAL BREAKDOWN"
-        color_box = "#ff2a5f"
-        tamil_desc = "விலை முக்கிய சப்போர்ட் எல்லையை உடைத்து கீழே இறங்கிவிட்டது."
-        trade_action = "⚡ SELL ACTION: Short பொசிஷன் எடுக்கலாம்!"
+        status = "💥 REAL BREAKDOWN"
+        color = "#ff2a5f"
+        desc = "விலை முக்கிய சப்போர்ட் எல்லையை உடைத்து கீழே இறங்கிவிட்டது."
     elif live_price > r1_val:
-        status_box = "🔥 REAL BREAKOUT"
-        color_box = "#00ff88"
-        tamil_desc = "விலை முக்கிய ரெசிஸ்டன்ஸ் எல்லையை உடைத்து மேலே ஏறியுள்ளது."
-        trade_action = "⚡ BUY ACTION: Long பொசிஷன் எடுக்கலாம்!"
+        status = "🔥 REAL BREAKOUT"
+        color = "#00ff88"
+        desc = "விலை முக்கிய ரெசிஸ்டன்ஸ் எல்லையை உடைத்து மேலே ஏறியுள்ளது."
     else:
-        status_box = "📡 CONSOLIDATION"
-        color_box = "#00b0ff"
-        tamil_desc = "விலை தற்போதைக்கு நடுநிலையான எல்லையில் உள்ளது."
-        trade_action = "⏳ WAIT: காத்திருக்கவும்."
+        status = "📡 CONSOLIDATION"
+        color = "#00b0ff"
+        desc = "சந்தையில் பெரிய மாற்றம் இல்லை, காத்திருக்கவும்."
 
-    # 🌟 UI DISPLAY (Fixed Gray Text)
+    # Display
     st.markdown(f"""
-    <div class="matrix-box" style="border-left: 6px solid {color_box};">
-        <h3 style="color: {color_box}; margin-bottom: 10px;">{status_box}</h3>
-        <p class="white-text" style="font-size: 14px;">📊 <b>தமிழ் விளக்கம்:</b> {tamil_desc}</p>
-        <div style="background: #161b22; padding: 12px; color: {color_box}; font-weight: bold; border-radius: 4px;">
-            {trade_action}
-        </div>
+    <div class="matrix-box" style="border-left: 6px solid {color};">
+        <h3 style="color: {color};">{status}</h3>
+        <p class="text-white">📊 {desc}</p>
     </div>
     """, unsafe_allow_html=True)
     
     time.sleep(1)
     st.rerun()
+else:
+    st.warning("தரவு கிடைக்கவில்லை அல்லது தவறான Ticker. தயவுசெய்து சரிபார்க்கவும்.")
