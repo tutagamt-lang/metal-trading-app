@@ -342,18 +342,14 @@ if len(df) >= 1:
         st.markdown(depth_table, unsafe_allow_html=True)
  
     # -----------------------------------------------------------------
-    # 🎯 🌟 NEW FEATURE: REALTIME ADVANCED BREAKOUT SCANNED MATRIX (FUTURES + OPTIONS COMBINED)
+    # 🎯 REALTIME ADVANCED BREAKOUT SCANNED MATRIX (HIGH CONTRAST TEXT)
     # -----------------------------------------------------------------
     st.markdown("#### `🎯 REALTIME ADVANCED BREAKOUT SCANNED MATRIX (FUTURES + OPTIONS)`")
     
-    # 📊 Dynamic Quant Logic Implementation
     is_near_resistance = any(abs(live_price - v) <= (live_price * 0.005) for k, v in levels.items() if "R" in k)
     is_near_support = any(abs(live_price - v) <= (live_price * 0.005) for k, v in levels.items() if "S" in k)
-    
-    # Simulating Live Futures OI Change % for Calculation (Real Instance replacement block)
     fut_oi_change_pct = float(f"{((df.iloc[-1]['Volume'] - df.iloc[0]['Volume'])/df.iloc[0]['Volume'])*10:.2f}") if len(df)>1 else 5.2
     
-    # Quant Condition Engine mapping with Tamil Insight
     if is_near_resistance:
         if day_change > 0 and fut_oi_change_pct > 0:
             status_box = "🔥 REAL BREAKOUT: LONG BUILDUP"
@@ -383,14 +379,18 @@ if len(df) >= 1:
         tamil_desc = "தற்போது ஸ்டாக் எந்த ஒரு முக்கிய சப்போர்ட் அல்லது ரெசிஸ்டன்ஸ் எல்லையையும் தொடவில்லை. நடுநிலையான எல்லையில் வர்த்தகம் ஆகிறது (Sideways / Consolidation)."
         trade_action = "⏳ WAIT: விலை முக்கிய சப்போர்ட் அல்லது ரெசிஸ்டன்ஸ் எல்லைக்கு அருகில் வரும் வரை பொறுமையாக காத்திருக்கவும்."
 
+    # 🌟 இங்கிருக்கும் ஒவ்வொரு எழுத்துக்களுக்கும் நிறம் மற்றும் தடிமன் (Force High Contrast Style) மாற்றப்பட்டுள்ளது
     st.markdown(f"""
-    <div style="background-color:#0d1117; padding:18px; border-radius:6px; border: 1px solid #30363d; border-left:6px solid {color_box}; color:#ffffff !important; line-height:1.7;">
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #30363d; padding-bottom:8px; margin-bottom:10px;">
-            <b style="color:{color_box} !important; font-size:14px; letter-spacing:0.5px; font-family:'JetBrains Mono';">{status_box}</b>
-            <span style="font-size:11px; color:#8b949e;">FUTURES OI CHANGE: <b style="color:#fff;">{fut_oi_change_pct:+.2f}%</b></span>
+    <div style="background-color:#0d1117; padding:18px; border-radius:6px; border: 1px solid #30363d; border-left:6px solid {color_box}; line-height:1.7;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #30363d; padding-bottom:8px; margin-bottom:12px;">
+            <b style="color:{color_box} !important; font-size:15px; letter-spacing:0.5px; font-family:'JetBrains Mono'; font-weight:800;">{status_box}</b>
+            <span style="font-size:12px; color:#c9d1d9 !important; font-weight:700;">FUTURES OI CHANGE: <span style="color:#ffffff !important;">{fut_oi_change_pct:+.2f}%</span></span>
         </div>
-        <p style="margin:0px; font-size:13px; color:#ffffff !important;"><b style="color:#ffcc00 !important;">📊 தமிழ் சந்தை விளக்கம்:</b> {tamil_desc}</p>
-        <div style="margin-top:10px; background-color:#161b22; padding:8px 12px; border-radius:4px; font-size:13px; border:1px solid #30363d; color:{color_box} !important; font-weight:bold;">
+        <div style="margin:0px; font-size:14px; color:#ffffff !important; font-weight:600; opacity:1 !important;">
+            <b style="color:#ffcc00 !important; font-weight:800;">📊 தமிழ் சந்தை விளக்கம்:</b> 
+            <span style="color:#ffffff !important; opacity:1 !important;">{tamil_desc}</span>
+        </div>
+        <div style="margin-top:12px; background-color:#161b22; padding:10px 14px; border-radius:4px; font-size:14px; border:1px solid #30363d; color:{color_box} !important; font-weight:800; opacity:1 !important;">
             {trade_action}
         </div>
     </div>
