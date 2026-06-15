@@ -194,7 +194,11 @@ ticker_clean = custom_ticker if (custom_ticker in TOKEN_MAP) else selected_focus
 live_data = get_live_market_depth_and_oi(ticker_clean)
 df = get_angel_candle_data(ticker_clean)
 
-if live_data and len(df) >= 1:else:
+if live_data and len(df) >= 1:
+        # உங்கள் சார்ட் மற்றும் டேபிள்கள் இருக்கும் இடம்
+        st.write("Data loaded successfully") 
+    else:
+        st.warning("தரவு கிடைக்கவில்லை!")
     st.warning("தரவு கிடைக்கவில்லை! சந்தை நேரத்தை சரிபார்க்கவும் அல்லது API லாகின் ஆகியுள்ளதா எனப் பார்க்கவும்.")
     st.write("Live Data Status:", live_data)
     # கணக்கீடுகள் (Indicators calculations)
