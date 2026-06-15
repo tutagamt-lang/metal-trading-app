@@ -47,27 +47,34 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------
-# 🔑 ANGEL ONE API CREDENTIALS (உங்கள் விவரங்களை இங்கே உள்ளிடவும்)
+# 🔑 ANGEL ONE API CREDENTIALS
 # -----------------------------------------------------------------
-API_KEY = "rpg4LX8F"
-CLIENT_CODE = "AACG314572"
+API_KEY = " rpg4LX8F "
+CLIENT_CODE = " AACG314572"
 PASSWORD = "6227"
-TOTP_KEY = "Z5MZBUBZAHYJFNKEYHWIJP4HWA"  # Enable TOTP on Angel One to get this key
+TOTP_KEY = " Z5MZBUBZAHYJFNKEYHWIJP4HWA"
 
-@st.cache_resource
+# 🔐 செஷன் மூலமாக பாதுகாப்பான ஒற்றை லாகின் அமைப்பு (Blink ஆகாது)
+if "angel_conn" not in st.session_state:
+    st.session_state.angel_conn = None
+
 def init_angel_one():
-    """Angel One SmartAPI உடன் பாதுகாப்பான இணைப்பை உருவாக்குதல்"""
+    """ஒருமுறை மட்டும் லாகின் செய்து செஷனைத் தக்கவைக்கும்"""
+    if st.session_state.angel_conn is not None:
+        return st.session_state.angel_conn
+        
     try:
         smart_conn = SmartConnect(api_key=API_KEY)
         totp = pyotp.TOTP(TOTP_KEY).now()
         data = smart_conn.generateSession(CLIENT_CODE, PASSWORD, totp)
         if data['status']:
+            st.session_state.angel_conn = smart_conn
             return smart_conn
-        return None
     except Exception as e:
-        return None
+        pass
+    return None
 
-# Angel One டோக்கன் மேப்பிங் (உதாரணம்: NSE பங்குகளின் துல்லியமான டோக்கன்கள்)
+# Angel One மார்க்கெட் டோக்கன் விவரங்கள்
 TOKEN_MAP = {
     "TATASTEEL": {"token": "3499", "symbol": "TATASTEEL-EQ"},
     "RELIANCE": {"token": "2885", "symbol": "RELIANCE-EQ"},
@@ -79,7 +86,7 @@ if 'watchlist' not in st.session_state:
     st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
 
 # -----------------------------------------------------------------
-# DATA ENGINE PIPELINE & INTRADAY PIVOT CALCULATOR
+# DATA ENGINE PIPELINE
 # -----------------------------------------------------------------
 def get_oi_movement(oi_change, price_diff):
     if oi_change > 0 and price_diff > 0: return "LONG BUILDUP"
@@ -102,7 +109,6 @@ def calculate_pivots(H, L, C, O):
     }
 
 def get_angel_live_data(symbol):
-    """Angel One SmartAPI இலிருந்து 1-Minute லைவ் கேண்டில் தரவைப் பெறுதல்"""
     obj = init_angel_one()
     
     if obj and symbol in TOKEN_MAP:
@@ -120,15 +126,14 @@ def get_angel_live_data(symbol):
             
             response = obj.getCandleData(historicParam)
             if response['status'] and response['data']:
-                # Angel One Response-ஐ பான்டாஸ் டேட்டாபிரேமாக மாற்றுதல்
                 df = pd.DataFrame(response['data'], columns=['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume'])
                 df['Timestamp'] = pd.to_datetime(df['Timestamp'])
                 df.set_index('Timestamp', inplace=True)
                 return df, "ANGEL_ONE_LIVE"
         except Exception as e:
-            pass
+            st.session_state.angel_conn = None
             
-    # API வேலை செய்யாத பட்சத்தில், அசல் பேக்கப் சிமுலேட்டர் இயங்கும் (ஆப் கிராஷ் ஆகாது)
+    # API இணைக்கப்படாத போது இயங்கும் பேக்கப் மேட்ரிக்ஸ் சிமுலேட்டர்
     times = pd.date_range(start="09:15", end="15:30", freq="1min")
     df_backup = pd.DataFrame(index=times)
     
@@ -199,7 +204,6 @@ if len(df) >= 1:
 
     # ⏰ EXTRACT EXACT ANCHOR DATA
     if data_status == "ANGEL_ONE_LIVE":
-        # அசல் ஏஞ்சல் ஒன் நேர வரம்பிலிருந்து 09:15 - 09:30 பிரித்தெடுத்தல்
         df_15min = df.between_time("09:15", "09:30")
         if not df_15min.empty:
             o_anchor = float(df_15min.iloc[0]['Open'])
@@ -229,7 +233,7 @@ if len(df) >= 1:
     atm_strike = round(live_price / strike_step) * strike_step
     max_pain = atm_strike  
 
-    # Title Sections with Angel One Feed Tracker (டேட்டா வரும் வழியைக் காட்டும் மேட்ரிக்ஸ்)
+    # Title Sections
     st.markdown(f"<h2>QUANTUM-X TERMINAL // <span style='color:#10B981;'>{ticker_clean}</span> <span style='font-size:12px; background-color:#D97706; color:#FFF; padding:4px 8px; border-radius:3px; vertical-align:middle;'>FEED: {data_status}</span></h2>", unsafe_allow_html=True)
 
     # Price Feed Ribbon
@@ -302,6 +306,7 @@ if len(df) >= 1:
     table_col1, table_col2 = st.columns([1, 1])
     
     with table_col1:
+        st.sidebar.markdown(" ")
         st.markdown("#### `📊 FUTURE OPEN INTEREST (OI) TRACKER`")
         st.markdown(f"""
         <table class='quant-table'>
@@ -384,6 +389,6 @@ if len(df) >= 1:
     table_html += "</tbody></table>"
     st.markdown(table_html, unsafe_allow_html=True)
 
-    # 🔄 Auto-refresh loop engine (1s refresh for High-Speed API)
-    time.sleep(1)
+    # 🔄 Auto-refresh loop engine (Blink ஆகாத வகையில் 5 வினாடிகளாக மாற்றப்பட்டுள்ளது)
+    time.sleep(5)
     st.rerun()
