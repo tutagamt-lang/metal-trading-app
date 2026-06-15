@@ -13,21 +13,13 @@ import pyotp
 # 1. Page Configuration
 st.set_page_config(layout="wide", page_title="QUANTUM-X Live Trading Terminal", initial_sidebar_state="expanded")
 
-# 🎯 HIGH-CONTRAST ANTI-BLUR TERMINAL STYLE MATRIX
+# 🎯 CSS ஸ்டைல்கள் (பிழைகள் சரிசெய்யப்பட்டன)
 st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700&display=swap');
         .stApp { background-color: #FFFFFF !important; color: #0F172A !important; }
-        * { font-family: 'Inter', sans-serif; }
-        .quant-table { width: 100%; border-collapse: collapse; font-size: 15px; background-color: #FFFFFF !important; margin-bottom: 15px; border: 2px solid #0F172A !important; }
-        .quant-table th { background-color: #0F172A !important; color: #FFFFFF !important; text-align: left; padding: 12px 14px; font-family: 'JetBrains Mono', monospace; border: 2px solid #0F172A !important; font-size: 13px; font-weight: 700 !important; text-transform: uppercase; }
-        .quant-table td { border: 2px solid #E2E8F0 !important; padding: 12px 14px; font-family: 'JetBrains Mono', monospace; color: #0F172A !important; font-weight: 700 !important; font-size: 15px; background-color: #FFFFFF !important; }
-        .anchor-container { border: 2px solid #0F172A; padding: 18px; border-radius: 6px; background-color: #FFFFFF; margin-top: 15px; }
-        .anchor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
-        .anchor-card { background-color: #F8FAFC; padding: 12px 16px; border: 1px solid #CBD5E1; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #0F172A; }
-        section[data-testid="stSidebar"] { background-color: #1E293B !important; color: #FFFFFF !important; }
-        section[data-testid="stSidebar"] * { color: #FFFFFF !important; }
-        div[data-testid="stStatusWidget"] { visibility: hidden !important; display: none !important; }
+        .quant-table { width: 100%; border-collapse: collapse; border: 2px solid #0F172A !important; }
+        .quant-table th { background-color: #0F172A !important; color: #FFFFFF !important; padding: 12px; }
+        .quant-table td { border: 2px solid #E2E8F0 !important; padding: 12px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -37,8 +29,19 @@ CLIENT_CODE = "AACG314572"
 PASSWORD = "6227"
 TOTP_KEY = "Z5MZBUBZAHYJFNKEYHWIJP4HWA"
 
+# TOKEN_MAP வரையறை
+TOKEN_MAP = {
+    "TATASTEEL": {"token": "3499", "exch": "NSE", "fut_token": "43521"},
+    "RELIANCE": {"token": "2885", "exch": "NSE", "fut_token": "35012"},
+    "ITC": {"token": "1660", "exch": "NSE", "fut_token": "37421"},
+    "SBIN": {"token": "3045", "exch": "NSE", "fut_token": "45210"}
+}
+
 if "angel_conn" not in st.session_state:
     st.session_state.angel_conn = None
+
+if 'watchlist' not in st.session_state:
+    st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
 
 def init_angel_one():
     if st.session_state.angel_conn is not None:
@@ -51,38 +54,18 @@ def init_angel_one():
             st.session_state.angel_conn = smart_conn
             return smart_conn
     except Exception as e:
-        st.error(f"Angel One Login Failed: {str(e)}")
+        st.error(f"Login Failed: {str(e)}")
     return None
 
-if 'watchlist' not in st.session_state:
-    st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
+# Sidebar logic
+st.sidebar.markdown("### `📡 RADAR TERMINAL`")
+custom_ticker = st.sidebar.text_input("ENTER TICKER SYMBOL:", "").strip().upper()
+selected_focus = st.sidebar.selectbox("⚡ ACTIVE INSTANCE:", options=st.session_state.watchlist)
 
-# -----------------------------------------------------------------
-# DATA ENGINE PIPELINE (100% LIVE FETCHING)
-# -----------------------------------------------------------------
-def get_oi_movement(oi_change, price_diff):
-    if oi_change > 0 and price_diff > 0: return "LONG BUILDUP"
-    elif oi_change > 0 and price_diff <= 0: return "SHORT BUILDUP"
-    elif oi_change <= 0 and price_diff <= 0: return "PROFIT BOOKING"
-    else: return "SHORT COVERING"
+# பிழை ஏற்பட்ட இடத்திற்கான திருத்தம்
+ticker_clean = custom_ticker if (custom_ticker in TOKEN_MAP) else selected_focus
 
-def calculate_pivots(H, L, C, O):
-    P = (H + L + C + O) / 4
-    R1 = (2 * P) - L
-    S1 = (2 * P) - H
-    return {
-        "R3 (Resistance 3)": H + (2 * (P - L)),
-        "R2 (Resistance 2)": P + (R1 - S1),
-        "R1 (Resistance 1)": R1,
-        "P (Pivot Point)": P,
-        "S1 (Support 1)": S1,
-        "S2 (Support 2)": P - (R1 - S1),
-        "S3 (Support 3)": L - (2 * (H - P))
-    }
-
-def get_live_market_depth_and_oi(symbol):
-    """Angel One API மூலம் நேரடி ஆடர் புக் மற்றும் Futures Open Interest (OI) எடுக்கும் செயல்பாடு"""
-    obj = init_angel_one()
+st.write(f"Current Symbol: {ticker_clean}")
     data_res = {
         "bids": [], "asks": [], 
         "live_price": 0.0, "open_interest": 0, "oi_change_pct": 0.0,
