@@ -52,7 +52,7 @@ if 'watchlist' not in st.session_state:
     st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
 
 # -----------------------------------------------------------------
-# DATA ENGINE PIPELINE
+# DATA ENGINE PIPELINE & INTRADAY PIVOT CALCULATOR
 # -----------------------------------------------------------------
 def get_oi_movement(oi_change, price_diff):
     if oi_change > 0 and price_diff > 0: return "LONG BUILDUP"
@@ -60,16 +60,19 @@ def get_oi_movement(oi_change, price_diff):
     elif oi_change <= 0 and price_diff <= 0: return "PROFIT BOOKING"
     else: return "SHORT COVERING"
 
-def calculate_pivots(H, L, C):
-    P = (H + L + C) / 3
+def calculate_pivots(H, L, C, O):
+    # Updated as per Custom Intraday Pivot Formula (with Open Price included)
+    P = (H + L + C + O) / 4
+    R1 = (2 * P) - L
+    S1 = (2 * P) - H
     return {
-        "R3 (Resistance 3)": H + 2 * (P - L),
-        "R2 (Resistance 2)": P + (H - L),
-        "R1 (Resistance 1)": (2 * P) - L,
+        "R3 (Resistance 3)": H + (2 * (P - L)),
+        "R2 (Resistance 2)": P + (R1 - S1),
+        "R1 (Resistance 1)": R1,
         "P (Pivot Point)": P,
-        "S1 (Support 1)": (2 * P) - H,
-        "S2 (Support 2)": P - (H - L),
-        "S3 (Support 3)": L - 2 * (H - P)
+        "S1 (Support 1)": S1,
+        "S2 (Support 2)": P - (R1 - S1),
+        "S3 (Support 3)": L - (2 * (H - P))
     }
 
 @st.cache_data(ttl=1)
@@ -149,6 +152,7 @@ if len(df) >= 1:
 
     idx_915, idx_930 = 0, min(15, len(df) - 1)
     c_915, c_930 = df.iloc[idx_915]['Close'], df.iloc[idx_930]['Close']
+    o_915 = df.iloc[idx_915]['Open']
     h_930 = df.iloc[0:idx_930+1]['High'].max()
     l_930 = df.iloc[0:idx_930+1]['Low'].min()
     
@@ -160,7 +164,9 @@ if len(df) >= 1:
     
     oi_change = int(df.iloc[idx_930]['Volume'] * 0.48) - int(df.iloc[idx_915]['Volume'] * 0.42)
     movement_type = get_oi_movement(oi_change, c_930 - c_915)
-    levels = calculate_pivots(float(h_930), float(l_930), float(c_930))
+    
+    # Passing High, Low, Close, and Open to the updated Pivot Calculator
+    levels = calculate_pivots(float(h_930), float(l_930), float(c_930), float(o_915))
 
     strike_step = 5.0 if live_price < 300 else (20.0 if live_price < 1500 else 50.0)
     atm_strike = round(live_price / strike_step) * strike_step
@@ -318,7 +324,7 @@ if len(df) >= 1:
     </div>
     """, unsafe_allow_html=True)
 
-    # Pivot Table Engine (Enhanced readability)
+    # Pivot Table Engine (Enhanced readability with new Intraday sequence)
     st.markdown("#### `🎯 ALIGNED BREAKOUT MATRIX ENGINE (TOP TO BOTTOM)`")
     table_html = "<table class='quant-table'><thead><tr><th>PIVOT IDENTIFIED INTERVAL</th><th>TARGET VALUE SYSTEM (INR)</th><th>REGIME STATE</th></tr></thead><tbody>"
     for lvl, value in levels.items():
