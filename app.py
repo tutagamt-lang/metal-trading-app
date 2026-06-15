@@ -62,7 +62,10 @@ def init_angel_one():
         return st.session_state.angel_conn
         
     try:
-        smart_conn = SmartConnect(api_key=API_KEY)
+        # இருக்கும் வரிகளை இப்படி மாற்றுங்கள் ( .strip() சேர்ப்பது மட்டும்)
+smart_conn = SmartConnect(api_key=API_KEY.strip())
+# ...
+data = smart_conn.generateSession(CLIENT_CODE.strip(), PASSWORD.strip(), totp)
         totp = pyotp.TOTP(TOTP_KEY.strip()).now()
         data = smart_conn.generateSession(CLIENT_CODE.strip(), PASSWORD.strip(), totp)
         if data['status']:
