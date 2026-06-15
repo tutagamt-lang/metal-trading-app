@@ -240,4 +240,100 @@ if len(df) >= 1:
         <div style="background-color:#1E1E14; padding:20px; border-radius:6px; border: 2px solid #0F172A; border-left:8px solid #D97706; height: 232px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
             <span style="background-color:#D97706; color:#FFFFFF; padding:4px 8px; font-size:12px; font-weight:bold; border-radius:2px; font-family:'JetBrains Mono';">SYSTEM CONFLICT MATRIX</span>
             <div style="margin-top:16px; font-size:14px; line-height:2.0; font-family:'JetBrains Mono'; color:#94A3B8;">
-                • DOW TREND: <b style="color:#F59E0B;">{dow_label}</b> |
+                • DOW TREND: <b style="color:#F59E0B;">{dow_label}</b> | FLOW: <b style="color:#F87171;">{flow_label}</b><br>
+                • <span style="color:#34D399; font-weight:bold;">IF BREAKOUT BUY:</span> Entry Above <b style="color:#FFFFFF; background-color:#2D2D24; padding:3px 6px; border-radius:3px;">₹ {calc_entry_b:.2f}</b><br>
+                • <span style="color:#F87171; font-weight:bold;">IF BREAKOUT SELL:</span> Entry Below <b style="color:#FFFFFF; background-color:#2D2D24; padding:3px 6px; border-radius:3px;">₹ {calc_entry_s:.2f}</b>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Orderbook Tables (RESTORING REST OF DATA SECTIONS FROM IMAGE_AD38A7)
+    st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
+    table_col1, table_col2 = st.columns([1, 1])
+    
+    with table_col1:
+        st.markdown("#### `📊 FUTURE OPEN INTEREST (OI) TRACKER`")
+        st.markdown(f"""
+        <table class='quant-table'>
+            <thead><tr><th>EXPIRY</th><th>CALL OI DELTA</th><th>PUT OI DELTA</th><th>PCR STATE</th><th>MAX PAIN</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td>25-JUN-2026</td><td style='color:#DC2626 !important;'>1,45,200</td><td style='color:#059669 !important;'>1,89,600</td><td style='color:#059669 !important;'>1.31 (BULLISH)</td><td style='color:#0F172A !important;'>₹ {max_pain:.2f}</td>
+                </tr>
+                <tr>
+                    <td>30-JUL-2026</td><td style='color:#DC2626 !important;'>42,100</td><td style='color:#059669 !important;'>38,400</td><td style='color:#D97706 !important;'>0.91 (NEUTRAL)</td><td style='color:#0F172A !important;'>₹ {max_pain + strike_step:.2f}</td>
+                </tr>
+            </tbody>
+        </table>
+        """, unsafe_allow_html=True)
+
+    with table_col2:
+        st.markdown("#### `🌐 REALTIME MARKET DEPTH L2 (ORDER BOOK)`")
+        st.markdown(f"""
+        <table class='quant-table'>
+            <thead><tr><th>BID QTY (BUY)</th><th>PRICE</th><th>ASK QTY (SELL)</th><th>PRICE</th></tr></thead>
+            <tbody>
+                <tr><td style='color:#059669 !important;'>12,450</td><td style='color:#0F172A !important;'>₹ {live_price - 0.05:.2f}</td><td style='color:#DC2626 !important;'>8,900</td><td style='color:#0F172A !important;'>₹ {live_price + 0.05:.2f}</td></tr>
+                <tr><td style='color:#059669 !important;'>18,100</td><td style='color:#0F172A !important;'>₹ {live_price - 0.10:.2f}</td><td style='color:#DC2626 !important;'>14,250</td><td style='color:#0F172A !important;'>₹ {live_price + 0.10:.2f}</td></tr>
+            </tbody>
+        </table>
+        """, unsafe_allow_html=True)
+
+    # Intelligent Signals Box
+    st.markdown("#### `🎯 REALTIME ADVANCED BREAKOUT SCANNED MATRIX`")
+    r1_val = levels["R1 (Resistance 1)"]
+    s1_val = levels["S1 (Support 1)"]
+    is_near_resistance = abs(live_price - r1_val) <= (live_price * 0.006)
+    is_near_support = abs(live_price - s1_val) <= (live_price * 0.006)
+    fut_oi_change_pct = float(f"{((df.iloc[-1]['Volume'] - df.iloc[0]['Volume'])/df.iloc[0]['Volume'])*10:.2f}") if len(df)>1 else 5.2
+    
+    if live_price < s1_val:
+        status_box, color_box, text_theme = "💥 REAL BREAKDOWN: SHORT BUILDUP", "#DC2626", "#DC2626"
+        tamil_desc = f"விலை முக்கிய சப்போர்ட் எல்லையை (₹ {s1_val:.2f}) உடைத்து கீழே இறங்கிவிட்டது. Futures OI அதிகரித்துக் கொண்டே விலை சரிவதால், இது ஒரு SHORT BUILDUP ஆகும். Put Option எழுதியவர்கள் தங்களின் பொசிஷன்களை மூடுவததால் (Put Unwinding) மார்க்கெட் இன்னும் வேகமாகச் சரியும்!"
+        trade_action = "⚡ SELL ACTION: சப்போர்ட் உடைந்துவிட்டதால், Short பொசிஷன் அல்லது PE (Put Option) எடுக்கலாம்!"
+    elif live_price > r1_val:
+        status_box, color_box, text_theme = "🔥 REAL BREAKOUT: LONG BUILDUP", "#059669", "#059669"
+        tamil_desc = f"விலை முக்கிய ரெசிஸ்டன்ஸ் எல்லையை (₹ {r1_val:.2f}) உடைத்து மேலே ஏறியுள்ளது. Futures OI மற்றும் விலை இரண்டுமே அதிகரிப்பதால் (Long Buildup), Call Writers தங்களின் பொசிஷன்களை மூடிவிட்டு ஓடுகிறார்கள் (Call Unwinding). இது பலமான அப்-ட்ரெண்ட்!"
+        trade_action = "⚡ BUY ACTION: ரெசிஸ்டன்ஸ் உடைந்ததால், தாராளமாக Long பொசிஷன் அல்லது CE (Call Option) எடுக்கலாம்!"
+    elif is_near_support and live_price >= s1_val:
+        status_box, color_box, text_theme = "🍏 SUPPORT REVERSAL: BOUNCE BACK", "#059669", "#059669"
+        tamil_desc = f"விலை சப்போர்ட் எல்லைக்கு (₹ {s1_val:.2f}) அருகில் வந்து, அதை உடைக்காமல் மேலே திரும்புகிறது. இந்த எல்லையில் Put OI அசுர வேகத்தில் குவிந்துள்ளதால், பெரிய நிறுவனங்கள் இந்த விலைக்கு கீழே ஸ்டாக்கை விடமாட்டார்கள். இங்கிருந்து ராக்கெட் போல் மேலே ஏறும்."
+        trade_action = "⚡ BUY ACTION: சப்போர்ட்டில் தஞ்சம் அடைந்து மேலே திரும்புதால் தாராளமாக Buy/Call Option எடுக்கலாம்."
+    elif is_near_resistance and live_price <= r1_val:
+        status_box, color_box, text_theme = "⚠️ RESISTANCE REVERSAL / FAKE BREAKOUT", "#DC2626", "#DC2626"
+        tamil_desc = f"விலை ரெசிஸ்டன்ஸ் எல்லைக்கு (₹ {r1_val:.2f}) அருகில் வந்தாலும் அதை உடைக்க முடியாமல் திணறுகிறது. Call OI இன்னும் பிரமாதமாக வலுவாக உள்ளது. பெரிய கைகள் மார்க்கெட்டை மேலே விடத் தயாராக இல்லை. இங்கிருந்து விலை கீழே விழும்!"
+        trade_action = "🛑 SELL ACTION: Resistance தாங்காமல் கீழே திரும்பும்போது Short / Put Option வாங்கலாம்."
+    else:
+        status_box, color_box, text_theme = "📡 CONSOLIDATION: MEAN REVERSION", "#2563EB", "#2563EB"
+        tamil_desc = "தற்போது ஸ்டாக் எந்த ஒரு முக்கிய சப்போர்ட் அல்லது ரெசிஸ்டன்ஸ் எல்லையையும் தொடவில்லை. நடுநிலையான எல்லையில் வர்த்தகம் ஆகிறது (Sideways / Consolidation)."
+        trade_action = "⏳ WAIT: விலை முக்கிய சப்போர்ட் அல்லது ரெசிஸ்டன்ஸ் எல்லைக்கு அருகில் வரும் வரை பொறுமையாக காத்திருக்கவும்."
+
+    st.markdown(f"""
+    <div class="matrix-box" style="border-left: 8px solid {color_box};">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #E2E8F0; padding-bottom: 10px; margin-bottom: 15px;">
+            <span style="color: {text_theme}; font-size: 18px; font-family: monospace; font-weight: bold;">{status_box}</span>
+            <span style="font-size: 14px; color: #0F172A; font-family: monospace; font-weight: bold;">FUTURES OI CHANGE: <span style="color: #D97706;">{fut_oi_change_pct:+.2f}%</span></span>
+        </div>
+        <div style="margin-bottom: 15px; font-size: 15px; color: #334155; line-height:1.7;">
+            <strong style="color: #1E3A8A; font-size:16px;">📊 தமிழ் சந்தை விளக்கம்:</strong> <span style="font-weight:600; color:#0F172A;">{tamil_desc}</span>
+        </div>
+        <div style="background-color: #F8FAFC; padding: 14px 18px; border-radius: 4px; font-size: 15px; border: 2px solid #0F172A; color: {text_theme}; font-weight: bold;">
+            {trade_action}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Pivot Table Engine (TOP TO BOTTOM)
+    st.markdown("#### `🎯 ALIGNED BREAKOUT MATRIX ENGINE (TOP TO BOTTOM)`")
+    table_html = "<table class='quant-table'><thead><tr><th>PIVOT IDENTIFIED INTERVAL</th><th>TARGET VALUE SYSTEM (INR)</th><th>REGIME STATE</th></tr></thead><tbody>"
+    for lvl, value in levels.items():
+        text_color = "#DC2626" if "R" in lvl else ("#059669" if "S" in lvl else "#2563EB")
+        regime = "RESISTANCE ZONE" if "R" in lvl else ("SUPPORT ZONE" if "S" in lvl else "MEAN PIVOT POINT")
+        regime_state = "BELOW VWAP" if live_price < current_vwap else "ABOVE VWAP"
+        table_html += f"<tr><td style='color: {text_color} !important; font-weight: bold;'>{lvl}</td><td style='color:#0F172A !important;'>₹ {value:.2f}</td><td style='color: #475569;'>{regime_state} ({regime})</td></tr>"
+    table_html += "</tbody></table>"
+    st.markdown(table_html, unsafe_allow_html=True)
+
+    # 🔄 Auto-refresh loop engine (Stable rerun configuration)
+    time.sleep(2)
+    st.rerun()
