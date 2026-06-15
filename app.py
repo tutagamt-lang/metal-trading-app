@@ -6,19 +6,18 @@ import plotly.graph_objects as go
 from ta.volatility import AverageTrueRange
 from ta.momentum import RSIIndicator
 from ta.trend import EMAIndicator
-import time
 
 # 1. Page Configuration
 st.set_page_config(
     layout="wide", 
-    page_title="QUANTUM-X Live Trading Terminal",
+    page_title="NSE QUANT QUANTUM-X",
     initial_sidebar_state="expanded"
 )
 
 # பிரீமியம் CSS வடிவமைப்பு மற்றும் மங்கலாவதைத் தடுக்கும் (Anti-Blur) குறியீடு
 st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght=400;700&family=Inter:wght=400;600&display=swap');
         * { font-family: 'Inter', sans-serif; }
         .block-container { padding-top: 2.2rem !important; padding-bottom: 0rem; padding-left: 1.5rem; padding-right: 1.5rem; }
         h2 { font-family: 'Inter', sans-serif; font-weight: 600; letter-spacing: -0.5px; margin-top: 5px !important; margin-bottom: 10px !important; }
@@ -27,7 +26,7 @@ st.markdown("""
         .pivot-table { width: 100%; border-collapse: collapse; font-size: 14px; background-color: #0b0c10; }
         .pivot-table td, .pivot-table th { border: 1px solid #1f2833; padding: 8px 12px; font-family: 'JetBrains Mono', monospace; }
 
-        /* 🎯 இதுதான் டேபிள்கள் மற்றும் எண்கள் மங்கலாவதைத் (Blur/Fade) தடுக்கும் முக்கிய CSS */
+        /* 🎯 டேபிள்கள் மற்றும் எண்கள் மங்கலாவதைத் (Blur/Fade) தடுக்கும் முக்கிய CSS */
         [data-testid="stDataFrameFade"], 
         [data-testid="stElementOverlay"],
         [data-testid="stTable"] {
@@ -37,7 +36,7 @@ st.markdown("""
             animation: none !important;
         }
         
-        /* Streamlit-ன் லோடிங் அனிமேஷனை மறைக்க */
+        /* Streamlit லோடிங் காட்டாமல் இருக்க */
         div[data-testid="stStatusWidget"] {
             visibility: hidden;
             height: 0%;
@@ -46,25 +45,39 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# டிஃபால்ட் வாட்ச்லிஸ்ட் (NSE Stocks)
 if 'watchlist' not in st.session_state:
-    st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
+    st.session_state.watchlist = ["SBIN", "RELIANCE", "ITC", "TATASTEEL", "INFY"]
 
-# போலி நேரடி விலை தரவு என்ஜின் (உங்களுடைய தேவைக்கேற்ப மாற்றிக்கொள்ளலாம்)
-def fetch_realtime_price(symbol):
-    base = {"TATASTEEL": 199.20, "RELIANCE": 1317.40, "ITC": 287.35, "SBIN": 1026.05}.get(symbol, 500.0)
-    return base + np.random.uniform(-0.5, 0.5)
-
-@st.cache_data(ttl=5)
-def fetch_historical_pipeline(symbol):
-    times = pd.date_range(start="09:15", end="15:30", freq="1min")
-    df_b = pd.DataFrame(index=times)
-    base = {"TATASTEEL": 199.20, "RELIANCE": 1317.40, "ITC": 287.35, "SBIN": 1026.05}.get(symbol, 500.0)
-    df_b['Open'] = base + np.random.uniform(-0.5, 0.5, len(times))
-    df_b['High'] = df_b['Open'] + np.random.uniform(0, 0.8, len(times))
-    df_b['Low'] = df_b['Open'] - np.random.uniform(0, 0.8, len(times))
-    df_b['Close'] = (df_b['High'] + df_b['Low']) / 2
-    df_b['Volume'] = np.random.randint(15000, 50000, len(times))
-    return df_b
+# -----------------------------------------------------------------
+# NSE REALTIME DATA FETCH ENGINE (YAHOO FINANCE VIA .NS)
+# -----------------------------------------------------------------
+def fetch_nse_realtime_data(symbol):
+    try:
+        # NSE பங்குகளை மட்டும் தேட .NS சேர்க்கப்படுகிறது
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}.NS?interval=1m&range=1d"
+        res = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=5).json()
+        result = res['chart']['result'][0]
+        indicators = result['indicators']['quote'][0]
+        
+        df = pd.DataFrame({
+            'Open': indicators['open'], 'High': indicators['high'],
+            'Low': indicators['low'], 'Close': indicators['close'], 'Volume': indicators['volume']
+        }, index=pd.to_datetime(result['timestamp'], unit='s', utc=True).tz_convert('Asia/Kolkata'))
+        
+        df = df.dropna()
+        live_price = float(df.iloc[-1]['Close'])
+        return df, live_price, "NSE_LIVE_DATA"
+    except Exception as e:
+        # டேட்டா கிடைக்கவில்லை என்றால் பேக்கப் போலி டேட்டா ஜெனரேட்டர்
+        times = pd.date_range(start="09:15", end="15:30", freq="1min")
+        df_b = pd.DataFrame(index=times)
+        df_b['Open'] = 500.0 + np.random.uniform(-1, 1, len(times))
+        df_b['High'] = df_b['Open'] + np.random.uniform(0, 2, len(times))
+        df_b['Low'] = df_b['Open'] - np.random.uniform(0, 2, len(times))
+        df_b['Close'] = (df_b['High'] + df_b['Low']) / 2
+        df_b['Volume'] = np.random.randint(5000, 25000, len(times))
+        return df_b, float(df_b.iloc[-1]['Close']), "SIMULATED_DATA"
 
 def get_oi_movement(oi_change, price_diff):
     if oi_change > 0 and price_diff > 0: return "LONG BUILDUP"
@@ -82,32 +95,28 @@ def calculate_pivots(H, L, C):
 # -----------------------------------------------------------------
 # SIDEBAR TERMINAL
 # -----------------------------------------------------------------
-st.sidebar.markdown("### `📡 RADAR TERMINAL`")
-custom_ticker = st.sidebar.text_input("ENTER TICKER SYMBOL:", "").strip().upper()
+st.sidebar.markdown("### `📡 NSE RADAR TERMINAL`")
+custom_ticker = st.sidebar.text_input("ENTER NSE STOCK SYMBOL (e.g. TCS, TATAMOTORS):", "").strip().upper()
 
+# புதிய NSE பங்கை வாட்ச்லிஸ்டில் சேர்க்கும் பகுதி
 if custom_ticker and custom_ticker not in st.session_state.watchlist:
-    if st.sidebar.button(f"[+] ADD {custom_ticker}", use_container_width=True):
+    if st.sidebar.button(f"[+] ADD {custom_ticker} TO NSE RADAR", use_container_width=True):
         st.session_state.watchlist.append(custom_ticker)
         st.rerun()
 
 selected_focus = st.sidebar.selectbox("⚡ ACTIVE INSTANCE:", options=st.session_state.watchlist)
 
-# 🎯 நீங்கள் கேட்ட துல்லியமான IF-ELSE கண்டிஷன் (பிழை வராதவாறு சரிசெய்யப்பட்டுள்ளது)
-if custom_ticker:
-    ticker_clean = custom_ticker
-else:
-    ticker_clean = selected_focus
+# தற்போதைய ஆக்டிவ் பங்கு தேர்வு
+ticker_clean = custom_ticker if custom_ticker else selected_focus
 
-# நிலையான தலைப்பு
-st.markdown(f"<h2>QUANTUM-X LIVE TERMINAL // <span style='color:#00ff88;'>{ticker_clean}</span></h2>", unsafe_allow_html=True)
+st.markdown(f"<h2>QUANTUM-X NSE TERMINAL // <span style='color:#00ff88;'>{ticker_clean}</span></h2>", unsafe_allow_html=True)
 
 # -----------------------------------------------------------------
-# 🎯 LIVE ENGINE - FRAGMENT (0.5 விநாடிக்கு ஒருமுறை பக்கம் மாறாமல் புதுப்பிக்கும்)
+# 🎯 LIVE ENGINE - FRAGMENT (0.5 விநாடிக்கு ஒருமுறை மங்கலாகாமல் புதுப்பிக்கும்)
 # -----------------------------------------------------------------
 @st.fragment(run_every=0.5)
 def render_live_dashboard(ticker):
-    df = fetch_historical_pipeline(ticker)
-    live_price = fetch_realtime_price(ticker)
+    df, live_price, data_status = fetch_nse_realtime_data(ticker)
 
     if len(df) >= 1:
         df['VWAP'] = ((df['High'] + df['Low'] + df['Close']) / 3 * df['Volume']).cumsum() / df['Volume'].cumsum()
@@ -135,13 +144,13 @@ def render_live_dashboard(ticker):
         movement_type = get_oi_movement(oi_change, c_930 - c_915)
         levels = calculate_pivots(float(df.iloc[0:idx_930+1]['High'].max()), float(df.iloc[0:idx_930+1]['Low'].min()), float(c_930))
 
-        # பிரதான விலை விபரப் பெட்டி
+        # பிரதான லைவ் பிரைஸ் போர்டு
         st.markdown(f"""
         <div style="background-color:#090a0f; padding: 14px; border-radius: 6px; border: 1px solid #1c2333; margin-bottom: 15px;">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
                 <div>
-                    <span style="color:#566275; font-size:11px; font-weight:700; letter-spacing:1.5px;">LIVE TICK FEED</span>
-                    <h1 class="mono-text" style="color:#FFFFFF; margin:0px; font-size:38px; font-weight:700;">INR {live_price:.2f} <span style="color:{dc_color}; font-size:18px; font-weight:normal;">{day_change:+.2f} ({((day_change/day_open)*100):+.2f}%)</span></h1>
+                    <span style="color:#566275; font-size:11px; font-weight:700; letter-spacing:1.5px;">NSE TICK FEED ({data_status})</span>
+                    <h1 class="mono-text" style="color:#FFFFFF; margin:0px; font-size:38px; font-weight:700;">₹ {live_price:.2f} <span style="color:{dc_color}; font-size:18px; font-weight:normal;">{day_change:+.2f} ({((day_change/day_open)*100):+.2f}%)</span></h1>
                 </div>
                 <div style="display: flex; gap: 25px; background-color:#121620; padding:10px 20px; border-radius:4px; border:1px solid #252e3d;">
                     <div><span style="color:#7889a3; font-size:11px; font-weight:600;">VWAP TRACKER</span><br><b class="mono-text" style="color:#00b0ff; font-size:16px;">{current_vwap:.2f}</b></div>
@@ -156,6 +165,7 @@ def render_live_dashboard(ticker):
         layout_col1, layout_col2 = st.columns([1, 1])
 
         with layout_col1:
+            # லைவ் சார்ட்
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines', name='Price', line=dict(color='#00ff88', width=2)))
             fig.add_trace(go.Scatter(x=df.index, y=df['VWAP'], mode='lines', name='VWAP', line=dict(color='#ffcc00', width=1.5, dash='dash')))
@@ -164,17 +174,18 @@ def render_live_dashboard(ticker):
 
             st.markdown(f"""
             <div style="background-color:#090a0f; padding:15px; border-radius:6px; font-size:14px; border: 1px solid #1c2333; color:#ffffff; line-height:1.7;">
-                <b style="color:#ffcc00; font-size:14px; letter-spacing:1px; font-family:'JetBrains Mono';">⚡ SYSTEM CAPTURED DATA MATRIX (09:15 - 09:30)</b><br>
+                <b style="color:#ffcc00; font-size:14px; letter-spacing:1px; font-family:'JetBrains Mono';">⚡ NSE SYSTEM CAPTURED DATA MATRIX (09:15 - 09:30)</b><br>
                 <div style="margin-top:8px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    <div>• 09:15 Price Block: <b class="mono-text" style="color:#00b0ff;">{c_915:.2f}</b></div>
-                    <div>• 09:30 Price Block: <b class="mono-text" style="color:#00b0ff;">{c_930:.2f}</b></div>
-                    <div>• Institutional Volume Delta: <b class="mono-text" style="color:#fff;">{oi_change:+,} Qty</b></div>
-                    <div>• Computed Pipeline State: <span class="mono-text" style="color:#00ff88; font-weight:700;">{movement_type}</span></div>
+                    <div>• 09:15 Price Block: <b class="mono-text" style="color:#00b0ff;">₹ {c_915:.2f}</b></div>
+                    <div>• 09:30 Price Block: <b class="mono-text" style="color:#00b0ff;">₹ {c_930:.2f}</b></div>
+                    <div>• Volume Delta: <b class="mono-text" style="color:#fff;">{oi_change:+,} Qty</b></div>
+                    <div>• Computed Flow State: <span class="mono-text" style="color:#00ff88; font-weight:700;">{movement_type}</span></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
         with layout_col2:
+            # ட்ரேடிங் சிக்னல் லாஜிக்
             strike_step = 5.0 if live_price < 300 else (20.0 if live_price < 1500 else 50.0)
             atm_strike = round(live_price / strike_step) * strike_step
             highest_call_oi_strike = atm_strike + (strike_step * 2)
@@ -187,65 +198,47 @@ def render_live_dashboard(ticker):
                 entry_exact = max(levels["R1 (Resistance 1)"], h_930)
                 action_html = f"""<div style="background-color:#031f12; padding:20px; border-radius:6px; border-left:5px solid #00ff88; border:1px solid #1c2333; color:#ffffff;">
                     <span style="background-color:#00ff88; color:#000; padding:2px 6px; font-size:11px; font-weight:bold; border-radius:2px;">TRIPLE CONFIRMED BUY</span><div style="margin-top:12px;"></div>
-                    • ENTRY TRIGGER LIMIT: <b class="mono-text" style="color:#00ff88; font-size:18px;">Above INR {entry_exact:.2f}</b><br>
-                    • TARGET EXPECTATION: <b class="mono-text" style="color:#00b0ff; font-size:18px;">INR {min(levels["R2 (Resistance 2)"], highest_call_oi_strike):.2f}</b><br>
-                    • QUANT STOP LOSS RISK: <b class="mono-text" style="color:#ff2a5f; font-size:18px;">INR {entry_exact - (current_atr * 1.5):.2f}</b></div>"""
+                    • ENTRY TRIGGER LIMIT: <b class="mono-text" style="color:#00ff88; font-size:18px;">Above ₹ {entry_exact:.2f}</b><br>
+                    • TARGET EXPECTATION: <b class="mono-text" style="color:#00b0ff; font-size:18px;">₹ {min(levels["R2 (Resistance 2)"], highest_call_oi_strike):.2f}</b><br>
+                    • STOP LOSS RISK: <b class="mono-text" style="color:#ff2a5f; font-size:18px;">₹ {entry_exact - (current_atr * 1.5):.2f}</b></div>"""
             elif "DOWNTREND" in dow_label and live_price < current_vwap and "SHORT" in movement_type:
                 entry_exact = min(levels["S1 (Support 1)"], l_930)
                 action_html = f"""<div style="background-color:#24070f; padding:20px; border-radius:6px; border-left:5px solid #ff2a5f; border:1px solid #1c2333; color:#ffffff;">
                     <span style="background-color:#ff2a5f; color:#fff; padding:2px 6px; font-size:11px; font-weight:bold; border-radius:2px;">TRIPLE CONFIRMED SHORT SELL</span><div style="margin-top:12px;"></div>
-                    • ENTRY TRIGGER LIMIT: <b class="mono-text" style="color:#ff2a5f; font-size:18px;">Below INR {entry_exact:.2f}</b><br>
-                    • TARGET EXPECTATION: <b class="mono-text" style="color:#00b0ff; font-size:18px;">INR {max(levels["S2 (Support 2)"], highest_put_oi_strike):.2f}</b><br>
-                    • QUANT STOP LOSS RISK: <b class="mono-text" style="color:#ff3d00; font-size:18px;">INR {entry_exact + (current_atr * 1.5):.2f}</b></div>"""
+                    • ENTRY TRIGGER LIMIT: <b class="mono-text" style="color:#ff2a5f; font-size:18px;">Below ₹ {entry_exact:.2f}</b><br>
+                    • TARGET EXPECTATION: <b class="mono-text" style="color:#00b0ff; font-size:18px;">₹ {max(levels["S2 (Support 2)"], highest_put_oi_strike):.2f}</b><br>
+                    • STOP LOSS RISK: <b class="mono-text" style="color:#ff3d00; font-size:18px;">₹ {entry_exact + (current_atr * 1.5):.2f}</b></div>"""
             else:
                 calc_entry_b = max(levels["R1 (Resistance 1)"], h_930)
                 calc_entry_s = min(levels["S1 (Support 1)"], l_930)
                 action_html = f"""<div style="background-color:#1c1703; padding:20px; border-radius:6px; border-left:5px solid #ffcc00; border:1px solid #1c2333; color:#ffffff;">
-                    <span style="background-color:#ffcc00; color:#000; padding:2px 6px; font-size:11px; font-weight:bold; border-radius:2px;">SYSTEM NO-TRADE MATRIX CONFLICT</span>
+                    <span style="background-color:#ffcc00; color:#000; padding:2px 6px; font-size:11px; font-weight:bold; border-radius:2px;">SYSTEM NO-TRADE CONFLICT</span>
                     <div style="margin-top:12px; font-size:14px; line-height:1.6;">
-                    • DOW TREND: <b style="color:#fff;">{dow_label}</b> | FLOW REGIME: <b style="color:#fff;">{"ABOVE VWAP" if live_price > current_vwap else "BELOW VWAP"}</b><br>
-                    • <span style="color:#00ff88; font-weight:bold;">IF BREAKOUT BUY:</span> Entry Above <b class="mono-text">INR {calc_entry_b:.2f}</b> | Target: <b class="mono-text">{min(levels["R2 (Resistance 2)"], highest_call_oi_strike):.2f}</b><br>
-                    • <span style="color:#ff2a5f; font-weight:bold;">IF BREAKOUT SELL:</span> Entry Below <b class="mono-text">INR {calc_entry_s:.2f}</b> | Target: <b class="mono-text">{max(levels["S2 (Support 2)"], highest_put_oi_strike):.2f}</b>
+                    • DOW TREND: <b style="color:#fff;">{dow_label}</b> | FLOW: <b style="color:#fff;">{"ABOVE VWAP" if live_price > current_vwap else "BELOW VWAP"}</b><br>
+                    • <span style="color:#00ff88; font-weight:bold;">IF BREAKOUT BUY:</span> Entry Above <b class="mono-text">₹ {calc_entry_b:.2f}</b> | Target: <b class="mono-text">₹ {min(levels["R2 (Resistance 2)"], highest_call_oi_strike):.2f}</b><br>
+                    • <span style="color:#ff2a5f; font-weight:bold;">IF BREAKOUT SELL:</span> Entry Below <b class="mono-text">INR {calc_entry_s:.2f}</b> | Target: <b class="mono-text">₹ {max(levels["S2 (Support 2)"], highest_put_oi_strike):.2f}</b>
                     </div></div>"""
             
             st.markdown(action_html, unsafe_allow_html=True)
 
-        # 1. வாட்ச்லிஸ்ட் அட்டவணை (மங்கலாகாது)
-        st.markdown("<h4>📊 MULTI-STOCK REALTIME MONITOR</h4>", unsafe_allow_html=True)
+        # வாட்ச்லிஸ்டில் உள்ள பிற NSE பங்குகளின் நேரடி கண்காணிப்பு
+        st.markdown("<h4>📊 NSE WATCHLIST MONITOR</h4>", unsafe_allow_html=True)
         watchlist_data = []
         for stock in st.session_state.watchlist:
-            s_price = fetch_realtime_price(stock)
-            watchlist_data.append({"STOCK": stock, "LAST PRICE": f"{s_price:.2f}", "OI MATRIX": "SHORT BUILDUP" if s_price < current_vwap else "LONG BUILDUP"})
+            _, s_price, _ = fetch_nse_realtime_data(stock)
+            watchlist_data.append({"STOCK (NSE)": stock, "LAST PRICE (₹)": f"{s_price:.2f}", "REGIME STATE": "BELOW VWAP" if s_price < current_vwap else "ABOVE VWAP"})
         st.table(pd.DataFrame(watchlist_data))
 
-        col_depth1, col_depth2 = st.columns(2)
-        
-        with col_depth1:
-            st.markdown("<h4>🔮 FUTURE OPEN INTEREST (OI) TRACKER</h4>", unsafe_allow_html=True)
-            oi_table = f"""<table class='pivot-table'>
-                <tr style='background-color:#121620; color:#7889a3;'><th>EXPIRY</th><th>CALL OI DELTA</th><th>PUT OI DELTA</th><th>PCR STATE</th></tr>
-                <tr><td>25-JUN-2026</td><td style='color:#ff2a5f;'>1,45,200</td><td style='color:#00ff88;'>1,89,600</td><td style='font-weight:bold; color:#00ff88;'>1.31 (BULLISH)</td></tr>
-                <tr><td>30-JUL-2026</td><td style='color:#ff2a5f;'>42,100</td><td style='color:#00ff88;'>38,400</td><td style='font-weight:bold; color:#ffcc00;'>0.91 (NEUTRAL)</td></tr>
-            </table>"""
-            st.markdown(oi_table, unsafe_allow_html=True)
-
-        with col_depth2:
-            st.markdown("<h4>📈 REALTIME MARKET DEPTH L2 (ORDER BOOK)</h4>", unsafe_allow_html=True)
-            depth_table = f"""<table class='pivot-table'>
-                <tr style='background-color:#121620; color:#7889a3;'><th>BID QTY (BUY)</th><th>PRICE</th><th>ASK QTY (SELL)</th><th>PRICE</th></tr>
-                <tr><td style='color:#00ff88;'>12,450</td><td>{live_price - 0.05:.2f}</td><td style='color:#ff2a5f;'>8,900</td><td>{live_price + 0.05:.2f}</td></tr>
-                <tr><td style='color:#00ff88;'>18,100</td><td>{live_price - 0.10:.2f}</td><td style='color:#ff2a5f;'>14,250</td><td>{live_price + 0.10:.2f}</td></tr>
-            </table>"""
-            st.markdown(depth_table, unsafe_allow_html=True)
-
-        # 2. பிவோட் லெவல்ஸ் அட்டவணை (HTML மூலம் உருவாக்கப்பட்டது - 100% மங்கலாகாது)
-        st.markdown("<h4>🎯 ALIGNED BREAKOUT MATRIX ENGINE (TOP TO BOTTOM)</h4>", unsafe_allow_html=True)
-        table_html = "<table class='pivot-table'><tr style='background-color: #121620; color: #7889a3;'><th>PIVOT IDENTIFIED INTERVAL</th><th>TARGET VALUE SYSTEM (INR)</th></tr>"
+        # பிவோட் லெவல்கள் (HTML வடிவமைப்பு - 100% மங்கலாகாது)
+        st.markdown("<h4>🎯 ALIGNED PIVOT MATRIX ENGINE (TOP TO BOTTOM)</h4>", unsafe_allow_html=True)
+        table_html = "<table class='pivot-table'><tr style='background-color: #121620; color: #7889a3;'><th>PIVOT IDENTIFIED INTERVAL</th><th>TARGET VALUE SYSTEM (₹)</th></tr>"
         for lvl, value in levels.items():
             text_color = "#ff2a5f" if "R" in lvl else ("#00ff88" if "S" in lvl else "#00b0ff")
             table_html += f"<tr><td style='color: {text_color}; font-weight: 600;'>{lvl}</td><td style='color: #ffffff; font-weight: bold;'>{value:.2f}</td></tr>"
         table_html += "</table>"
         st.markdown(table_html, unsafe_allow_html=True)
+    else:
+        st.error("NSE Engine Error. Retrying Pipeline...")
 
 # -----------------------------------------------------------------
 # RUN DASHBOARD ENGINE
