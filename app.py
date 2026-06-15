@@ -101,6 +101,12 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+if "last_refresh" not in st.session_state:
+    st.session_state.last_refresh = time.time()
+
+if 'watchlist' not in st.session_state:
+    st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
+
 # -----------------------------------------------------------------
 # DATA ENGINE PIPELINE
 # -----------------------------------------------------------------
@@ -149,15 +155,8 @@ def fetch_realtime_nse_data(symbol):
         df_backup['Volume'] = np.random.randint(15000, 50000, len(times))
         return df_backup, "SIM"
 
-# Session State Initialization
-if "last_refresh" not in st.session_state:
-    st.session_state.last_refresh = time.time()
-
-if 'watchlist' not in st.session_state:
-    st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
-
 # -----------------------------------------------------------------
-# SIDEBAR TERMINAL (Static Container)
+# SIDEBAR TERMINAL (Static Elements)
 # -----------------------------------------------------------------
 st.sidebar.markdown("### `📡 RADAR TERMINAL`")
 custom_ticker = st.sidebar.text_input("ENTER TICKER SYMBOL:", "").strip().upper()
@@ -174,20 +173,24 @@ ticker_clean = custom_ticker if custom_ticker else selected_focus
 st.sidebar.markdown("---")
 st.sidebar.markdown("#### `⚡ MULTI-STOCK MONITOR`")
 
-# Sidebar Live Tracking Content Area
+# SideBar Realtime Dynamic Container
 sidebar_placeholder = st.sidebar.empty()
 
 # -----------------------------------------------------------------
-# MAIN TERMINAL DASHBOARD PLACEHOLDER
+# MAIN TERMINAL PLACEHOLDER (High-Performance Engine)
 # -----------------------------------------------------------------
-# மெயின் ஸ்கிரீன் மின்னாமல் இருக்க நாம் பயன்படுத்தும் பிரதான கண்டெய்னர்
-main_dashboard_placeholder = st.empty()
+main_container = st.empty()
 
 # -----------------------------------------------------------------
-# LIVE POLLING EXECUTION LOOP (Continuous Refresh Engine)
+# LIVE POLLING EXECUTION LOOP (FIXED - NO DUPLICATE ELEMENT ID)
 # -----------------------------------------------------------------
+# லூப் ரன் ஆகும்போது டூப்ளிகேட் ஐடி பிழையைத் தடுக்க தனித்துவமான லூப் கவுண்டர்
+loop_count = 0
+
 while True:
-    # 1. SIDEBAR MULTI-STOCK MONITOR UPDATE
+    loop_count += 1
+    
+    # 1. Update Sidebar Multi-Stock Monitor Data
     if st.session_state.watchlist:
         scanner_data = []
         for s in st.session_state.watchlist:
@@ -198,19 +201,14 @@ while True:
                     int(s_df.iloc[idx_30]['Volume']*0.48) - int(s_df.iloc[0]['Volume']*0.42), 
                     s_df.iloc[idx_30]['Close'] - s_df.iloc[0]['Close']
                 )
-                scanner_data.append({
-                    "STOCK": s, 
-                    "LAST PRICE": f"{s_df.iloc[-1]['Close']:.2f}", 
-                    "OI MATRIX": s_move
-                })
+                scanner_data.append({"STOCK": s, "LAST PRICE": f"{s_df.iloc[-1]['Close']:.2f}", "OI MATRIX": s_move})
         sidebar_placeholder.dataframe(pd.DataFrame(scanner_data), hide_index=True, use_container_width=True)
 
-    # 2. FETCH ACTIVE INSTANCE DATA
+    # 2. Fetch Core Trading Data
     df, data_status = fetch_realtime_nse_data(ticker_clean)
 
-    # 3. RENDER MAIN TERMINAL (Inside the high-performance placeholder)
+    # 3. Main Dashboard Rendering Block
     if len(df) >= 1:
-        # Calculate Technical Indicators
         df['VWAP'] = ((df['High'] + df['Low'] + df['Close']) / 3 * df['Volume']).cumsum() / df['Volume'].cumsum()
         current_vwap = df.iloc[-1]['VWAP']
         df['RSI'] = RSIIndicator(close=df['Close'], window=14).rsi()
@@ -241,20 +239,20 @@ while True:
         atm_strike = round(live_price / strike_step) * strike_step
         max_pain = atm_strike  
         
-        # லூப் இயங்கும்போது இந்த Container மட்டுமே புதுப்பிக்கப்படும் (No Flicker)
-        with main_dashboard_placeholder.container():
-            # Header Panel
+        # ஆப் பிளிங்கிங் ஆகாமல் தடுக்க மெயின் கண்டெய்னரை மட்டும் ரிஃப்ரெஷ் செய்கிறோம்
+        with main_container.container():
             head_col1, head_col2 = st.columns([1.5, 1])
             with head_col1:
                 st.markdown(f"<h2>QUANTUM-X NSE TERMINAL // <span style='color:#00ff88;'>{ticker_clean}</span></h2>", unsafe_allow_html=True)
             with head_col2:
+                # TradingView Widget-க்கு தனித்துவமான கீ (Unique Key) கொடுக்கப்பட்டுள்ளது
                 components.html(f"""
                     <div class="tradingview-widget-container" style="margin-top: 5px;">
                       <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
                       {{"symbol": "NSE:{ticker_clean}", "width": "100%", "colorTheme": "dark", "isTransparent": true, "locale": "en"}}
                       </script>
                     </div>
-                """, height=50)
+                """, height=50, key=f"tv_widget_{loop_count}")
 
             # Core Price Engine Feed
             st.markdown(f"""
@@ -286,7 +284,8 @@ while True:
                     margin=dict(l=10, r=10, t=10, b=10), height=150, showlegend=False,
                     xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor='#161b22')
                 )
-                st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+                # Plotly Chart-க்கு டூப்ளிகேட் வராமல் இருக்க பிரத்யேக கீ கொடுக்கப்பட்டுள்ளது
+                st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key=f"chart_{loop_count}")
 
                 st.markdown(f"""
                 <div style="background-color:#121620; padding:15px; border-radius:6px; font-size:13px; border: 1px solid #1c2333; color:#ffffff !important; line-height:1.7;">
@@ -441,5 +440,5 @@ while True:
             table_html += "</tbody></table>"
             st.markdown(table_html, unsafe_allow_html=True)
 
-    # 4. Polling Execution Delay
+    # 4. Loop Execution Delay (1 Second Interval)
     time.sleep(1)
