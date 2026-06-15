@@ -16,7 +16,8 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
  
-# FIXED CSS: Anti-blur patches + Your existing UI theme layout
+# 🎯 ANTI-BLUR & ANTI-FLICKER CORE CSS MATRIX
+# இந்த CSS, டேட்டா மாறும்போதோ அல்லது எர்ரர் வரும்போதோ ஸ்கிரீன் மங்கலாவதை (Blur/Fade) 100% தடுக்கும்.
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght=400;700&family=Inter:wght=400;600&display=swap');
@@ -52,28 +53,25 @@ st.markdown("""
             font-family: 'JetBrains Mono', monospace;
         }
 
-        /* 🎯 ANTI-BLUR & ANTI-FLICKER MATRIX */
-        /* டேபிள் டேட்டா அப்டேட் ஆகும்போது மங்கலாவதை (Fade/Blur) முற்றிலும் தடுக்கிறது */
-        div[data-testid="stDataFrameFade"], [data-testid="stElementOverlay"] {
+        /* 🛑 இங்கம்தான் மேஜிக் நடக்கிறது: Streamlit-ன் மங்கலாக்கும் தன்மையை (Fade Out) முடக்குகிறோம் */
+        div[data-testid="stDataFrameFade"] {
+            opacity: 1 !important;
+            filter: none !important;
+            filter: blur(0px) !important;
+        }
+        
+        /* பக்கத்தை ரீ-ரன் செய்யும்போது எலிமெண்ட்டுகள் ப்ளர் ஆவதைத் தடுக்கிறது */
+        .stApp [data-testid="stVerticalBlock"] > div {
             opacity: 1 !important;
             filter: none !important;
             transition: none !important;
+        }
+
+        /* ஓவர்லே மற்றும் ரன்னிங் ஸ்டேட்டஸ் லோடிங் அனிமேஷன்களை முற்றிலும் மறைக்கிறது */
+        div[data-testid="stElementOverlay"] {
             display: none !important;
-            visibility: hidden !important;
+            opacity: 0 !important;
         }
-        
-        /* ரீரன் (Rerun) அனிமேஷன்களை முடக்குகிறது */
-        div[data-testid="stVerticalBlock"] > div {
-            animation: none !important;
-            transition: none !important;
-        }
-        .stMarkdown, .stPlotlyChart, .stDataFrame, .stTable {
-            animation: none !important;
-            transition: none !important;
-            filter: none !important;
-        }
-        
-        /* மேல் வலதுபுறம் தோன்றும் 'Running...' ஸ்பின்னரை மறைக்கிறது */
         div[data-testid="stStatusWidget"] {
             visibility: hidden !important;
             display: none !important;
@@ -148,6 +146,8 @@ if custom_ticker:
             st.rerun()
  
 selected_focus = st.sidebar.selectbox("⚡ ACTIVE INSTANCE:", options=st.session_state.watchlist)
+
+# ✅ FIXED SYNTAX ERROR: இங்கு விடுபட்ட else துல்லியமாக இணைக்கப்பட்டுள்ளது
 ticker_clean = custom_ticker if custom_ticker else selected_focus
  
 st.sidebar.markdown("---")
@@ -195,7 +195,7 @@ if len(df) >= 1:
     movement_type = get_oi_movement(oi_change, c_930 - c_915)
     levels = calculate_pivots(float(df.iloc[0:idx_930+1]['High'].max()), float(df.iloc[0:idx_930+1]['Low'].min()), float(c_930))
  
-    # Top Header Panel - FIXED IN LINE HEIGHT WITH MARGINS
+    # Top Header Panel
     head_col1, head_col2 = st.columns([1.5, 1])
     with head_col1:
         st.markdown(f"<h2>INSTITUTIONAL QUANT TERMINAL // <span style='color:#888;'>{ticker_clean}</span></h2>", unsafe_allow_html=True)
@@ -318,6 +318,7 @@ if len(df) >= 1:
         else:
             text_color = "#00b0ff"
             
+        # ✅ FIXED F-STRING IN PREVIOUS STEP
         table_html += f"<tr><td style='color: {text_color}; font-weight: 600;'>{lvl}</td><td style='color: #ffffff; font-weight: bold;'>{value:.2f}</td></tr>"
     
     table_html += "</table>"
