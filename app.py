@@ -197,7 +197,7 @@ df = get_angel_candle_data(ticker_clean)
 if live_data and len(df) >= 1:
         # உங்கள் சார்ட் மற்றும் டேபிள்கள் இருக்கும் இடம்
         st.write("Data loaded successfully") 
-    else:
+else:
         st.warning("தரவு கிடைக்கவில்லை!")
     st.warning("தரவு கிடைக்கவில்லை! சந்தை நேரத்தை சரிபார்க்கவும் அல்லது API லாகின் ஆகியுள்ளதா எனப் பார்க்கவும்.")
     st.write("Live Data Status:", live_data)
