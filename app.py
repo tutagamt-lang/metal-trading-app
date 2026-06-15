@@ -48,10 +48,10 @@ st.markdown("""
 # -----------------------------------------------------------------
 # 🔑 ANGEL ONE API CREDENTIALS
 # -----------------------------------------------------------------
-API_KEY = " rpg4LX8F "
-CLIENT_CODE = " AACG314572"
+API_KEY = "rpg4LX8F"
+CLIENT_CODE = "AACG314572"
 PASSWORD = "6227"
-TOTP_KEY = " Z5MZBUBZAHYJFNKEYHWIJP4HWA"
+TOTP_KEY = "Z5MZBUBZAHYJFNKEYHWIJP4HWA"
 
 if "angel_conn" not in st.session_state:
     st.session_state.angel_conn = None
