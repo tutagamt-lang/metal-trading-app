@@ -10,44 +10,20 @@ from datetime import datetime
 from SmartApi import SmartConnect
 import pyotp
 
-# 1. Page Configuration for Pro Institutional Layout
-st.set_page_config(
-    layout="wide", 
-    page_title="QUANTUM-X Live Trading Terminal",
-    initial_sidebar_state="expanded"
-)
+# Page Configuration
+st.set_page_config(layout="wide", page_title="QUANTUM-X Live Trading Terminal", initial_sidebar_state="expanded")
 
-# 🎯 HIGH-CONTRAST ANTI-BLUR TERMINAL STYLE MATRIX
+# CSS Style
 st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght=400;700&family=Inter:wght=400;600;700&display=swap');
-        
         .stApp { background-color: #FFFFFF !important; color: #0F172A !important; }
-        * { font-family: 'Inter', sans-serif; }
-        .block-container { padding-top: 1.5rem !important; padding-bottom: 0rem; }
-        
-        h2 { font-weight: 700; letter-spacing: -0.5px; margin: 5px 0 10px 0 !important; color: #0F172A !important; }
-        h4 { font-weight: 700; color: #1E3A8A !important; font-family: 'JetBrains Mono', monospace !important; margin-top: 20px !important; }
-        .mono-text { font-family: 'JetBrains Mono', monospace !important; font-weight: 700 !important; }
-        
-        .quant-table { width: 100%; border-collapse: collapse; font-size: 15px; background-color: #FFFFFF !important; margin-bottom: 15px; border: 2px solid #0F172A !important; }
-        .quant-table th { background-color: #0F172A !important; color: #FFFFFF !important; text-align: left; padding: 12px 14px; font-family: 'JetBrains Mono', monospace; border: 2px solid #0F172A !important; font-size: 13px; font-weight: 700 !important; text-transform: uppercase; }
-        .quant-table td { border: 2px solid #E2E8F0 !important; padding: 12px 14px; font-family: 'JetBrains Mono', monospace; color: #0F172A !important; font-weight: 700 !important; font-size: 15px; background-color: #FFFFFF !important; }
-
-        .anchor-container { border: 2px solid #0F172A; padding: 18px; border-radius: 6px; background-color: #FFFFFF; margin-top: 15px; }
-        .anchor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
-        .anchor-card { background-color: #F8FAFC; padding: 12px 16px; border: 1px solid #CBD5E1; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #0F172A; }
-
-        section[data-testid="stSidebar"] { background-color: #1E293B !important; color: #FFFFFF !important; }
-        section[data-testid="stSidebar"] * { color: #FFFFFF !important; }
-        section[data-testid="stSidebar"] input { color: #000000 !important; }
-        div[data-testid="stStatusWidget"] { visibility: hidden !important; display: none !important; }
+        .quant-table { width: 100%; border-collapse: collapse; border: 2px solid #0F172A !important; }
+        .quant-table th { background-color: #0F172A !important; color: #FFFFFF !important; padding: 12px; }
+        .quant-table td { border: 2px solid #E2E8F0 !important; padding: 12px; }
     </style>
 """, unsafe_allow_html=True)
 
-# -----------------------------------------------------------------
-# 🔑 ANGEL ONE API CREDENTIALS
-# -----------------------------------------------------------------
+# Credentials
 API_KEY = "rpg4LX8F"
 CLIENT_CODE = "AACG314572"
 PASSWORD = "6227"
@@ -57,22 +33,22 @@ if "angel_conn" not in st.session_state:
     st.session_state.angel_conn = None
 
 def init_angel_one():
-    """ஒருமுறை மட்டும் லாகின் செய்து செஷனைத் தக்கவைக்கும்"""
     if st.session_state.angel_conn is not None:
         return st.session_state.angel_conn
-        
+    
     try:
-        # இருக்கும் வரிகளை இப்படி மாற்றுங்கள் ( .strip() சேர்ப்பது மட்டும்)
-smart_conn = SmartConnect(api_key=API_KEY.strip())
-# ...
-data = smart_conn.generateSession(CLIENT_CODE.strip(), PASSWORD.strip(), totp)
+        # இங்கு 4 இடைவெளி தள்ளி இந்த வரிகள் இருக்க வேண்டும்
+        smart_conn = SmartConnect(api_key=API_KEY.strip())
         totp = pyotp.TOTP(TOTP_KEY.strip()).now()
         data = smart_conn.generateSession(CLIENT_CODE.strip(), PASSWORD.strip(), totp)
-        if data['status']:
+        if data and data.get('status'):
             st.session_state.angel_conn = smart_conn
             return smart_conn
     except Exception as e:
         st.error(f"Angel One Login Failed: {str(e)}")
+    return None
+
+# பழைய கோடின் தொடக்கம் (வரி 76-ல் இருந்து உங்கள் பழைய கோட் இருக்கட்டும்)
     return None
 
 # 📌 திருத்தப்பட்ட மார்க்கெட் டோக்கன் விவரங்கள் (NSE Cash & NFO Futures Tokens)
