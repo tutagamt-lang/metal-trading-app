@@ -69,7 +69,6 @@ def calculate_pivots(H, L, C, O):
         "S2": P - (R1 - S1),
         "S3": L - 2 * (H - P)
     }
-
 @st.cache_data(ttl=1)
 def fetch_realtime_nse_data(symbol):
     try:
