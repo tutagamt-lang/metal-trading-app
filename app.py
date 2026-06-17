@@ -273,7 +273,8 @@ if len(df) >= 1:
 
     # Intelligent Signals Box (Light Mode Sharp Text)
     st.markdown("#### `🎯 REALTIME ADVANCED BREAKOUT SCANNED MATRIX`")
-    r1_val = levels["R1 (Resistance 1)"]
+    r1_val = levels["R1"]
+    s1_val = levels["S1"]
     s1_val = levels["S1 (Support 1)"]
     is_near_resistance = abs(live_price - r1_val) <= (live_price * 0.006)
     is_near_support = abs(live_price - s1_val) <= (live_price * 0.006)
