@@ -10,11 +10,7 @@ import streamlit.components.v1 as components
 import time
 
 # 1. Page Configuration for Pro Institutional Layout
-st.set_page_config(
-    layout="wide", 
-    page_title="QUANTUM-X Live Trading Terminal",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(layout="wide", page_title="QUANTUM-X Live Trading Terminal")
 
 # 🎯 LIGHT-MODE HIGH-CONTRAST TERMINAL STYLE (FOR MAXIMUM CLARITY)
 st.markdown("""
@@ -64,7 +60,6 @@ def calculate_pivots(H, L, C, O):
     P = (H + C + L + O) / 4
     R1 = (2 * P) - L
     S1 = (2 * P) - H
-    
     return {
         "R3": H + 2 * (P - L),
         "R2": P + (R1 - S1),
@@ -230,8 +225,8 @@ if len(df) >= 1:
     with layout_col2:
         h_color = "#059669" if df.iloc[idx_930]['High'] > df.iloc[idx_915]['High'] else "#DC2626"
         dow_label = "UPTREND" if h_color == "#059669" else "DOWNTREND"
-        calc_entry_b = max(levels["R1 (Resistance 1)"], h_930)
-        calc_entry_s = min(levels["S1 (Support 1)"], l_930)
+        calc_entry_b = max(levels["R1"], h_930)
+        calc_entry_s = min(levels["S1"], l_930)
         flow_label = "ABOVE VWAP" if live_price > current_vwap else "BELOW VWAP"
         
         st.markdown(f"""
