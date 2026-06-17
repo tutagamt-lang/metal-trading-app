@@ -163,8 +163,7 @@ if len(df) >= 1:
     
     oi_change = int(df.iloc[idx_930]['Volume'] * 0.48) - int(df.iloc[idx_915]['Volume'] * 0.42)
     movement_type = get_oi_movement(oi_change, c_930 - c_915)
-    # இந்த வரியை மாற்றவும்:
-levels = calculate_pivots(float(h_930), float(l_930), float(c_930), float(df.iloc[0]['Open']))
+    levels = calculate_pivots(float(h_930), float(l_930), float(c_930), float(df.iloc[0]['Open']))
 
     strike_step = 5.0 if live_price < 300 else (20.0 if live_price < 1500 else 50.0)
     atm_strike = round(live_price / strike_step) * strike_step
