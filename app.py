@@ -60,16 +60,19 @@ def get_oi_movement(oi_change, price_diff):
     elif oi_change <= 0 and price_diff <= 0: return "PROFIT BOOKING"
     else: return "SHORT COVERING"
 
-def calculate_pivots(H, L, C):
-    P = (H + L + C) / 3
+def calculate_pivots(H, L, C, O):
+    P = (H + C + L + O) / 4
+    R1 = (2 * P) - L
+    S1 = (2 * P) - H
+    
     return {
-        "R3 (Resistance 3)": H + 2 * (P - L),
-        "R2 (Resistance 2)": P + (H - L),
-        "R1 (Resistance 1)": (2 * P) - L,
-        "P (Pivot Point)": P,
-        "S1 (Support 1)": (2 * P) - H,
-        "S2 (Support 2)": P - (H - L),
-        "S3 (Support 3)": L - 2 * (H - P)
+        "R3": H + 2 * (P - L),
+        "R2": P + (R1 - S1),
+        "R1": R1,
+        "P": P,
+        "S1": S1,
+        "S2": P - (R1 - S1),
+        "S3": L - 2 * (H - P)
     }
 
 @st.cache_data(ttl=1)
