@@ -273,8 +273,8 @@ if len(df) >= 1:
 
     # Intelligent Signals Box (Light Mode Sharp Text)
     st.markdown("#### `🎯 REALTIME ADVANCED BREAKOUT SCANNED MATRIX`")
-   r1_val = levels["R1"]
-   s1_val = levels["S1"]
+    r1_val = levels["R1"]
+    s1_val = levels["S1"]
     is_near_resistance = abs(live_price - r1_val) <= (live_price * 0.006)
     is_near_support = abs(live_price - s1_val) <= (live_price * 0.006)
     fut_oi_change_pct = float(f"{((df.iloc[-1]['Volume'] - df.iloc[0]['Volume'])/df.iloc[0]['Volume'])*10:.2f}") if len(df)>1 else 5.2
