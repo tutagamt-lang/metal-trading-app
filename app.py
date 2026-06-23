@@ -84,52 +84,52 @@ def calculate_pivots(H, L, C, O):
     }
 
 @st.cache_data(ttl=1)
+@st.cache_data(ttl=1)
 def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
-    if _api_key and _client_id and _password and _totp:
-        try:
-            smart_conn = SmartConnect(api_key=_api_key)
-            smart_conn.generateSession(_client_id, _password, _totp)
-            token = TOKEN_MAP.get(symbol, "52726")
-            current_date = datetime.now().strftime("%Y-%m-%d")
+    if not (_api_key and _client_id and _password and _totp):
+        st.error("தயவுசெய்து அனைத்து API லாகின் விவரங்களையும் சரியாக வழங்கவும்.")
+        st.stop()
+        
+    try:
+        smart_conn = SmartConnect(api_key=_api_key)
+        session_data = smart_conn.generateSession(_client_id, _password, _totp)
+        
+        if not session_data.get('status'):
+            st.error(f"AngelOne லாகின் தோல்வி: {session_data.get('message')}")
+            st.stop()
             
-            historic_param = {
-                "exchange": "NFO",  # Future மார்க்கெட்டிற்கு 'NFO' அவசியம்
-                "symboltoken": token, 
-                "interval": "ONE_MINUTE",
-                "fromdate": f"{current_date} 09:15", 
-                "todate": f"{current_date} 15:30"
-            }
-            response = smart_conn.getCandleData(historic_param)
+        token = TOKEN_MAP.get(symbol, "52726")
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        
+        historic_param = {
+            "exchange": "NFO", 
+            "symboltoken": token, 
+            "interval": "ONE_MINUTE",
+            "fromdate": f"{current_date} 09:15", 
+            "todate": f"{current_date} 15:30"
+        }
+        response = smart_conn.getCandleData(historic_param)
+        
+        if response and response.get("status") and response.get("data"):
+            candles = response["data"]
+            df_api = pd.DataFrame(candles, columns=['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume'])
             
-            if response and "data" in response and response["data"]:
-                candles = response["data"]
-                df_api = pd.DataFrame(candles, columns=['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume'])
-                
-                # 6-வது காலமில் உண்மையான ஓப்பன் இன்ட்ரெஸ்ட் (OI) இருந்தால் எடுக்கும்
-                if len(candles[0]) >= 7:
-                    df_api['OI'] = [c[6] for c in candles]
-                else:
-                    df_api['OI'] = df_api['Volume'] * 2
-                    
-                df_api['Timestamp'] = pd.to_datetime(df_api['Timestamp']).dt.tz_localize('Asia/Kolkata')
-                df_api.set_index('Timestamp', inplace=True)
-                return df_api, "LIVE_ANGELONE"
+            if len(candles[0]) >= 7:
+                df_api['OI'] = [c[6] for c in candles]
             else:
-                st.sidebar.warning("API இணைக்கப்பட்டது, ஆனால் லைவ் மார்க்கெட் தரவு கிடைக்கவில்லை. (மார்க்கெட் மூடப்பட்டிருக்கலாம்)")
-        except Exception as e:
-            st.sidebar.error(f"AngelOne லாகின் பிழை: {str(e)}")
+                df_api['OI'] = df_api['Volume'] * 2
+                
+            df_api['Timestamp'] = pd.to_datetime(df_api['Timestamp']).dt.tz_localize('Asia/Kolkata')
+            df_api.set_index('Timestamp', inplace=True)
+            return df_api, "LIVE_ANGELONE"
+        else:
+            error_msg = response.get("message") if response else "No Response"
+            st.error(f"API லாகின் ஆகிவிட்டது, ஆனால் சர்வரில் இருந்து தரவு வரவில்லை: {error_msg}")
+            st.stop()
             
-    # பேக்கப் சிமுலேஷன் (டேட்டா வராத போது மட்டும் இயங்கும்)
-    times = pd.date_range(start="09:15", end="15:30", freq="1min", tz="Asia/Kolkata")
-    df_backup = pd.DataFrame(index=times)
-    base = {"TATASTEEL": 194.62, "RELIANCE": 1326.60, "ITC": 291.80, "SBIN": 1036.95}.get(symbol, 500.0)
-    df_backup['Open'] = base + np.random.uniform(-0.2, 0.2, len(times))
-    df_backup['High'] = df_backup['Open'] + np.random.uniform(0, 0.4, len(times))
-    df_backup['Low'] = df_backup['Open'] - np.random.uniform(0, 0.4, len(times))
-    df_backup['Close'] = (df_backup['High'] + df_backup['Low']) / 2
-    df_backup['Volume'] = np.random.randint(15000, 50000, len(times))
-    df_backup['OI'] = np.random.randint(5000000, 6000000, len(times))
-    return df_backup, "SIMULATED_BACKUP"
+    except Exception as e:
+        st.error(f"கணினி பிழை (Exception): {str(e)}")
+        st.stop()
 
 st.sidebar.markdown("---")
 selected_focus = st.sidebar.selectbox("⚡ ACTIVE INSTANCE:", options=st.session_state.watchlist)
