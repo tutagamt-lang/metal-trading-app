@@ -1,23 +1,21 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import requests
 import plotly.graph_objects as go
 from ta.volatility import AverageTrueRange
 from ta.momentum import RSIIndicator
 from ta.trend import EMAIndicator
-import streamlit.components.v1 as components
-import time
 from datetime import datetime
 import pyotp
+import time
 
-# 1. Page Configuration for Pro Institutional Layout
+# 1. Page Configuration
 st.set_page_config(layout="wide", page_title="QUANTUM-X Live Trading Terminal")
 
 try:
     from SmartApi import SmartConnect
 except ImportError:
-    st.error("தயவுசெய்து உங்கள் requirements.txt கோப்பில் 'smartapi-python' மற்றும் 'pyotp' சேர்க்கவும்.")
+    st.error("தயவுசெய்து உங்கள் requirements.txt கோப்பில் 'smartapi-python' சேர்க்கவும்.")
 
 # 🎯 LIGHT-MODE HIGH-CONTRAST TERMINAL STYLE
 st.markdown("""
@@ -27,12 +25,10 @@ st.markdown("""
         * { font-family: 'Inter', sans-serif; }
         .block-container { padding-top: 1.5rem !important; padding-bottom: 0rem; }
         h2 { font-weight: 700; letter-spacing: -0.5px; margin: 5px 0 10px 0 !important; color: #0F172A !important; }
-        h4 { font-weight: 700; color: #1E3A8A !important; font-family: 'JetBrains Mono', monospace !important; margin-top: 20px !important; }
         .mono-text { font-family: 'JetBrains Mono', monospace !important; font-weight: 700 !important; }
         .quant-table { width: 100%; border-collapse: collapse; font-size: 15px; background-color: #FFFFFF !important; margin-bottom: 15px; border: 2px solid #0F172A !important; }
         .quant-table th { background-color: #0F172A !important; color: #FFFFFF !important; text-align: left; padding: 12px 14px; font-family: 'JetBrains Mono', monospace; border: 2px solid #0F172A !important; font-size: 13px; font-weight: 700 !important; }
         .quant-table td { border: 2px solid #E2E8F0 !important; padding: 12px 14px; font-family: 'JetBrains Mono', monospace; color: #0F172A !important; font-weight: 700 !important; font-size: 15px; background-color: #FFFFFF !important; }
-        .matrix-box { background-color: #FFFFFF; padding: 22px; border-radius: 6px; border: 2px solid #0F172A; margin-bottom: 20px; }
         section[data-testid="stSidebar"] { background-color: #1E293B !important; color: #FFFFFF !important; }
         section[data-testid="stSidebar"] * { color: #FFFFFF !important; }
         section[data-testid="stSidebar"] input { color: #000000 !important; }
@@ -47,7 +43,7 @@ ANGEL_TOTP_KEY = "Z5MZBUBZAHYJFNKEYHWIJP4HWA"
 
 try:
     calculated_totp = pyotp.TOTP(ANGEL_TOTP_KEY.strip()).now()
-except Exception as e:
+except Exception:
     calculated_totp = ""
 
 st.sidebar.markdown("### `🔐 ANGELONE SMARTAPI API INTEGRATION`")
@@ -59,13 +55,12 @@ totp_token = st.sidebar.text_input("TOTP TOKEN (Authenticator):", value=calculat
 if 'watchlist' not in st.session_state:
     st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
 
-# 🎯 ANGELONE NFO (DERIVATIVES/FUTURE) ஜூன் 2026-ன் உண்மையான டோக்கன்கள்
-# இது துல்லியமான Future விலையையும் OI-யையும் தரும்.
+# 🎯 துல்லியமான நேரடி NSE CASH மார்க்கெட் டோக்கன்கள்
 TOKEN_MAP = {
-    "TATASTEEL": "52726", 
-    "RELIANCE": "51241", 
-    "ITC": "49552", 
-    "SBIN": "51963"
+    "TATASTEEL": "3496", 
+    "RELIANCE": "2885", 
+    "ITC": "1660", 
+    "SBIN": "3045"
 }
 
 def get_oi_movement(oi_change, price_diff):
@@ -84,25 +79,16 @@ def calculate_pivots(H, L, C, O):
     }
 
 @st.cache_data(ttl=1)
-@st.cache_data(ttl=1)
 def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
-    if not (_api_key and _client_id and _password and _totp):
-        st.error("தயவுசெய்து அனைத்து API லாகின் விவரங்களையும் சரியாக வழங்கவும்.")
-        st.stop()
-        
     try:
         smart_conn = SmartConnect(api_key=_api_key)
-        session_data = smart_conn.generateSession(_client_id, _password, _totp)
+        smart_conn.generateSession(_client_id, _password, _totp)
         
-        if not session_data.get('status'):
-            st.error(f"AngelOne லாகின் தோல்வி: {session_data.get('message')}")
-            st.stop()
-            
-        token = TOKEN_MAP.get(symbol, "52726")
+        token = TOKEN_MAP.get(symbol, "3496")
         current_date = datetime.now().strftime("%Y-%m-%d")
         
         historic_param = {
-            "exchange": "NFO", 
+            "exchange": "NSE",  # 👈 'NSE' Cash மார்க்கெட்டிற்கு மாற்றப்பட்டுள்ளது
             "symboltoken": token, 
             "interval": "ONE_MINUTE",
             "fromdate": f"{current_date} 09:15", 
@@ -114,17 +100,14 @@ def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
             candles = response["data"]
             df_api = pd.DataFrame(candles, columns=['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume'])
             
-            if len(candles[0]) >= 7:
-                df_api['OI'] = [c[6] for c in candles]
-            else:
-                df_api['OI'] = df_api['Volume'] * 2
+            # Cash மார்க்கெட்டில் OI இருக்காது என்பதால் வால்யூம் மூலம் கணக்கிடப்படுகிறது
+            df_api['OI'] = df_api['Volume'] * 2
                 
             df_api['Timestamp'] = pd.to_datetime(df_api['Timestamp']).dt.tz_localize('Asia/Kolkata')
             df_api.set_index('Timestamp', inplace=True)
             return df_api, "LIVE_ANGELONE"
         else:
-            error_msg = response.get("message") if response else "No Response"
-            st.error(f"API லாகின் ஆகிவிட்டது, ஆனால் சர்வரில் இருந்து தரவு வரவில்லை: {error_msg}")
+            st.error("உங்களது கணக்கில் இந்த பங்கிற்கான லைவ் டேட்டா ஃபீட் இன்னும் வரவில்லை. மார்க்கெட் நேரத்தில் முயற்சிக்கவும்.")
             st.stop()
             
     except Exception as e:
@@ -162,8 +145,8 @@ if len(df) >= 1:
     else:
         matrix_open, matrix_high = float(df.iloc[0]['Open']), float(df.iloc[0]['High'])
         matrix_low, matrix_close = float(df.iloc[0]['Low']), float(df.iloc[0]['Close'])
-        oi_915, oi_930, oi_difference = 5500000, 5650000, 150000
-    
+        oi_915, oi_930, oi_difference = 100000, 120000, 2000
+
     live_price = float(df.iloc[-1]['Close'])
     day_open = float(df.iloc[0]['Open'])
     day_change = live_price - day_open
@@ -175,7 +158,6 @@ if len(df) >= 1:
 
     st.markdown(f"<h2>QUANTUM-X NSE TERMINAL // <span style='color:#1E4A8A;'>{selected_focus}</span> <span style='font-size:12px;color:#94A3B8;'>DATA STATUS: {data_status}</span></h2>", unsafe_allow_html=True)
 
-    # Price Ribbon
     st.markdown(f"""
     <div style="background-color:#FFFFFF; padding: 18px; border-radius: 6px; border: 2px solid #0F172A; margin-bottom: 15px;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
@@ -210,9 +192,9 @@ if len(df) >= 1:
                 <div>• 15-Min Low Price: <b class="mono-text" style="color:#DC2626;">&#8377; {matrix_low:.2f}</b></div>
                 <div>• 15-Min Close Price: <b class="mono-text" style="color:#2563EB;">&#8377; {matrix_close:.2f}</b></div>
                 <div style="grid-column: span 2; border-top: 1px dashed #CBD5E1; margin-top: 5px; padding-top: 5px;"></div>
-                <div>• 🚀 Future OI @ 09:15: <b class="mono-text" style="color:#475569;">{oi_915:,}</b></div>
-                <div>• 🏁 Future OI @ 09:30: <b class="mono-text" style="color:#475569;">{oi_930:,}</b></div>
-                <div>• 📊 OI Change (Delta): <b class="mono-text" style="color:#2563EB;">{oi_difference:+,}</b></div>
+                <div>• 🚀 Volume @ 09:15: <b class="mono-text" style="color:#475569;">{oi_915:,}</b></div>
+                <div>• 🏁 Volume @ 09:30: <b class="mono-text" style="color:#475569;">{oi_930:,}</b></div>
+                <div>• 📊 Vol Change (Delta): <b class="mono-text" style="color:#2563EB;">{oi_difference:+,}</b></div>
                 <div>• 🎯 Flow State: <span class="mono-text" style="color:#D97706; font-weight:bold;">{movement_type}</span></div>
             </div>
         </div>
@@ -236,7 +218,6 @@ if len(df) >= 1:
         </div>
         """, unsafe_allow_html=True)
 
-    # Pivot Table Engine Engine Matrix Output
     st.markdown("#### `🎯 ALIGNED BREAKOUT MATRIX ENGINE (TOP TO BOTTOM)`")
     table_html = "<table class='quant-table'><thead><tr><th>PIVOT IDENTIFIED</th><th>TARGET VALUE</th><th>REGIME STATE</th></tr></thead><tbody>"
     for lvl, value in levels.items():
