@@ -7,7 +7,6 @@ from ta.momentum import RSIIndicator
 from ta.trend import EMAIndicator
 from datetime import datetime, timezone, timedelta
 import pyotp
-import time
 
 # 1. Page Configuration
 st.set_page_config(layout="wide", page_title="QUANTUM-X Live Trading Terminal")
@@ -55,7 +54,7 @@ totp_token = st.sidebar.text_input("TOTP TOKEN (Authenticator):", value=calculat
 if 'watchlist' not in st.session_state:
     st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
 
-# 🎯 அசல் NSE CASH மார்க்கெட் டோக்கன் எண்கள்
+# 🎯 అசல் NSE CASH மார்க்கெட் டோக்கன் எண்கள்
 TOKEN_MAP = {
     "TATASTEEL": "3496", 
     "RELIANCE": "2885", 
@@ -85,11 +84,19 @@ def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
         smart_conn.generateSession(_client_id, _password, _totp)
         
         token = TOKEN_MAP.get(symbol, "3496")
-        
-        # ⏱️ எக்ஸ்டர்னல் மாடியூல் இல்லாமல் IST (இந்திய நேரம்) கணக்கிடுதல் (+5:30)
         ist_offset = timezone(timedelta(hours=5, minutes=30))
         today_date = datetime.now(ist_offset).strftime("%Y-%m-%d")
         
+        # ⚡ 1. மார்க்கெட்டின் தற்போதைய துல்லியமான நேரடி விலையைப் பெறுதல் (LTP)
+        live_tick_price = None
+        try:
+            ltp_response = smart_conn.getLtpData("NSE", f"{symbol}-EQ", token)
+            if ltp_response and ltp_response.get("status") and ltp_response.get("data"):
+                live_tick_price = float(ltp_response["data"].get("ltp", 0))
+        except Exception:
+            pass
+
+        # 📈 2. வரைபடம் மற்றும் முந்தைய தரவிற்கான மெழுகுவர்த்தி தரவு
         historic_param = {
             "exchange": "NSE", 
             "symboltoken": token, 
@@ -113,13 +120,16 @@ def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
             df_api.set_index('Timestamp', inplace=True)
             df_api = df_api.sort_index()
             
-            # இன்றைய இந்திய தேதிக்கான தரவை மட்டும் வடிகட்டுதல்
             current_day = datetime.now(ist_offset).date()
             df_filtered = df_api[df_api.index.date == current_day]
             
-            if df_filtered.empty:
-                return df_api, "LIVE_ANGELONE"
-            return df_filtered, "LIVE_ANGELONE"
+            final_df = df_filtered if not df_filtered.empty else df_api
+            
+            # 🚀 LTP விலையை கடைசி வரிசையில் கட்டாயமாகப் புதுப்பித்தல்
+            if live_tick_price and live_tick_price > 0 and not final_df.empty:
+                final_df.iloc[-1, final_df.columns.get_loc('Close')] = live_tick_price
+                
+            return final_df, "LIVE_ANGELONE", live_tick_price
         else:
             st.warning(f"⚠️ ஏஞ்சல் ஒன் சர்வரில் இன்று ({today_date}) இன்னும் லைவ் டேட்டா ஃபீட் துவங்கவில்லை.")
             st.stop()
@@ -131,7 +141,7 @@ def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
 st.sidebar.markdown("---")
 selected_focus = st.sidebar.selectbox("⚡ ACTIVE INSTANCE:", options=st.session_state.watchlist)
 
-df, data_status = fetch_realtime_nse_data(selected_focus, api_key, client_id, password, totp_token)
+df, data_status, direct_live_price = fetch_realtime_nse_data(selected_focus, api_key, client_id, password, totp_token)
 
 if len(df) >= 1:
     # 📈 INDICATORS
@@ -147,7 +157,7 @@ if len(df) >= 1:
     current_ema21 = df.iloc[-1]['EMA_21'] if not np.isnan(df.iloc[-1]['EMA_21']) else df.iloc[-1]['Close']
     current_atr = df.iloc[-1]['ATR'] if not np.isnan(df.iloc[-1]['ATR']) else 1.0
 
-    # 🎯 09:15 - 09:30 சரியான ரேஞ்ச் கணக்கீடு
+    # 🎯 09:15 - 09:30 ரேஞ்ச்
     df_15min = df[(df.index.hour == 9) & (df.index.minute >= 15) & (df.index.minute <= 30)]
     
     if not df_15min.empty:
@@ -165,7 +175,8 @@ if len(df) >= 1:
         matrix_close = float(df.iloc[0]['Close'])
         oi_915, oi_930, oi_difference = int(df.iloc[0]['Volume']), int(df.iloc[0]['Volume']), 0
 
-    live_price = float(df.iloc[-1]['Close'])
+    # 🎯 மார்க்கெட் நேரடி விலையைத் தேர்ந்தெடுத்தல்
+    live_price = direct_live_price if direct_live_price else float(df.iloc[-1]['Close'])
     day_open = float(df.iloc[0]['Open'])
     day_change = live_price - day_open
     dc_color = "#10B981" if day_change >= 0 else "#EF4444"
