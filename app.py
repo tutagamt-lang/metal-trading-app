@@ -89,7 +89,7 @@ def fetch_realtime_nse_data(symbol):
     except:
         times = pd.date_range(start="09:15", end="15:30", freq="1min")
         df_backup = pd.DataFrame(index=times)
-        base = {"TATASTEEL": 197.80, "RELIANCE": 1293.0, "ITC": 285.10, "SBIN": 1017.15}.get(symbol, 500.0)
+        base = {"TATASTEEL": 196.66, "RELIANCE": 1326.60, "ITC": 291.80, "SBIN": 1036.95}.get(symbol, 500.0)
         df_backup['Open'] = base + np.random.uniform(-0.5, 0.5, len(times))
         df_backup['High'] = df_backup['Open'] + np.random.uniform(0, 0.8, len(times))
         df_backup['Low'] = df_backup['Open'] - np.random.uniform(0, 0.8, len(times))
@@ -145,16 +145,16 @@ if len(df) >= 1:
     current_ema21 = df.iloc[-1]['EMA_21'] if not np.isnan(df.iloc[-1]['EMA_21']) else df.iloc[-1]['Close']
     current_atr = df.iloc[-1]['ATR'] if not np.isnan(df.iloc[-1]['ATR']) else 1.0
 
+    # 🛑 SAFE INDEX HANDLING: 09:15 முதல் 09:30 வரையிலான தரவுகள் இருப்பதை உறுதி செய்கிறது
     idx_930 = min(15, len(df) - 1)
     
-    # 🔧 09:15 - 09:30 வரையிலான ஒட்டுமொத்த 15 நிமிட OHLC கணக்கீடு
-    matrix_open = df.iloc[0]['Open']                                 # 9:15 Open
-    matrix_high = df.iloc[0:idx_930+1]['High'].max()                 # 9:15 - 9:30 High
-    matrix_low = df.iloc[0:idx_930+1]['Low'].min()                   # 9:15 - 9:30 Low
-    matrix_close = df.iloc[idx_930]['Close']                         # 9:30 Close
+    matrix_open = float(df.iloc[0]['Open'])
+    matrix_high = float(df.iloc[0:idx_930+1]['High'].max())
+    matrix_low = float(df.iloc[0:idx_930+1]['Low'].min())
+    matrix_close = float(df.iloc[idx_930]['Close'])
     
-    live_price = df.iloc[-1]['Close']
-    day_open = df.iloc[0]['Open']
+    live_price = float(df.iloc[-1]['Close'])
+    day_open = float(df.iloc[0]['Open'])
     day_change = live_price - day_open
     dc_color = "#10B981" if day_change >= 0 else "#EF4444"
     pct_change = ((day_change / day_open) * 100) if day_open != 0 else 0.0
@@ -162,8 +162,7 @@ if len(df) >= 1:
     oi_change = int(df.iloc[idx_930]['Volume'] * 0.48) - int(df.iloc[0]['Volume'] * 0.42)
     movement_type = get_oi_movement(oi_change, matrix_close - matrix_open)
     
-    # 🔧 புதிய 15-Min Range OHLC மதிப்புகளைக் கொண்டு பிவோட் கணக்கீடு செய்யப்படுகிறது
-    levels = calculate_pivots(float(matrix_high), float(matrix_low), float(matrix_close), float(matrix_open))
+    levels = calculate_pivots(matrix_high, matrix_low, matrix_close, matrix_open)
 
     strike_step = 5.0 if live_price < 300 else (20.0 if live_price < 1500 else 50.0)
     atm_strike = round(live_price / strike_step) * strike_step
@@ -215,7 +214,7 @@ if len(df) >= 1:
         )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-        # 🔧 திருத்தப்பட்ட மற்றும் உங்களால் கேட்கப்பட்ட 4 புதிய OHLC விவரங்கள் கொண்ட மேட்ரிக்ஸ் பாக்ஸ்
+        # 📊 09:15 - 09:30 MATRIX BLOCK 
         st.markdown(f"""
         <div style="background-color:#FFFFFF; padding:15px; border-radius:6px; font-size:14px; border: 2px solid #0F172A; color:#0F172A !important; line-height:1.8;">
             <b style="color:#1E3A8A !important; font-size:13px; letter-spacing:1px; font-family:'JetBrains Mono';">⚡ NSE SYSTEM CAPTURED DATA MATRIX (09:15 - 09:30 RANGE)</b><br>
@@ -306,4 +305,38 @@ if len(df) >= 1:
         trade_action = "🛑 SELL ACTION: Resistance தாங்காமல் கீழே திரும்பும்போது Short / Put Option வாங்கலாம்."
     else:
         status_box, color_box, text_theme = "📡 CONSOLIDATION: MEAN REVERSION", "#2563EB", "#2563EB"
-        tamil_desc = "தற்போது ஸ்டாக் எந்த ஒரு முக்கிய ச
+        tamil_desc = "தற்போது ஸ்டாக் எந்த ஒரு முக்கிய சப்போர்ட் அல்லது ரெசிஸ்டன்ஸ் எல்லையையும் தொடவில்லை. நடுநிலையான எல்லையில் வர்த்தகம் ஆகிறது (Sideways / Consolidation)."
+        trade_action = "⏳ WAIT: விலை முக்கிய சப்போர்ட் அல்லது ரெசிஸ்டன்ஸ் எல்லைக்கு அருகில் வரும் வரை பொறுமையாக காத்திருக்கவும்."
+
+    st.markdown(f"""
+    <div class="matrix-box" style="border-left: 8px solid {color_box};">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #E2E8F0; padding-bottom: 10px; margin-bottom: 15px;">
+            <span style="color: {text_theme}; font-size: 18px; font-family: monospace; font-weight: bold;">{status_box}</span>
+            <span style="font-size: 14px; color: #0F172A; font-family: monospace; font-weight: bold;">FUTURES OI CHANGE: <span style="color: #D97706;">{fut_oi_change_pct:+.2f}%</span></span>
+        </div>
+        <div style="margin-bottom: 15px; font-size: 15px; color: #334155; line-height:1.7;">
+            <strong style="color: #1E3A8A; font-size:16px;">📊 தமிழ் சந்தை விளக்கம்:</strong> <span style="font-weight:600; color:#0F172A;">{tamil_desc}</span>
+        </div>
+        <div style="background-color: #F8FAFC; padding: 14px 18px; border-radius: 4px; font-size: 15px; border: 2px solid #0F172A; color: {text_theme}; font-weight: bold;">
+            {trade_action}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Pivot Table Engine
+    st.markdown("#### `🎯 ALIGNED BREAKOUT MATRIX ENGINE (TOP TO BOTTOM)`")
+    table_html = "<table class='quant-table'><thead><tr><th>PIVOT IDENTIFIED INTERVAL</th><th>TARGET VALUE SYSTEM (INR)</th><th>REGIME STATE</th></tr></thead><tbody>"
+    for lvl, value in levels.items():
+        text_color = "#DC2626" if "R" in lvl else ("#059669" if "S" in lvl else "#2563EB")
+        regime = "RESISTANCE ZONE" if "R" in lvl else ("SUPPORT ZONE" if "S" in lvl else "MEAN PIVOT POINT")
+        regime_state = "BELOW VWAP" if live_price < current_vwap else "ABOVE VWAP"
+        table_html += f"<tr><td style='color: {text_color} !important; font-weight: bold;'>{lvl}</td><td style='color:#0F172A !important;'>&#8377; {value:.2f}</td><td style='color: #475569;'>{regime_state} ({regime})</td></tr>"
+    table_html += "</tbody></table>"
+    st.markdown(table_html, unsafe_allow_html=True)
+
+    # 🔄 Auto-refresh loop engine safely using st.fragment or placeholder logic instead of breaking loop
+    try:
+        time.sleep(2)
+        st.rerun()
+    except Exception:
+        pass
