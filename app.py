@@ -54,7 +54,6 @@ totp_token = st.sidebar.text_input("TOTP TOKEN (Authenticator):", value=calculat
 if 'watchlist' not in st.session_state:
     st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
 
-# 🎯 అசல் NSE CASH மார்க்கெட் டோக்கன் எண்கள்
 TOKEN_MAP = {
     "TATASTEEL": "3496", 
     "RELIANCE": "2885", 
@@ -77,26 +76,12 @@ def calculate_pivots(H, L, C, O):
         "P": P, "S1": S1, "S2": P - (R1 - S1), "S3": L - 2 * (H - P)
     }
 
-@st.cache_data(ttl=1)
-def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
+# ⏳ வரலாற்று தரவை 5 நிமிடங்களுக்கு ஒருமுறை மட்டும் புதுப்பிக்கும்படி மாற்றி, சர்வர் பிழையைத் தடுத்தல்
+@st.cache_data(ttl=300)
+def fetch_historic_candles(symbol, token, today_date, _api_key, _client_id, _password, _totp):
     try:
         smart_conn = SmartConnect(api_key=_api_key)
         smart_conn.generateSession(_client_id, _password, _totp)
-        
-        token = TOKEN_MAP.get(symbol, "3496")
-        ist_offset = timezone(timedelta(hours=5, minutes=30))
-        today_date = datetime.now(ist_offset).strftime("%Y-%m-%d")
-        
-        # ⚡ 1. மார்க்கெட்டின் தற்போதைய துல்லியமான நேரடி விலையைப் பெறுதல் (LTP)
-        live_tick_price = None
-        try:
-            ltp_response = smart_conn.getLtpData("NSE", f"{symbol}-EQ", token)
-            if ltp_response and ltp_response.get("status") and ltp_response.get("data"):
-                live_tick_price = float(ltp_response["data"].get("ltp", 0))
-        except Exception:
-            pass
-
-        # 📈 2. வரைபடம் மற்றும் முந்தைய தரவிற்கான மெழுகுவர்த்தி தரவு
         historic_param = {
             "exchange": "NSE", 
             "symboltoken": token, 
@@ -105,45 +90,49 @@ def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
             "todate": f"{today_date} 15:30"
         }
         response = smart_conn.getCandleData(historic_param)
-        
-        if response and response.get("status") and response.get("data") and len(response["data"]) > 0:
-            candles = response["data"]
-            df_api = pd.DataFrame(candles, columns=['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume'])
-            df_api['OI'] = df_api['Volume'] * 2
-            
-            df_api['Timestamp'] = pd.to_datetime(df_api['Timestamp'])
-            try:
-                df_api['Timestamp'] = df_api['Timestamp'].dt.tz_convert('Asia/Kolkata')
-            except TypeError:
-                df_api['Timestamp'] = df_api['Timestamp'].dt.tz_localize('Asia/Kolkata')
-                
-            df_api.set_index('Timestamp', inplace=True)
-            df_api = df_api.sort_index()
-            
-            current_day = datetime.now(ist_offset).date()
-            df_filtered = df_api[df_api.index.date == current_day]
-            
-            final_df = df_filtered if not df_filtered.empty else df_api
-            
-            # 🚀 LTP விலையை கடைசி வரிசையில் கட்டாயமாகப் புதுப்பித்தல்
-            if live_tick_price and live_tick_price > 0 and not final_df.empty:
-                final_df.iloc[-1, final_df.columns.get_loc('Close')] = live_tick_price
-                
-            return final_df, "LIVE_ANGELONE", live_tick_price
-        else:
-            st.warning(f"⚠️ ஏஞ்சல் ஒன் சர்வரில் இன்று ({today_date}) இன்னும் லைவ் டேட்டா ஃபீட் துவங்கவில்லை.")
-            st.stop()
-            
-    except Exception as e:
-        st.error(f"கணினி பிழை (Exception): {str(e)}")
-        st.stop()
+        if response and response.get("status") and response.get("data"):
+            return response["data"]
+    except Exception:
+        pass
+    return []
+
+# ⚡ உடனடி நேரடி விலையை (LTP) மட்டும் வேகமாக எடுக்கும் பங்க்ஷன்
+def fetch_current_ltp(symbol, token, _api_key, _client_id, _password, _totp):
+    try:
+        smart_conn = SmartConnect(api_key=_api_key)
+        smart_conn.generateSession(_client_id, _password, _totp)
+        ltp_response = smart_conn.getLtpData("NSE", f"{symbol}-EQ", token)
+        if ltp_response and ltp_response.get("status") and ltp_response.get("data"):
+            return float(ltp_response["data"].get("ltp", 0))
+    except Exception:
+        pass
+    return None
 
 st.sidebar.markdown("---")
 selected_focus = st.sidebar.selectbox("⚡ ACTIVE INSTANCE:", options=st.session_state.watchlist)
 
-df, data_status, direct_live_price = fetch_realtime_nse_data(selected_focus, api_key, client_id, password, totp_token)
+# நேர கணக்கீடு
+ist_offset = timezone(timedelta(hours=5, minutes=30))
+today_str = datetime.now(ist_offset).strftime("%Y-%m-%d")
+active_token = TOKEN_MAP.get(selected_focus, "3496")
 
-if len(df) >= 1:
+# தரவு சேகரிப்பு
+candle_data = fetch_historic_candles(selected_focus, active_token, today_str, api_key, client_id, password, totp_token)
+live_tick_price = fetch_current_ltp(selected_focus, active_token, api_key, client_id, password, totp_token)
+
+if candle_data:
+    df = pd.DataFrame(candle_data, columns=['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume'])
+    df['OI'] = df['Volume'] * 2
+    df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+    df.set_index('Timestamp', inplace=True)
+    df = df.sort_index()
+    
+    if live_tick_price and live_tick_price > 0:
+        df.iloc[-1, df.columns.get_loc('Close')] = live_tick_price
+        live_price = live_tick_price
+    else:
+        live_price = float(df.iloc[-1]['Close'])
+
     # 📈 INDICATORS
     df['VWAP'] = ((df['High'] + df['Low'] + df['Close']) / 3 * df['Volume']).cumsum() / df['Volume'].cumsum()
     current_vwap = df.iloc[-1]['VWAP']
@@ -175,8 +164,6 @@ if len(df) >= 1:
         matrix_close = float(df.iloc[0]['Close'])
         oi_915, oi_930, oi_difference = int(df.iloc[0]['Volume']), int(df.iloc[0]['Volume']), 0
 
-    # 🎯 மார்க்கெட் நேரடி விலையைத் தேர்ந்தெடுத்தல்
-    live_price = direct_live_price if direct_live_price else float(df.iloc[-1]['Close'])
     day_open = float(df.iloc[0]['Open'])
     day_change = live_price - day_open
     dc_color = "#10B981" if day_change >= 0 else "#EF4444"
@@ -185,7 +172,7 @@ if len(df) >= 1:
     movement_type = get_oi_movement(oi_difference, matrix_close - matrix_open)
     levels = calculate_pivots(matrix_high, matrix_low, matrix_close, matrix_open)
 
-    st.markdown(f"<h2>QUANTUM-X NSE TERMINAL // <span style='color:#1E4A8A;'>{selected_focus}</span> <span style='font-size:12px;color:#94A3B8;'>DATA STATUS: {data_status}</span></h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2>QUANTUM-X NSE TERMINAL // <span style='color:#1E4A8A;'>{selected_focus}</span></h2>", unsafe_allow_html=True)
 
     st.markdown(f"""
     <div style="background-color:#FFFFFF; padding: 18px; border-radius: 6px; border: 2px solid #0F172A; margin-bottom: 15px;">
@@ -254,3 +241,5 @@ if len(df) >= 1:
         table_html += f"<tr><td style='color: {text_color} !important; font-weight: bold;'>{lvl}</td><td>&#8377; {value:.2f}</td><td>PIVOT LEVEL BASED ON SMARTAPI 15M RANGE</td></tr>"
     table_html += "</tbody></table>"
     st.markdown(table_html, unsafe_allow_html=True)
+else:
+    st.info("🔄 தரவைச் சேகரிக்கிறது... தற்காலிகமாக ஏஞ்சல் ஒன் சர்வர் உங்களைத் தடுத்திருக்கலாம். 2 நிமிடம் கழித்து பக்கத்தை Rerun செய்யவும்.")
