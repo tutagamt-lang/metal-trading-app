@@ -5,7 +5,8 @@ import plotly.graph_objects as go
 from ta.volatility import AverageTrueRange
 from ta.momentum import RSIIndicator
 from ta.trend import EMAIndicator
-from datetime import datetime, timedelta
+from datetime import datetime
+import pytz
 import pyotp
 import time
 
@@ -86,8 +87,9 @@ def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
         
         token = TOKEN_MAP.get(symbol, "3496")
         
-        # ⏱️ துல்லியமான இன்றைய தேதியை மட்டும் உருவாக்குதல்
-        today_date = datetime.now().strftime("%Y-%m-%d")
+        # ⏱️ சர்வர் நேரத்தை புறக்கணித்து, இந்திய நேரப்படி (IST) மாற்றுதல்
+        ist_zone = pytz.timezone('Asia/Kolkata')
+        today_date = datetime.now(ist_zone).strftime("%Y-%m-%d")
         
         historic_param = {
             "exchange": "NSE", 
@@ -112,15 +114,15 @@ def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
             df_api.set_index('Timestamp', inplace=True)
             df_api = df_api.sort_index()
             
-            # இன்றைய தேதிக்கான தரவை மட்டும் வடிகட்டுதல் (Strict Filter)
-            current_day = datetime.now().date()
+            # இன்றைய இந்திய தேதிக்கான தரவை மட்டும் வடிகட்டுதல்
+            current_day = datetime.now(ist_zone).date()
             df_filtered = df_api[df_api.index.date == current_day]
             
             if df_filtered.empty:
                 return df_api, "LIVE_ANGELONE"
             return df_filtered, "LIVE_ANGELONE"
         else:
-            st.warning(f"⚠️ ஏஞ்சல் ஒன் சர்வரில் இன்று ({today_date}) இன்னும் லைவ் டேட்டோ ஃபீட் துவங்கவில்லை.")
+            st.warning(f"⚠️ ஏஞ்சல் ஒன் சர்வரில் இன்று ({today_date}) இன்னும் லைவ் டேட்டா ஃபீட் துவங்கவில்லை.")
             st.stop()
             
     except Exception as e:
