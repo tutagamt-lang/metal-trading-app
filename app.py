@@ -5,8 +5,7 @@ import plotly.graph_objects as go
 from ta.volatility import AverageTrueRange
 from ta.momentum import RSIIndicator
 from ta.trend import EMAIndicator
-from datetime import datetime
-import pytz
+from datetime import datetime, timezone, timedelta
 import pyotp
 import time
 
@@ -87,9 +86,9 @@ def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
         
         token = TOKEN_MAP.get(symbol, "3496")
         
-        # ⏱️ சர்வர் நேரத்தை புறக்கணித்து, இந்திய நேரப்படி (IST) மாற்றுதல்
-        ist_zone = pytz.timezone('Asia/Kolkata')
-        today_date = datetime.now(ist_zone).strftime("%Y-%m-%d")
+        # ⏱️ எக்ஸ்டர்னல் மாடியூல் இல்லாமல் IST (இந்திய நேரம்) கணக்கிடுதல் (+5:30)
+        ist_offset = timezone(timedelta(hours=5, minutes=30))
+        today_date = datetime.now(ist_offset).strftime("%Y-%m-%d")
         
         historic_param = {
             "exchange": "NSE", 
@@ -115,7 +114,7 @@ def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
             df_api = df_api.sort_index()
             
             # இன்றைய இந்திய தேதிக்கான தரவை மட்டும் வடிகட்டுதல்
-            current_day = datetime.now(ist_zone).date()
+            current_day = datetime.now(ist_offset).date()
             df_filtered = df_api[df_api.index.date == current_day]
             
             if df_filtered.empty:
