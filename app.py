@@ -80,6 +80,7 @@ def calculate_pivots(H, L, C, O):
 
 @st.cache_data(ttl=1)
 @st.cache_data(ttl=1)
+@st.cache_data(ttl=1)
 def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
     try:
         smart_conn = SmartConnect(api_key=_api_key)
