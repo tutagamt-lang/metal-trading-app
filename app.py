@@ -56,8 +56,9 @@ if 'watchlist' not in st.session_state:
     st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
 
 # 🎯 துல்லியமான நேரடி NSE CASH மார்க்கெட் டோக்கன்கள்
+# 🎯 துல்லியமான நேரடி NSE CASH மார்க்கெட் டோக்கன்கள் (Updated)
 TOKEN_MAP = {
-    "TATASTEEL": "3496", 
+    "TATASTEEL": "20297", 
     "RELIANCE": "2885", 
     "ITC": "1660", 
     "SBIN": "3045"
