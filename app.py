@@ -16,21 +16,41 @@ try:
 except ImportError:
     st.error("தயவுசெய்து உங்கள் requirements.txt கோப்பில் 'smartapi-python' சேர்க்கவும்.")
 
-# 🎯 LIGHT-MODE HIGH-CONTRAST TERMINAL STYLE
+# 🎨 PREMIUM MODERN CORPORATE LIGHT-MODE TERMINAL
 st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght=400;700&family=Inter:wght=400;600;700&display=swap');
-        .stApp { background-color: #F8FAFC !important; color: #0F172A !important; }
-        * { font-family: 'Inter', sans-serif; }
-        .block-container { padding-top: 1.5rem !important; padding-bottom: 0rem; }
-        h2 { font-weight: 700; letter-spacing: -0.5px; margin: 5px 0 10px 0 !important; color: #0F172A !important; }
-        .mono-text { font-family: 'JetBrains Mono', monospace !important; font-weight: 700 !important; }
-        .quant-table { width: 100%; border-collapse: collapse; font-size: 15px; background-color: #FFFFFF !important; margin-bottom: 15px; border: 2px solid #0F172A !important; }
-        .quant-table th { background-color: #0F172A !important; color: #FFFFFF !important; text-align: left; padding: 12px 14px; font-family: 'JetBrains Mono', monospace; border: 2px solid #0F172A !important; font-size: 13px; font-weight: 700 !important; }
-        .quant-table td { border: 2px solid #E2E8F0 !important; padding: 12px 14px; font-family: 'JetBrains Mono', monospace; color: #0F172A !important; font-weight: 700 !important; font-size: 15px; background-color: #FFFFFF !important; }
-        section[data-testid="stSidebar"] { background-color: #1E293B !important; color: #FFFFFF !important; }
-        section[data-testid="stSidebar"] * { color: #FFFFFF !important; }
-        section[data-testid="stSidebar"] input { color: #000000 !important; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+        
+        /* Global Reset */
+        .stApp { background-color: #F8FAFC !important; color: #1E293B !important; }
+        * { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; }
+        
+        /* Typography */
+        h2 { font-weight: 700; letter-spacing: -0.5px; margin: 0 0 15px 0 !important; color: #0F172A !important; font-size: 24px !important; }
+        .mono-text { font-family: 'JetBrains Mono', monospace !important; }
+        
+        /* Metric Cards Grid */
+        .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .metric-card { background: #FFFFFF; padding: 16px; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.05); }
+        .metric-label { color: #64748B; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px; }
+        .metric-value { color: #0F172A; font-size: 22px; font-weight: 700; }
+        
+        /* Info Container */
+        .info-box { background: #FFFFFF; padding: 20px; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.05); height: 100%; }
+        .info-title { color: #1E40AF; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px; display: block; }
+        
+        /* Custom Clean Table */
+        .quant-table { width: 100%; border-collapse: collapse; font-size: 14px; background: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #E2E8F0; margin-top: 15px; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.05); }
+        .quant-table th { background-color: #F1F5F9; color: #475569; text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; border-bottom: 1px solid #E2E8F0; }
+        .quant-table td { padding: 14px 16px; border-bottom: 1px solid #F1F5F9; color: #1E293B; }
+        .quant-table tr:last-child td { border-bottom: none; }
+        
+        /* Sidebar Styling */
+        section[data-testid="stSidebar"] { background-color: #0F172A !important; border-right: 1px solid #1E293B; }
+        section[data-testid="stSidebar"] * { color: #E2E8F0 !important; }
+        section[data-testid="stSidebar"] input { color: #0F172A !important; background-color: #FFFFFF !important; border-radius: 6px !important; }
+        section[data-testid="stSidebar"] div[data-baseweb="select"] * { color: #0F172A !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -45,21 +65,16 @@ try:
 except Exception:
     calculated_totp = ""
 
-st.sidebar.markdown("### `🔐 ANGELONE SMARTAPI API INTEGRATION`")
+st.sidebar.markdown("### 🔐 SMARTAPI INTEGRATION")
 api_key = st.sidebar.text_input("ANGELONE API KEY:", value=ANGEL_API_KEY, type="password")
-client_id = st.sidebar.text_input("CLIENT ID (e.g., S12345):", value=ANGEL_CLIENT_ID)
+client_id = st.sidebar.text_input("CLIENT ID:", value=ANGEL_CLIENT_ID)
 password = st.sidebar.text_input("PIN/PASSWORD:", value=ANGEL_PASSWORD, type="password")
-totp_token = st.sidebar.text_input("TOTP TOKEN (Authenticator):", value=calculated_totp, type="password")
+totp_token = st.sidebar.text_input("TOTP TOKEN:", value=calculated_totp, type="password")
 
 if 'watchlist' not in st.session_state:
     st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
 
-TOKEN_MAP = {
-    "TATASTEEL": "3496", 
-    "RELIANCE": "2885", 
-    "ITC": "1660", 
-    "SBIN": "3045"
-}
+TOKEN_MAP = {"TATASTEEL": "3496", "RELIANCE": "2885", "ITC": "1660", "SBIN": "3045"}
 
 def get_oi_movement(oi_change, price_diff):
     if oi_change > 0 and price_diff > 0: return "LONG BUILDUP"
@@ -73,21 +88,17 @@ def calculate_pivots(H, L, C, O):
     S1 = (2 * P) - H
     return {
         "R3": H + 2 * (P - L), "R2": P + (R1 - S1), "R1": R1,
-        "P": P, "S1": S1, "S2": P - (R1 - S1), "S3": L - 2 * (H - P)
+        "PP": P, "S1": S1, "S2": P - (R1 - S1), "S3": L - 2 * (H - P)
     }
 
-# ⏳ வரலாற்று தரவை 5 நிமிடங்களுக்கு ஒருமுறை மட்டும் புதுப்பிக்கும்படி மாற்றி, சர்வர் பிழையைத் தடுத்தல்
 @st.cache_data(ttl=300)
 def fetch_historic_candles(symbol, token, today_date, _api_key, _client_id, _password, _totp):
     try:
         smart_conn = SmartConnect(api_key=_api_key)
         smart_conn.generateSession(_client_id, _password, _totp)
         historic_param = {
-            "exchange": "NSE", 
-            "symboltoken": token, 
-            "interval": "ONE_MINUTE",
-            "fromdate": f"{today_date} 09:15", 
-            "todate": f"{today_date} 15:30"
+            "exchange": "NSE", "symboltoken": token, "interval": "ONE_MINUTE",
+            "fromdate": f"{today_date} 09:15", "todate": f"{today_date} 15:30"
         }
         response = smart_conn.getCandleData(historic_param)
         if response and response.get("status") and response.get("data"):
@@ -96,7 +107,6 @@ def fetch_historic_candles(symbol, token, today_date, _api_key, _client_id, _pas
         pass
     return []
 
-# ⚡ உடனடி நேரடி விலையை (LTP) மட்டும் வேகமாக எடுக்கும் பங்க்ஷன்
 def fetch_current_ltp(symbol, token, _api_key, _client_id, _password, _totp):
     try:
         smart_conn = SmartConnect(api_key=_api_key)
@@ -111,12 +121,10 @@ def fetch_current_ltp(symbol, token, _api_key, _client_id, _password, _totp):
 st.sidebar.markdown("---")
 selected_focus = st.sidebar.selectbox("⚡ ACTIVE INSTANCE:", options=st.session_state.watchlist)
 
-# நேர கணக்கீடு
 ist_offset = timezone(timedelta(hours=5, minutes=30))
 today_str = datetime.now(ist_offset).strftime("%Y-%m-%d")
 active_token = TOKEN_MAP.get(selected_focus, "3496")
 
-# தரவு சேகரிப்பு
 candle_data = fetch_historic_candles(selected_focus, active_token, today_str, api_key, client_id, password, totp_token)
 live_tick_price = fetch_current_ltp(selected_focus, active_token, api_key, client_id, password, totp_token)
 
@@ -133,7 +141,6 @@ if candle_data:
     else:
         live_price = float(df.iloc[-1]['Close'])
 
-    # 📈 INDICATORS
     df['VWAP'] = ((df['High'] + df['Low'] + df['Close']) / 3 * df['Volume']).cumsum() / df['Volume'].cumsum()
     current_vwap = df.iloc[-1]['VWAP']
     df['RSI'] = RSIIndicator(close=df['Close'], window=14).rsi()
@@ -146,9 +153,7 @@ if candle_data:
     current_ema21 = df.iloc[-1]['EMA_21'] if not np.isnan(df.iloc[-1]['EMA_21']) else df.iloc[-1]['Close']
     current_atr = df.iloc[-1]['ATR'] if not np.isnan(df.iloc[-1]['ATR']) else 1.0
 
-    # 🎯 09:15 - 09:30 ரேஞ்ச்
     df_15min = df[(df.index.hour == 9) & (df.index.minute >= 15) & (df.index.minute <= 30)]
-    
     if not df_15min.empty:
         matrix_open = float(df_15min.iloc[0]['Open'])               
         matrix_high = float(df_15min['High'].max())                 
@@ -158,88 +163,110 @@ if candle_data:
         oi_930 = int(df_15min.iloc[-1]['OI'])
         oi_difference = oi_930 - oi_915
     else:
-        matrix_open = float(df.iloc[0]['Open'])
-        matrix_high = float(df.iloc[0]['High'])
-        matrix_low = float(df.iloc[0]['Low'])
-        matrix_close = float(df.iloc[0]['Close'])
+        matrix_open, matrix_high, matrix_low, matrix_close = float(df.iloc[0]['Open']), float(df.iloc[0]['High']), float(df.iloc[0]['Low']), float(df.iloc[0]['Close'])
         oi_915, oi_930, oi_difference = int(df.iloc[0]['Volume']), int(df.iloc[0]['Volume']), 0
 
     day_open = float(df.iloc[0]['Open'])
     day_change = live_price - day_open
     dc_color = "#10B981" if day_change >= 0 else "#EF4444"
     pct_change = ((day_change / day_open) * 100) if day_open != 0 else 0.0
-    
     movement_type = get_oi_movement(oi_difference, matrix_close - matrix_open)
     levels = calculate_pivots(matrix_high, matrix_low, matrix_close, matrix_open)
 
-    st.markdown(f"<h2>QUANTUM-X NSE TERMINAL // <span style='color:#1E4A8A;'>{selected_focus}</span></h2>", unsafe_allow_html=True)
+    # Header Title
+    st.markdown(f"<h2>QUANTUM-X TRADING TERMINAL // <span style='color:#2563EB;'>{selected_focus}</span></h2>", unsafe_allow_html=True)
 
+    # Modern Micro Metrics Grid
     st.markdown(f"""
-    <div style="background-color:#FFFFFF; padding: 18px; border-radius: 6px; border: 2px solid #0F172A; margin-bottom: 15px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-            <div>
-                <span style="color:#475569; font-size:12px; font-weight:700; font-family:'JetBrains Mono';">NSE LIVE TICK FEED</span>
-                <h1 class="mono-text" style="color:#0F172A; margin:0px; font-size:38px;">₹ {live_price:.2f} <span style="color:{dc_color}; font-size:20px;">{day_change:+.2f} ({pct_change:+.2f}%)</span></h1>
-            </div>
-            <div style="display: flex; gap: 20px; background-color:#F1F5F9; padding:12px 18px; border-radius:4px; border:2px solid #0F172A;">
-                <div><span style="color:#475569; font-size:12px; font-weight:700;">VWAP TRACKER</span><br><b class="mono-text" style="color:#2563EB;">{current_vwap:.2f}</b></div>
-                <div><span style="color:#475569; font-size:12px; font-weight:700;">MOMENTUM RSI</span><br><b class="mono-text" style="color:#D97706;">{current_rsi:.2f}</b></div>
-                <div><span style="color:#475569; font-size:12px; font-weight:700;">EMA 9 / 21</span><br><b class="mono-text" style="color:#059669;">{current_ema9:.1f}/{current_ema21:.1f}</b></div>
-                <div><span style="color:#475569; font-size:12px; font-weight:700;">ATR MATRIX</span><br><b class="mono-text" style="color:#DC2626;">{current_atr:.2f}</b></div>
-            </div>
+    <div class="metric-grid">
+        <div class="metric-card" style="border-left: 4px solid {dc_color};">
+            <div class="metric-label">LTP FEED (NSE)</div>
+            <div class="metric-value mono-text">₹ {live_price:.2f} <span style="color:{dc_color}; font-size:14px; font-weight:600;">{day_change:+.2f} ({pct_change:+.2f}%)</span></div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">VWAP Tracker</div>
+            <div class="metric-value mono-text" style="color:#2563EB;">{current_vwap:.2f}</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Momentum RSI (14)</div>
+            <div class="metric-value mono-text" style="color:#D97706;">{current_rsi:.2f}</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">EMA Cross (9/21)</div>
+            <div class="metric-value mono-text" style="color:#059669;">{current_ema9:.1f}/{current_ema21:.1f}</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    layout_col1, layout_col2 = st.columns([1, 1])
+    # Layout Split Screen
+    layout_col1, layout_col2 = st.columns([1.3, 1])
 
     with layout_col1:
+        # High Premium Minimal Chart
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines', line=dict(color='#10B981', width=2.5)))
-        fig.update_layout(template="plotly_white", margin=dict(l=10, r=10, t=10, b=10), height=140, showlegend=False, xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor='#E2E8F0'))
+        fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines', line=dict(color='#2563EB', width=2), fill='tozeroy', fillcolor='rgba(37,99,235,0.04)'))
+        fig.update_layout(
+            template="plotly_white", 
+            margin=dict(l=0, r=0, t=5, b=0), 
+            height=200, 
+            showlegend=False, 
+            xaxis=dict(showgrid=False, tickfont=dict(size=10, color='#64748B')), 
+            yaxis=dict(showgrid=True, gridcolor='#F1F5F9', side='right', tickfont=dict(size=10, color='#64748B'))
+        )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
+        # Aligned Breakout Table Engine
+        st.markdown("<div style='margin-top:15px;'><b>🎯 ALIGNED BREAKOUT MATRIX ENGINE</b></div>", unsafe_allow_html=True)
+        table_html = "<table class='quant-table'><thead><tr><th>PIVOT LEVEL</th><th>TARGET VALUE</th><th>REGIME ANALYSIS</th></tr></thead><tbody>"
+        for lvl, value in levels.items():
+            text_color = "#EF4444" if "R" in lvl else ("#10B981" if "S" in lvl else "#2563EB")
+            table_html += f"<tr><td class='mono-text' style='color:{text_color}; font-weight:700;'>{lvl}</td><td class='mono-text' style='font-weight:600;'>&#8377; {value:.2f}</td><td style='color:#64748B; font-size:13px;'>Intraday pivot boundary via SmartAPI</td></tr>"
+        table_html += "</tbody></table>"
+        st.markdown(table_html, unsafe_allow_html=True)
+
+    with layout_col2:
+        # Range Captured Box
         st.markdown(f"""
-        <div style="background-color:#FFFFFF; padding:15px; border-radius:6px; font-size:14px; border: 2px solid #0F172A; color:#0F172A !important; line-height:1.8;">
-            <b style="color:#1E3A8A !important; font-size:13px; font-family:'JetBrains Mono';">⚡ NSE SYSTEM CAPTURED DATA MATRIX (09:15 - 09:30 RANGE)</b><br>
-            <div style="margin-top:8px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <div>• 15-Min Open Price: <b class="mono-text" style="color:#2563EB;">&#8377; {matrix_open:.2f}</b></div>
-                <div>• 15-Min High Price: <b class="mono-text" style="color:#059669;">&#8377; {matrix_high:.2f}</b></div>
-                <div>• 15-Min Low Price: <b class="mono-text" style="color:#DC2626;">&#8377; {matrix_low:.2f}</b></div>
-                <div>• 15-Min Close Price: <b class="mono-text" style="color:#2563EB;">&#8377; {matrix_close:.2f}</b></div>
-                <div style="grid-column: span 2; border-top: 1px dashed #CBD5E1; margin-top: 5px; padding-top: 5px;"></div>
-                <div>• 🚀 Volume @ 09:15: <b class="mono-text" style="color:#475569;">{oi_915:,}</b></div>
-                <div>• 🏁 Volume @ 09:30: <b class="mono-text" style="color:#475569;">{oi_930:,}</b></div>
-                <div>• 📊 Vol Change (Delta): <b class="mono-text" style="color:#2563EB;">{oi_difference:+,}</b></div>
-                <div>• 🎯 Flow State: <span class="mono-text" style="color:#D97706; font-weight:bold;">{movement_type}</span></div>
+        <div class="info-box">
+            <span class="info-title">⚡ CAPTURED RANGE MATRIX (09:15 - 09:30)</span>
+            <div style="font-size:14px; color:#334155; line-height:2;" class="mono-text">
+                • 15M Range Open : <span style="color:#0F172A; font-weight:600;">₹ {matrix_open:.2f}</span><br>
+                • 15M Range High : <span style="color:#10B981; font-weight:600;">₹ {matrix_high:.2f}</span><br>
+                • 15M Range Low  : <span style="color:#EF4444; font-weight:600;">₹ {matrix_low:.2f}</span><br>
+                • 15M Range Close: <span style="color:#0F172A; font-weight:600;">₹ {matrix_close:.2f}</span>
+                <div style="border-top:1px dashed #E2E8F0; margin:10px 0;"></div>
+                • Vol @ 09:15 : <span style="color:#475569;">{oi_915:,}</span><br>
+                • Vol @ 09:30 : <span style="color:#475569;">{oi_930:,}</span><br>
+                • Vol Delta   : <span style="color:#2563EB; font-weight:600;">{oi_difference:+,}</span><br>
+                • Flow State  : <span style="background:#FEF3C7; color:#D97706; padding:2px 6px; border-radius:4px; font-weight:700; font-size:12px;">{movement_type}</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
-
-    with layout_col2:
-        h_color = "#059669" if matrix_close > matrix_open else "#DC2626"
-        dow_label = "UPTREND" if h_color == "#059669" else "DOWNTREND"
+        
+        # Conflict System Execution Box
+        h_color = "#10B981" if matrix_close > matrix_open else "#EF4444"
+        dow_label = "UPTREND" if h_color == "#10B981" else "DOWNTREND"
         calc_entry_b = max(levels["R1"], matrix_high)
         calc_entry_s = min(levels["S1"], matrix_low)
         flow_label = "ABOVE VWAP" if live_price > current_vwap else "BELOW VWAP"
         
         st.markdown(f"""
-        <div style="background-color:#FFFFFF; padding:18px; border-radius:6px; border: 2px solid #0F172A; border-left:8px solid #D97706; height: 260px;">
-            <span style="background-color:#D97706; color:#FFFFFF; padding:4px 8px; font-size:12px; font-weight:bold; font-family:'JetBrains Mono';">SYSTEM CONFLICT MATRIX</span>
-            <div style="margin-top:12px; font-size:14px; line-height:1.8; font-family:'JetBrains Mono';">
-                • DOW TREND: <b style="color:#B45309;">{dow_label}</b> | FLOW: <b style="color:#DC2626;">{flow_label}</b><br>
-                • <span style="color:#059669; font-weight:bold;">IF BREAKOUT BUY:</span> Entry Above <b class="mono-text">&#8377; {calc_entry_b:.2f}</b><br>
-                • <span style="color:#DC2626; font-weight:bold;">IF BREAKOUT SELL:</span> Entry Below <b class="mono-text">&#8377; {calc_entry_s:.2f}</b>
+        <div class="info-box" style="margin-top:15px; border-left: 4px solid #D97706; height:auto;">
+            <span class="info-title" style="color:#D97706;">⚙️ SYSTEM CONFLICT MATRIX</span>
+            <div style="font-size:14px; color:#334155; line-height:1.8;" class="mono-text">
+                • DOW TREND: <b style="color:{h_color};">{dow_label}</b><br>
+                • FLOW STATE: <b style="color:#475569;">{flow_label}</b><br>
+                <div style="margin-top:10px; padding:10px; background:#F8FAFC; border-radius:6px; border:1px solid #E2E8F0;">
+                    <span style="color:#10B981; font-weight:700;">🚀 BREAKOUT BUY ENTRY</span><br>
+                    Trigger Above: <b>₹ {calc_entry_b:.2f}</b>
+                </div>
+                <div style="margin-top:8px; padding:10px; background:#F8FAFC; border-radius:6px; border:1px solid #E2E8F0;">
+                    <span style="color:#EF4444; font-weight:700;">📉 BREAKOUT SELL ENTRY</span><br>
+                    Trigger Below: <b>₹ {calc_entry_s:.2f}</b>
+                </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-    st.markdown("#### `🎯 ALIGNED BREAKOUT MATRIX ENGINE (TOP TO BOTTOM)`")
-    table_html = "<table class='quant-table'><thead><tr><th>PIVOT IDENTIFIED</th><th>TARGET VALUE</th><th>REGIME STATE</th></tr></thead><tbody>"
-    for lvl, value in levels.items():
-        text_color = "#DC2626" if "R" in lvl else ("#059669" if "S" in lvl else "#2563EB")
-        table_html += f"<tr><td style='color: {text_color} !important; font-weight: bold;'>{lvl}</td><td>&#8377; {value:.2f}</td><td>PIVOT LEVEL BASED ON SMARTAPI 15M RANGE</td></tr>"
-    table_html += "</tbody></table>"
-    st.markdown(table_html, unsafe_allow_html=True)
 else:
-    st.info("🔄 தரவைச் சேகரிக்கிறது... தற்காலிகமாக ஏஞ்சல் ஒன் சர்வர் உங்களைத் தடுத்திருக்கலாம். 2 நிமிடம் கழித்து பக்கத்தை Rerun செய்யவும்.")
+    st.info("🔄 தரவைச் சேகரிக்கிறது... உங்கள் ஏஞ்சல் ஒன் API-ல் `ACTIVE INSTANCE` பங்கைத் தேர்ந்தெடுக்கவும்.")
