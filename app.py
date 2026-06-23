@@ -79,8 +79,6 @@ def calculate_pivots(H, L, C, O):
     }
 
 @st.cache_data(ttl=1)
-@st.cache_data(ttl=1)
-@st.cache_data(ttl=1)
 def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
     try:
         smart_conn = SmartConnect(api_key=_api_key)
@@ -102,8 +100,14 @@ def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
             candles = response["data"]
             df_api = pd.DataFrame(candles, columns=['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume'])
             df_api['OI'] = df_api['Volume'] * 2
+            
+            # 🔄 கால மண்டலப் பிழையைச் சரிசெய்யும் முக்கியப் பகுதி
             df_api['Timestamp'] = pd.to_datetime(df_api['Timestamp'])
-            df_api['Timestamp'] = df_api['Timestamp'].dt.tz_localize('Asia/Kolkata')
+            try:
+                df_api['Timestamp'] = df_api['Timestamp'].dt.tz_convert('Asia/Kolkata')
+            except TypeError:
+                df_api['Timestamp'] = df_api['Timestamp'].dt.tz_localize('Asia/Kolkata')
+                
             df_api.set_index('Timestamp', inplace=True)
             return df_api, "LIVE_ANGELONE"
         else:
