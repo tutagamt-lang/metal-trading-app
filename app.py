@@ -177,7 +177,6 @@ with header_col1:
     st.markdown("<h2 style='margin-top:10px;'>QUANTUM-X Live Trading Terminal</h2>", unsafe_allow_html=True)
 
 with header_col2:
-    # ⚡ FORCED UPDATE: DIRECT DROPDOWN ON HOME PAGE WITH THE NEW METALS LIST
     selected_focus = st.selectbox("⚡ ACTIVE INSTANCE:", options=MY_STOCKS)
 
 ist_offset = timezone(timedelta(hours=5, minutes=30))
@@ -254,12 +253,8 @@ with tab_live:
 
         layout_col1, layout_col2 = st.columns([1.3, 1])
         with layout_col1:
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines', line=dict(color='#2563EB', width=2), fill='tozeroy', fillcolor='rgba(37,99,235,0.04)'))
-            fig.update_layout(template="plotly_white", margin=dict(l=0, r=0, t=5, b=0), height=200, showlegend=False, xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor='#F1F5F9', side='right'))
-            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-
-            st.markdown("<div style='margin-top:15px;'><b>🎯 ALIGNED BREAKOUT MATRIX ENGINE</b></div>", unsafe_allow_html=True)
+            # CHART REMOVED FROM HERE FOR CLEANER LOOK
+            st.markdown("<div><b>🎯 ALIGNED BREAKOUT MATRIX ENGINE</b></div>", unsafe_allow_html=True)
             table_html = "<table class='quant-table'><thead><tr><th>PIVOT LEVEL</th><th>TARGET VALUE</th><th>REGIME ANALYSIS</th></tr></thead><tbody>"
             for lvl, value in levels.items():
                 text_color = "#EF4444" if "R" in lvl else ("#10B981" if "S" in lvl else "#2563EB")
