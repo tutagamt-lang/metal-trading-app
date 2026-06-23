@@ -142,7 +142,7 @@ def fetch_current_ltp(symbol, token, _api_key, _client_id, _password, _totp):
     return None
 
 st.sidebar.markdown("---")
-# 🧭 UPGRADED APP NAVIGATION - INCLUDES F&O STRATEGY MATRIX
+# 🧭 UPGRADED APP NAVIGATION - THREE CLEAR MODES
 app_mode = st.sidebar.radio("📁 TERMINAL NAVIGATION:", options=["📈 Live Trading Terminal", "📊 F&O Strategy Matrix", "📰 News & Insights"])
 st.sidebar.markdown("---")
 selected_focus = st.sidebar.selectbox("⚡ ACTIVE INSTANCE:", options=st.session_state.watchlist)
@@ -189,7 +189,7 @@ if candle_data:
         
     levels = calculate_pivots(matrix_high, matrix_low, matrix_close, matrix_open)
 else:
-    live_price, current_vwap, oi_difference, matrix_close, matrix_open = 0, 0, 0, 0, 0
+    live_price, current_vwap, oi_difference, matrix_close, matrix_open, day_change, pct_change = 0, 0, 0, 0, 0, 0, 0
 
 # ----------------- MODE 1: LIVE TRADING TERMINAL -----------------
 if app_mode == "📈 Live Trading Terminal":
@@ -299,8 +299,8 @@ elif app_mode == "📊 F&O Strategy Matrix":
             <div class="info-box" style="border-top: 4px solid #7C3AED;">
                 <span class="info-title" style="color:#7C3AED;">🎯 OPTION CHAIN OPEN INTEREST (OI) ANALYSIS</span>
                 <table style="width:100%; font-size:14px; line-height:2.2;" class="mono-text">
-                    <tr><td>• Max Call OI (உச்சகட்ட தடை - Resistance):</td><td style="color:#EF4444;"><b>₹ {highest_call_oi_strike} Strike</b></td></tr>
-                    <tr><td>• Max Put OI (உச்சகட்ட ஆதரவு - Support):</td><td style="color:#10B981;"><b>₹ {highest_put_oi_strike} Strike</b></td></tr>
+                    <tr><td>• Max Call OI (Resistance):</td><td style="color:#EF4444;"><b>₹ {highest_call_oi_strike} Strike (உச்சகட்ட தடை)</b></td></tr>
+                    <tr><td>• Max Put OI (Support):</td><td style="color:#10B981;"><b>₹ {highest_put_oi_strike} Strike (உச்சகட்ட ஆதரவு)</b></td></tr>
                     <tr><td>• PCR (Put Call Ratio Indicator):</td><td><b>1.12 (சமநிலையான வேகம்)</b></td></tr>
                 </table>
             </div>
