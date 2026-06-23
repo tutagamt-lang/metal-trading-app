@@ -79,6 +79,7 @@ def calculate_pivots(H, L, C, O):
     }
 
 @st.cache_data(ttl=1)
+@st.cache_data(ttl=1)
 def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
     try:
         smart_conn = SmartConnect(api_key=_api_key)
@@ -87,6 +88,13 @@ def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
         token = TOKEN_MAP.get(symbol, "3496")
         current_date = datetime.now().strftime("%Y-%m-%d")
         
+        # 1. துல்லியமான தற்போதைய நேரடி விலையைப் பெறுதல் (Fetch Real True LTP)
+        ltp_response = smart_conn.getLTP(exchange="NSE", tradingSymbol=symbol, symboltoken=token)
+        true_live_price = None
+        if ltp_response and ltp_response.get("status") and ltp_response.get("data"):
+            true_live_price = float(ltp_response["data"].get("ltp", 0))
+        
+        # 2. மெழுகுவர்த்தி தரவுகளைப் பெறுதல்
         historic_param = {
             "exchange": "NSE", 
             "symboltoken": token, 
@@ -96,12 +104,11 @@ def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
         }
         response = smart_conn.getCandleData(historic_param)
         
-        if response and response.get("status") and response.get("data"):
+        if response and response.get("status") and response.get("data") and len(response["data"]) > 0:
             candles = response["data"]
             df_api = pd.DataFrame(candles, columns=['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume'])
             df_api['OI'] = df_api['Volume'] * 2
             
-            # 🔄 கால மண்டலப் பிழையைச் சரிசெய்யும் முக்கியப் பகுதி
             df_api['Timestamp'] = pd.to_datetime(df_api['Timestamp'])
             try:
                 df_api['Timestamp'] = df_api['Timestamp'].dt.tz_convert('Asia/Kolkata')
@@ -109,9 +116,15 @@ def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
                 df_api['Timestamp'] = df_api['Timestamp'].dt.tz_localize('Asia/Kolkata')
                 
             df_api.set_index('Timestamp', inplace=True)
+            
+            # ஒருவேளை LTP வெற்றிகரமாகக் கிடைத்தால், இறுதி வரியின் விலையை அதைக் கொண்டு புதுப்பிக்கவும்
+            if true_live_price:
+                df_api.iloc[-1, df_api.columns.get_loc('Close')] = true_live_price
+                
             return df_api, "LIVE_ANGELONE"
         else:
-            st.error("உங்களது கணக்கில் இந்த பங்கிற்கான லைவ் டேட்டா ஃபீட் இன்னும் வரவில்லை. மார்க்கெட் நேரத்தில் முயற்சிக்கவும்.")
+            # 3. மார்க்கெட் துவங்காத நேரத்தில் அல்லது API-ல் இன்றைய டேட்டா இல்லாதபோது காட்ட வேண்டிய செய்தி
+            st.warning(f"⚠️ ஏஞ்சல் ஒன் சர்வரில் இன்று ({current_date}) இன்னும் லைவ் டேட்டா ஃபீட் தொடங்கவில்லை. மார்க்கெட் நேரத்தில் (09:15 AM - 03:30 PM) முயற்சிக்கவும்.")
             st.stop()
             
     except Exception as e:
