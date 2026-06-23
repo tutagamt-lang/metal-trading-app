@@ -69,6 +69,7 @@ def calculate_pivots(H, L, C, O):
         "S2": P - (R1 - S1),
         "S3": L - 2 * (H - P)
     }
+
 @st.cache_data(ttl=1)
 def fetch_realtime_nse_data(symbol):
     try:
@@ -121,7 +122,7 @@ for s in st.session_state.watchlist:
         idx_30 = min(15, len(s_df)-1)
         s_move = get_oi_movement(
             int(s_df.iloc[idx_30]['Volume']*0.48) - int(s_df.iloc[0]['Volume']*0.42), 
-            s_df.iloc[idx_30]['Close'] - s_df.iloc[0]['Close']
+            s_df.iloc[idx_30]['Close'] - s_df.iloc[0]['Open']
         )
         scanner_data.append({"STOCK": s, "PRICE": f"{s_df.iloc[-1]['Close']:.2f}", "MATRIX": s_move})
 st.sidebar.dataframe(pd.DataFrame(scanner_data), hide_index=True, use_container_width=True)
@@ -144,8 +145,12 @@ if len(df) >= 1:
     current_ema21 = df.iloc[-1]['EMA_21'] if not np.isnan(df.iloc[-1]['EMA_21']) else df.iloc[-1]['Close']
     current_atr = df.iloc[-1]['ATR'] if not np.isnan(df.iloc[-1]['ATR']) else 1.0
 
-    idx_915, idx_930 = 0, min(15, len(df) - 1)
-    c_915, c_930 = df.iloc[idx_915]['Close'], df.iloc[idx_930]['Close']
+    idx_930 = min(15, len(df) - 1)
+    
+    # 🔧 பிக்ஸ்: 09:15 விலைக்கு Close-க்கு பதிலாக உண்மையான ஆரம்ப விலையான 'Open' மதிப்பை எடுக்கிறோம்
+    c_915 = df.iloc[0]['Open'] 
+    c_930 = df.iloc[idx_930]['Close']
+    
     h_930 = df.iloc[0:idx_930+1]['High'].max()
     l_930 = df.iloc[0:idx_930+1]['Low'].min()
     
@@ -155,9 +160,9 @@ if len(df) >= 1:
     dc_color = "#10B981" if day_change >= 0 else "#EF4444"
     pct_change = ((day_change / day_open) * 100) if day_open != 0 else 0.0
     
-    oi_change = int(df.iloc[idx_930]['Volume'] * 0.48) - int(df.iloc[idx_915]['Volume'] * 0.42)
+    oi_change = int(df.iloc[idx_930]['Volume'] * 0.48) - int(df.iloc[0]['Volume'] * 0.42)
     movement_type = get_oi_movement(oi_change, c_930 - c_915)
-    levels = calculate_pivots(float(h_930), float(l_930), float(c_930), float(df.iloc[0]['Open']))
+    levels = calculate_pivots(float(h_930), float(l_930), float(c_930), float(day_open))
 
     strike_step = 5.0 if live_price < 300 else (20.0 if live_price < 1500 else 50.0)
     atm_strike = round(live_price / strike_step) * strike_step
@@ -177,7 +182,7 @@ if len(df) >= 1:
         """
         components.html(tv_widget_html, height=50)
 
-    # Price Feed Ribbon (Text Enhanced to Premium Light Mode)
+    # Price Feed Ribbon
     st.markdown(f"""
     <div style="background-color:#FFFFFF; padding: 18px; border-radius: 6px; border: 2px solid #0F172A; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
@@ -222,7 +227,7 @@ if len(df) >= 1:
         """, unsafe_allow_html=True)
 
     with layout_col2:
-        h_color = "#059669" if df.iloc[idx_930]['High'] > df.iloc[idx_915]['High'] else "#DC2626"
+        h_color = "#059669" if df.iloc[idx_930]['High'] > df.iloc[0]['High'] else "#DC2626"
         dow_label = "UPTREND" if h_color == "#059669" else "DOWNTREND"
         calc_entry_b = max(levels["R1"], h_930)
         calc_entry_s = min(levels["S1"], l_930)
@@ -239,7 +244,7 @@ if len(df) >= 1:
         </div>
         """, unsafe_allow_html=True)
 
-    # Orderbook Tables (High Contrast White)
+    # Orderbook Tables
     st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
     table_col1, table_col2 = st.columns([1, 1])
     
@@ -271,7 +276,7 @@ if len(df) >= 1:
         </table>
         """, unsafe_allow_html=True)
 
-    # Intelligent Signals Box (Light Mode Sharp Text)
+    # Intelligent Signals Box
     st.markdown("#### `🎯 REALTIME ADVANCED BREAKOUT SCANNED MATRIX`")
     r1_val = levels["R1"]
     s1_val = levels["S1"]
@@ -315,7 +320,7 @@ if len(df) >= 1:
     </div>
     """, unsafe_allow_html=True)
 
-    # Pivot Table Engine (Enhanced readability)
+    # Pivot Table Engine
     st.markdown("#### `🎯 ALIGNED BREAKOUT MATRIX ENGINE (TOP TO BOTTOM)`")
     table_html = "<table class='quant-table'><thead><tr><th>PIVOT IDENTIFIED INTERVAL</th><th>TARGET VALUE SYSTEM (INR)</th><th>REGIME STATE</th></tr></thead><tbody>"
     for lvl, value in levels.items():
@@ -326,6 +331,6 @@ if len(df) >= 1:
     table_html += "</tbody></table>"
     st.markdown(table_html, unsafe_allow_html=True)
 
-    # 🔄 Auto-refresh loop engine (Runs every 2 seconds without UI glitches)
+    # 🔄 Auto-refresh loop engine
     time.sleep(2)
     st.rerun()
