@@ -226,8 +226,8 @@ if len(df) >= 1:
     table_html += "</tbody></table>"
     st.markdown(table_html, unsafe_allow_html=True)
 
-    try:
-        time.sleep(5)
+   try:
+        time.sleep(60)  # 60 வினாடிகளுக்கு ஒருமுறை மட்டும் புதுப்பிக்கும்படி மாற்றப்பட்டுள்ளது
         st.rerun()
     except:
         pass
