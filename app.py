@@ -98,9 +98,8 @@ client_id = st.sidebar.text_input("CLIENT ID:", value=ANGEL_CLIENT_ID)
 password = st.sidebar.text_input("PIN/PASSWORD:", value=ANGEL_PASSWORD, type="password")
 totp_token = st.sidebar.text_input("TOTP TOKEN:", value=calculated_totp, type="password")
 
-# 📋 UPDATED INTRADAY METALS WATCHLIST & TOKEN MAP
-if 'watchlist' not in st.session_state:
-    st.session_state.watchlist = ["SAIL", "VEDL", "HINDALCO", "NATIONALUM", "HINDCOPPER"]
+# 📋 INTRADAY METALS WATCHLIST & TOKEN MAP DIRECT DEFINITION
+MY_STOCKS = ["SAIL", "VEDL", "HINDALCO", "NATIONALUM", "HINDCOPPER"]
 
 TOKEN_MAP = {
     "SAIL": "2963",
@@ -178,8 +177,8 @@ with header_col1:
     st.markdown("<h2 style='margin-top:10px;'>QUANTUM-X Live Trading Terminal</h2>", unsafe_allow_html=True)
 
 with header_col2:
-    # ⚡ STYLISH ACTIVE INSTANCE DROPDOWN PLACED DIRECTLY ON HOME PAGE
-    selected_focus = st.selectbox("⚡ ACTIVE INSTANCE:", options=st.session_state.watchlist)
+    # ⚡ FORCED UPDATE: DIRECT DROPDOWN ON HOME PAGE WITH THE NEW METALS LIST
+    selected_focus = st.selectbox("⚡ ACTIVE INSTANCE:", options=MY_STOCKS)
 
 ist_offset = timezone(timedelta(hours=5, minutes=30))
 today_str = datetime.now(ist_offset).strftime("%Y-%m-%d")
