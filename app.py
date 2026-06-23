@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from ta.volatility import AverageTrueRange
 from ta.momentum import RSIIndicator
 from ta.trend import EMAIndicator
-from datetime import datetime
+from datetime import datetime, timedelta
 import pyotp
 import time
 
@@ -55,10 +55,9 @@ totp_token = st.sidebar.text_input("TOTP TOKEN (Authenticator):", value=calculat
 if 'watchlist' not in st.session_state:
     st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
 
-# 🎯 துல்லியமான நேரடி NSE CASH மார்க்கெட் டோக்கன்கள்
-# 🎯 துல்லியமான நேரடி NSE CASH மார்க்கெட் டோக்கன்கள் (Updated)
+# 🎯 அசல் NSE CASH மார்க்கெட் டோக்கன் எண்கள்
 TOKEN_MAP = {
-    "TATASTEEL": "20297", 
+    "TATASTEEL": "3496", 
     "RELIANCE": "2885", 
     "ITC": "1660", 
     "SBIN": "3045"
@@ -80,22 +79,22 @@ def calculate_pivots(H, L, C, O):
     }
 
 @st.cache_data(ttl=1)
-@st.cache_data(ttl=1)
-@st.cache_data(ttl=1)
 def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
     try:
         smart_conn = SmartConnect(api_key=_api_key)
         smart_conn.generateSession(_client_id, _password, _totp)
         
         token = TOKEN_MAP.get(symbol, "3496")
-        current_date = datetime.now().strftime("%Y-%m-%d")
+        
+        # ⏱️ துல்லியமான இன்றைய தேதியை மட்டும் உருவாக்குதல்
+        today_date = datetime.now().strftime("%Y-%m-%d")
         
         historic_param = {
             "exchange": "NSE", 
             "symboltoken": token, 
             "interval": "ONE_MINUTE",
-            "fromdate": f"{current_date} 09:15", 
-            "todate": f"{current_date} 15:30"
+            "fromdate": f"{today_date} 09:15", 
+            "todate": f"{today_date} 15:30"
         }
         response = smart_conn.getCandleData(historic_param)
         
@@ -111,12 +110,17 @@ def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
                 df_api['Timestamp'] = df_api['Timestamp'].dt.tz_localize('Asia/Kolkata')
                 
             df_api.set_index('Timestamp', inplace=True)
-            
-            # ⏱️ புதிய தரவு கீழே இருக்கும்படி நேரத்தின் அடிப்படையில் வரிசைப்படுத்துதல்
             df_api = df_api.sort_index()
-            return df_api, "LIVE_ANGELONE"
+            
+            # இன்றைய தேதிக்கான தரவை மட்டும் வடிகட்டுதல் (Strict Filter)
+            current_day = datetime.now().date()
+            df_filtered = df_api[df_api.index.date == current_day]
+            
+            if df_filtered.empty:
+                return df_api, "LIVE_ANGELONE"
+            return df_filtered, "LIVE_ANGELONE"
         else:
-            st.warning(f"⚠️ ஏஞ்சல் ஒன் சர்வரில் இன்று ({current_date}) இன்னும் லைவ் டேட்டா ஃபீட் தொடங்கவில்லை. மார்க்கெட் நேரத்தில் (09:15 AM - 03:30 PM) முயற்சிக்கவும்.")
+            st.warning(f"⚠️ ஏஞ்சல் ஒன் சர்வரில் இன்று ({today_date}) இன்னும் லைவ் டேட்டோ ஃபீட் துவங்கவில்லை.")
             st.stop()
             
     except Exception as e:
@@ -129,18 +133,7 @@ selected_focus = st.sidebar.selectbox("⚡ ACTIVE INSTANCE:", options=st.session
 df, data_status = fetch_realtime_nse_data(selected_focus, api_key, client_id, password, totp_token)
 
 if len(df) >= 1:
-    # ⏱️ 1. தரவை நேரத்தின் அடிப்படையில் வரிசைப்படுத்துதல் (Fixing Data Order)
-    df = df.sort_index()
-
-    # 📅 2. இன்றைய தேதிக்கான தரவை மட்டும் தனியாகப் பிரித்தல்
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    df_today = df[df.index.strftime("%Y-%m-%d") == today_str]
-
-    # இன்றைய டேட்டா இல்லை எனில், இருக்கும் தரவின் இறுதிப் பகுதியை எடுத்தல்
-    if df_today.empty:
-        df_today = df.copy()
-
-    # 📈 INDICATORS (Calculated on full dataset for accuracy)
+    # 📈 INDICATORS
     df['VWAP'] = ((df['High'] + df['Low'] + df['Close']) / 3 * df['Volume']).cumsum() / df['Volume'].cumsum()
     current_vwap = df.iloc[-1]['VWAP']
     df['RSI'] = RSIIndicator(close=df['Close'], window=14).rsi()
@@ -153,8 +146,8 @@ if len(df) >= 1:
     current_ema21 = df.iloc[-1]['EMA_21'] if not np.isnan(df.iloc[-1]['EMA_21']) else df.iloc[-1]['Close']
     current_atr = df.iloc[-1]['ATR'] if not np.isnan(df.iloc[-1]['ATR']) else 1.0
 
-    # 🎯 3. 09:15 - 09:30 சரியான ரேஞ்ச் கணக்கீடு (Strict Today's Filter)
-    df_15min = df_today[(df_today.index.hour == 9) & (df_today.index.minute >= 15) & (df_today.index.minute <= 30)]
+    # 🎯 09:15 - 09:30 சரியான ரேஞ்ச் கணக்கீடு
+    df_15min = df[(df.index.hour == 9) & (df.index.minute >= 15) & (df.index.minute <= 30)]
     
     if not df_15min.empty:
         matrix_open = float(df_15min.iloc[0]['Open'])               
@@ -165,16 +158,14 @@ if len(df) >= 1:
         oi_930 = int(df_15min.iloc[-1]['OI'])
         oi_difference = oi_930 - oi_915
     else:
-        # டேட்டா கிடைக்காத பட்சத்தில் இன்றைய முதல் மெழுகுவர்த்தி
-        matrix_open = float(df_today.iloc[0]['Open'])
-        matrix_high = float(df_today.iloc[0]['High'])
-        matrix_low = float(df_today.iloc[0]['Low'])
-        matrix_close = float(df_today.iloc[0]['Close'])
-        oi_915, oi_930, oi_difference = int(df_today.iloc[0]['Volume']), int(df_today.iloc[0]['Volume']), 0
+        matrix_open = float(df.iloc[0]['Open'])
+        matrix_high = float(df.iloc[0]['High'])
+        matrix_low = float(df.iloc[0]['Low'])
+        matrix_close = float(df.iloc[0]['Close'])
+        oi_915, oi_930, oi_difference = int(df.iloc[0]['Volume']), int(df.iloc[0]['Volume']), 0
 
-    # 🏁 4. சரியான தற்போதைய நேரடி விலை (True Live Price)
-    live_price = float(df_today.iloc[-1]['Close'])
-    day_open = float(df_today.iloc[0]['Open'])
+    live_price = float(df.iloc[-1]['Close'])
+    day_open = float(df.iloc[0]['Open'])
     day_change = live_price - day_open
     dc_color = "#10B981" if day_change >= 0 else "#EF4444"
     pct_change = ((day_change / day_open) * 100) if day_open != 0 else 0.0
