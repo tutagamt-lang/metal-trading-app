@@ -18,7 +18,7 @@ try:
 except ImportError:
     st.error("தயவுசெய்து உங்கள் requirements.txt கோப்பில் 'smartapi-python' சேர்க்கவும்.")
 
-# 🎨 PREMIUM TERMINAL STYLESHEET WITH F&O COMPONENTS
+# 🎨 PREMIUM TERMINAL STYLESHEET WITH STYLISH HOME MENU
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
@@ -30,6 +30,21 @@ st.markdown("""
         h2 { font-weight: 700; letter-spacing: -0.5px; margin: 0 0 15px 0 !important; color: #0F172A !important; font-size: 24px !important; }
         .mono-text { font-family: 'JetBrains Mono', monospace !important; }
         
+        /* Premium Navigation Tabs Styling */
+        div[data-testid="stTabs"] button {
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            color: #64748B !important;
+            padding: 10px 24px !important;
+            border-radius: 8px 8px 0px 0px !important;
+            transition: all 0.3s ease;
+        }
+        div[data-testid="stTabs"] button[aria-selected="true"] {
+            color: #2563EB !important;
+            background-color: #EFF6FF !important;
+            border-bottom: 3px solid #2563EB !important;
+        }
+        
         /* Layout Grid Cards */
         .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .metric-card { background: #FFFFFF; padding: 16px; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.05); }
@@ -39,7 +54,7 @@ st.markdown("""
         .info-box { background: #FFFFFF; padding: 20px; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.05); height: 100%; margin-bottom: 15px; }
         .info-title { color: #1E40AF; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px; display: block; }
         
-        /* Dedicated News Section Styles */
+        /* News Cards */
         .premium-news-card { background: #FFFFFF; padding: 20px; border-radius: 12px; border: 1px solid #E2E8F0; margin-bottom: 16px; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.05); }
         .news-badge { background: #EFF6FF; color: #2563EB; font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; display: inline-block; margin-bottom: 8px; }
         .premium-news-title { font-size: 16px; font-weight: 700; color: #0F172A; text-decoration: none; display: block; margin-bottom: 6px; line-height: 1.4; }
@@ -142,9 +157,6 @@ def fetch_current_ltp(symbol, token, _api_key, _client_id, _password, _totp):
     return None
 
 st.sidebar.markdown("---")
-# 🧭 UPGRADED APP NAVIGATION - THREE CLEAR MODES
-app_mode = st.sidebar.radio("📁 TERMINAL NAVIGATION:", options=["📈 Live Trading Terminal", "📊 F&O Strategy Matrix", "📰 News & Insights"])
-st.sidebar.markdown("---")
 selected_focus = st.sidebar.selectbox("⚡ ACTIVE INSTANCE:", options=st.session_state.watchlist)
 
 ist_offset = timezone(timedelta(hours=5, minutes=30))
@@ -191,14 +203,18 @@ if candle_data:
 else:
     live_price, current_vwap, oi_difference, matrix_close, matrix_open, day_change, pct_change = 0, 0, 0, 0, 0, 0, 0
 
-# ----------------- MODE 1: LIVE TRADING TERMINAL -----------------
-if app_mode == "📈 Live Trading Terminal":
+# Header
+st.markdown(f"<h2>QUANTUM-X TRADING SYSTEM // <span style='color:#2563EB;'>{selected_focus}</span></h2>", unsafe_allow_html=True)
+
+# 🗺️ STYLISH HOME PAGE NAVIGATION MENU BARS
+tab_live, tab_fo, tab_news = st.tabs(["📈 Live Trading Terminal", "📊 F&O Strategy Matrix", "📰 News & Insights"])
+
+# ----------------- TAB 1: LIVE TRADING TERMINAL -----------------
+with tab_live:
     if candle_data:
         dc_color = "#10B981" if day_change >= 0 else "#EF4444"
-        st.markdown(f"<h2>QUANTUM-X TRADING TERMINAL // <span style='color:#2563EB;'>{selected_focus}</span></h2>", unsafe_allow_html=True)
-        
         st.markdown(f"""
-        <div class="metric-grid">
+        <div class="metric-grid" style="margin-top:10px;">
             <div class="metric-card" style="border-left: 4px solid {dc_color};">
                 <div class="metric-label">LTP FEED (NSE)</div>
                 <div class="metric-value mono-text">₹ {live_price:.2f} <span style="color:{dc_color}; font-size:14px; font-weight:600;">{day_change:+.2f} ({pct_change:+.2f}%)</span></div>
@@ -251,26 +267,22 @@ if app_mode == "📈 Live Trading Terminal":
     else:
         st.info("🔄 தரவைச் சேகரிக்கிறது... உங்கள் ஏஞ்சல் ஒன் API-ஐச் சரிபார்க்கவும்.")
 
-# ----------------- MODE 2: DEDICATED F&O STRATEGY MATRIX (New Strategic Update) -----------------
-elif app_mode == "📊 F&O Strategy Matrix":
+# ----------------- TAB 2: F&O STRATEGY MATRIX -----------------
+with tab_fo:
     if candle_data:
-        st.markdown(f"<h2>📊 F&O DERIVATIVE STRATEGY ENGINE: <span style='color:#2563EB;'>{selected_focus}</span></h2>", unsafe_allow_html=True)
-        st.markdown("<p style='color:#64748B; margin-top:-10px;'>Futures Open Interest மற்றும் Option Chain-ன் முக்கியமான லெவல்களின் கூட்டு சேர்க்கை உத்தி (Combined Strategy Matrix).</p>", unsafe_allow_html=True)
+        st.markdown("<p style='color:#64748B; margin-top:10px;'>Futures Open Interest மற்றும் Option Chain-ன் முக்கியமான லெவல்களின் கூட்டு சேர்க்கை உத்தி (Combined Strategy Matrix).</p>", unsafe_allow_html=True)
         
-        # Calculations for Options OI Strategy
         round_ltp = round(live_price / 10) * 10
         highest_call_oi_strike = round_ltp + 20
         highest_put_oi_strike = round_ltp - 20
         
-        # Futures Trend Evaluation
-        futures_trend, trend_color = get_fo_regime(live_price - day_open, oi_difference)
+        fo_label, trend_color = get_fo_regime(live_price - day_open, oi_difference)
         
-        # Generate Trading Signal Based on F&O Strategy Rule
-        if "LONG BUILDUP" in futures_trend and live_price > current_vwap:
+        if "LONG BUILDUP" in fo_label and live_price > current_vwap:
             strategy_signal = "STRONG BULLISH BUY (கம்பீரமான வாங்குதல் சிக்னல்)"
             signal_desc = f"விலை VWAP-க்கு மேலேயும், ஃபியூச்சர்ஸில் புதிய பையர்ஸ் (Long Buildup) உள்ளே வருவதால் மார்க்கெட் {highest_call_oi_strike} வரை செல்ல வாய்ப்புள்ளது."
             sig_box_color = "#10B981"
-        elif "SHORT BUILDUP" in futures_trend and live_price < current_vwap:
+        elif "SHORT BUILDUP" in fo_label and live_price < current_vwap:
             strategy_signal = "STRONG BEARISH SELL (கனமான விற்பனை சிக்னல்)"
             signal_desc = f"விலை VWAP-க்கு கீழேயும், ஃபியூச்சர்ஸில் ஆக்ரோஷமான ஷார்ட்ஸ் (Short Buildup) விழுவதால் {highest_put_oi_strike} நோக்கி வீழ்ச்சியடையலாம்."
             sig_box_color = "#EF4444"
@@ -279,9 +291,7 @@ elif app_mode == "📊 F&O Strategy Matrix":
             signal_desc = "ஃபியூச்சர்ஸ் மற்றும் ஆப்ஷன்ஸ் தரவுகள் ஒன்றுக்கொன்று முரணாக உள்ளதால், பிரேக்அவுட் நடக்கும் வரை புதிய வர்த்தகத்தைத் தவிர்க்கவும்."
             sig_box_color = "#F59E0B"
 
-        # Display Strategy Components Layout
         col_f1, col_f2 = st.columns(2)
-        
         with col_f1:
             st.markdown(f"""
             <div class="info-box" style="border-top: 4px solid #2563EB;">
@@ -289,7 +299,7 @@ elif app_mode == "📊 F&O Strategy Matrix":
                 <table style="width:100%; font-size:14px; line-height:2.2;" class="mono-text">
                     <tr><td>• Futures Spot Price:</td><td><b>₹ {live_price:.2f}</b></td></tr>
                     <tr><td>• Cumulative OI Change:</td><td style="color:#2563EB;"><b>{oi_difference:+,} Contracts</b></td></tr>
-                    <tr><td>• Intraday Trend Direction:</td><td><span style="color:{trend_color}; font-weight:700;">{futures_trend}</span></td></tr>
+                    <tr><td>• Intraday Trend Direction:</td><td><span style="color:{trend_color}; font-weight:700;">{fo_label}</span></td></tr>
                 </table>
             </div>
             """, unsafe_allow_html=True)
@@ -301,12 +311,11 @@ elif app_mode == "📊 F&O Strategy Matrix":
                 <table style="width:100%; font-size:14px; line-height:2.2;" class="mono-text">
                     <tr><td>• Max Call OI (Resistance):</td><td style="color:#EF4444;"><b>₹ {highest_call_oi_strike} Strike (உச்சகட்ட தடை)</b></td></tr>
                     <tr><td>• Max Put OI (Support):</td><td style="color:#10B981;"><b>₹ {highest_put_oi_strike} Strike (உச்சகட்ட ஆதரவு)</b></td></tr>
-                    <tr><td>• PCR (Put Call Ratio Indicator):</td><td><b>1.12 (சமநிலையான வேகம்)</b></td></tr>
+                    <tr><td>• PCR Indicator:</td><td><b>1.12 (சமநிலையான வேகம்)</b></td></tr>
                 </table>
             </div>
             """, unsafe_allow_html=True)
             
-        # Display Final Strategy Trigger Signal Block
         st.markdown(f"""
         <div class="info-box" style="border-left: 6px solid {sig_box_color}; background-color: #FFFFFF;">
             <span class="info-title" style="color:{sig_box_color}; font-size: 14px;">⚡ QUANT REAL-TIME EXECUTION SIGNAL</span>
@@ -317,9 +326,9 @@ elif app_mode == "📊 F&O Strategy Matrix":
     else:
         st.info("🔄 எஃப் ஆண்ட் ஓ உத்தி கணக்கீட்டிற்குத் தரவுகள் தேவைப்படுகின்றன...")
 
-# ----------------- MODE 3: DEDICATED NEWS & INSIGHTS PAGE -----------------
-elif app_mode == "📰 News & Insights":
-    st.markdown(f"<h2>📰 REAL-TIME NEWS MATRIX: <span style='color:#2563EB;'>{selected_focus}</span></h2>", unsafe_allow_html=True)
+# ----------------- TAB 3: NEWS & INSIGHTS -----------------
+with tab_news:
+    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
     live_news = fetch_stock_news(selected_focus)
     if live_news:
         for news in live_news:
