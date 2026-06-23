@@ -88,7 +88,7 @@ def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
         current_date = datetime.now().strftime("%Y-%m-%d")
         
         historic_param = {
-            "exchange": "NSE",  # 👈 'NSE' Cash மார்க்கெட்டிற்கு மாற்றப்பட்டுள்ளது
+            "exchange": "NSE", 
             "symboltoken": token, 
             "interval": "ONE_MINUTE",
             "fromdate": f"{current_date} 09:15", 
@@ -99,10 +99,7 @@ def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
         if response and response.get("status") and response.get("data"):
             candles = response["data"]
             df_api = pd.DataFrame(candles, columns=['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume'])
-            
-            # Cash மார்க்கெட்டில் OI இருக்காது என்பதால் வால்யூம் மூலம் கணக்கிடப்படுகிறது
             df_api['OI'] = df_api['Volume'] * 2
-                
             df_api['Timestamp'] = pd.to_datetime(df_api['Timestamp']).dt.tz_localize('Asia/Kolkata')
             df_api.set_index('Timestamp', inplace=True)
             return df_api, "LIVE_ANGELONE"
@@ -226,7 +223,7 @@ if len(df) >= 1:
     table_html += "</tbody></table>"
     st.markdown(table_html, unsafe_allow_html=True)
 
-   try:
+    try:
         time.sleep(60)
         st.rerun()
     except Exception:
