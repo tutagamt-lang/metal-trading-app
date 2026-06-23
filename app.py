@@ -9,6 +9,7 @@ from ta.trend import EMAIndicator
 import streamlit.components.v1 as components
 import time
 from datetime import datetime
+import pyotp
 
 # 1. Page Configuration for Pro Institutional Layout
 st.set_page_config(layout="wide", page_title="QUANTUM-X Live Trading Terminal")
@@ -16,7 +17,7 @@ st.set_page_config(layout="wide", page_title="QUANTUM-X Live Trading Terminal")
 try:
     from SmartApi import SmartConnect
 except ImportError:
-    st.error("தயவுசெய்து உங்கள் டெர்மினலில் 'pip install smartapi-python' நிறுவிக்கொள்ளவும்.")
+    st.error("தயவுசெய்து உங்கள் requirements.txt கோப்பில் 'smartapi-python' மற்றும் 'pyotp' சேர்க்கவும்.")
 
 # 🎯 LIGHT-MODE HIGH-CONTRAST TERMINAL STYLE
 st.markdown("""
@@ -35,13 +36,10 @@ st.markdown("""
         section[data-testid="stSidebar"] { background-color: #1E293B !important; color: #FFFFFF !important; }
         section[data-testid="stSidebar"] * { color: #FFFFFF !important; }
         section[data-testid="stSidebar"] input { color: #000000 !important; }
-        div[data-testid="stStatusWidget"] { visibility: hidden !important; display: none !important; }
     </style>
 """, unsafe_allow_html=True)
 
 # 🔐 ANGELONE API CREDENTIALS AUTOMATIC CONFIGURATION
-import pyotp
-
 ANGEL_API_KEY = "rpg4LX8F"
 ANGEL_CLIENT_ID = "AACG314572"
 ANGEL_PASSWORD = "6227"
@@ -49,7 +47,7 @@ ANGEL_TOTP_KEY = "Z5MZBUBZAHYJFNKEYHWIJP4HWA"
 
 try:
     calculated_totp = pyotp.TOTP(ANGEL_TOTP_KEY.strip()).now()
-except Exception:
+except Exception as e:
     calculated_totp = ""
 
 st.sidebar.markdown("### `🔐 ANGELONE SMARTAPI API INTEGRATION`")
@@ -61,7 +59,14 @@ totp_token = st.sidebar.text_input("TOTP TOKEN (Authenticator):", value=calculat
 if 'watchlist' not in st.session_state:
     st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
 
-TOKEN_MAP = {"TATASTEEL": "3496", "RELIANCE": "2885", "ITC": "1660", "SBIN": "3045"}
+# 🎯 ANGELONE NFO (DERIVATIVES/FUTURE) ஜூன் 2026-ன் உண்மையான டோக்கன்கள்
+# இது துல்லியமான Future விலையையும் OI-யையும் தரும்.
+TOKEN_MAP = {
+    "TATASTEEL": "52726", 
+    "RELIANCE": "51241", 
+    "ITC": "49552", 
+    "SBIN": "51963"
+}
 
 def get_oi_movement(oi_change, price_diff):
     if oi_change > 0 and price_diff > 0: return "LONG BUILDUP"
@@ -84,29 +89,37 @@ def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
         try:
             smart_conn = SmartConnect(api_key=_api_key)
             smart_conn.generateSession(_client_id, _password, _totp)
-            token = TOKEN_MAP.get(symbol, "3496")
+            token = TOKEN_MAP.get(symbol, "52726")
             current_date = datetime.now().strftime("%Y-%m-%d")
             
             historic_param = {
-                "exchange": "NSE", "symboltoken": token, "interval": "ONE_MINUTE",
-                "fromdate": f"{current_date} 09:15", "todate": f"{current_date} 15:30"
+                "exchange": "NFO",  # Future மார்க்கெட்டிற்கு 'NFO' அவசியம்
+                "symboltoken": token, 
+                "interval": "ONE_MINUTE",
+                "fromdate": f"{current_date} 09:15", 
+                "todate": f"{current_date} 15:30"
             }
-            candles = smart_conn.getCandleData(historic_param)["data"]
-            df_api = pd.DataFrame(candles, columns=['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume'])
+            response = smart_conn.getCandleData(historic_param)
             
-            # SmartAPI சில சமயம் 7 வது காலமில் OI வழங்கும் (உள்ளமைக்கப்பட்டிருந்தால் எடுக்கவும்)
-            if len(candles[0]) >= 7:
-                df_api['OI'] = [c[6] for c in candles]
-            else:
-                # இல்லையெனில் வால்யூம் கொண்டு தோராய கணக்கீடு
-                df_api['OI'] = df_api['Volume'] * 3.5 
+            if response and "data" in response and response["data"]:
+                candles = response["data"]
+                df_api = pd.DataFrame(candles, columns=['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume'])
                 
-            df_api['Timestamp'] = pd.to_datetime(df_api['Timestamp']).dt.tz_localize('Asia/Kolkata')
-            df_api.set_index('Timestamp', inplace=True)
-            return df_api, "LIVE_ANGELONE"
+                # 6-வது காலமில் உண்மையான ஓப்பன் இன்ட்ரெஸ்ட் (OI) இருந்தால் எடுக்கும்
+                if len(candles[0]) >= 7:
+                    df_api['OI'] = [c[6] for c in candles]
+                else:
+                    df_api['OI'] = df_api['Volume'] * 2
+                    
+                df_api['Timestamp'] = pd.to_datetime(df_api['Timestamp']).dt.tz_localize('Asia/Kolkata')
+                df_api.set_index('Timestamp', inplace=True)
+                return df_api, "LIVE_ANGELONE"
+            else:
+                st.sidebar.warning("API இணைக்கப்பட்டது, ஆனால் லைவ் மார்க்கெட் தரவு கிடைக்கவில்லை. (மார்க்கெட் மூடப்பட்டிருக்கலாம்)")
         except Exception as e:
-            pass
+            st.sidebar.error(f"AngelOne லாகின் பிழை: {str(e)}")
             
+    # பேக்கப் சிமுலேஷன் (டேட்டா வராத போது மட்டும் இயங்கும்)
     times = pd.date_range(start="09:15", end="15:30", freq="1min", tz="Asia/Kolkata")
     df_backup = pd.DataFrame(index=times)
     base = {"TATASTEEL": 194.62, "RELIANCE": 1326.60, "ITC": 291.80, "SBIN": 1036.95}.get(symbol, 500.0)
@@ -115,9 +128,8 @@ def fetch_realtime_nse_data(symbol, _api_key, _client_id, _password, _totp):
     df_backup['Low'] = df_backup['Open'] - np.random.uniform(0, 0.4, len(times))
     df_backup['Close'] = (df_backup['High'] + df_backup['Low']) / 2
     df_backup['Volume'] = np.random.randint(15000, 50000, len(times))
-    # சிமுலேஷனுக்கான பேக்கப் OI ஜெனரேஷன்
     df_backup['OI'] = np.random.randint(5000000, 6000000, len(times))
-    return df_backup, "SIM"
+    return df_backup, "SIMULATED_BACKUP"
 
 st.sidebar.markdown("---")
 selected_focus = st.sidebar.selectbox("⚡ ACTIVE INSTANCE:", options=st.session_state.watchlist)
@@ -144,8 +156,6 @@ if len(df) >= 1:
         matrix_high = float(df_15min['High'].max())                 
         matrix_low = float(df_15min['Low'].min())                   
         matrix_close = float(df_15min.iloc[-1]['Close'])
-        
-        # 📊 9:15 மற்றும் 9:30 Future OI டிராக்கிங் லாஜிக்
         oi_915 = int(df_15min.iloc[0]['OI'])
         oi_930 = int(df_15min.iloc[-1]['OI'])
         oi_difference = oi_930 - oi_915
@@ -163,7 +173,7 @@ if len(df) >= 1:
     movement_type = get_oi_movement(oi_difference, matrix_close - matrix_open)
     levels = calculate_pivots(matrix_high, matrix_low, matrix_close, matrix_open)
 
-    st.markdown(f"<h2>QUANTUM-X NSE TERMINAL // <span style='color:#1E4A8A;'>{selected_focus}</span> <span style='font-size:12px;color:#94A3B8;'>DATA: {data_status}</span></h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2>QUANTUM-X NSE TERMINAL // <span style='color:#1E4A8A;'>{selected_focus}</span> <span style='font-size:12px;color:#94A3B8;'>DATA STATUS: {data_status}</span></h2>", unsafe_allow_html=True)
 
     # Price Ribbon
     st.markdown(f"""
@@ -191,7 +201,6 @@ if len(df) >= 1:
         fig.update_layout(template="plotly_white", margin=dict(l=10, r=10, t=10, b=10), height=140, showlegend=False, xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor='#E2E8F0'))
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-        # ⚡ UPDATED DATA MATRIX WITH 9:15 & 9:30 FUTURE OI
         st.markdown(f"""
         <div style="background-color:#FFFFFF; padding:15px; border-radius:6px; font-size:14px; border: 2px solid #0F172A; color:#0F172A !important; line-height:1.8;">
             <b style="color:#1E3A8A !important; font-size:13px; font-family:'JetBrains Mono';">⚡ NSE SYSTEM CAPTURED DATA MATRIX (09:15 - 09:30 RANGE)</b><br>
@@ -227,7 +236,7 @@ if len(df) >= 1:
         </div>
         """, unsafe_allow_html=True)
 
-    # Aligned Breakout Matrix
+    # Pivot Table Engine Engine Matrix Output
     st.markdown("#### `🎯 ALIGNED BREAKOUT MATRIX ENGINE (TOP TO BOTTOM)`")
     table_html = "<table class='quant-table'><thead><tr><th>PIVOT IDENTIFIED</th><th>TARGET VALUE</th><th>REGIME STATE</th></tr></thead><tbody>"
     for lvl, value in levels.items():
@@ -237,7 +246,7 @@ if len(df) >= 1:
     st.markdown(table_html, unsafe_allow_html=True)
 
     try:
-        time.sleep(2)
+        time.sleep(5)
         st.rerun()
     except:
         pass
