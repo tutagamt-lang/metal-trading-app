@@ -10,7 +10,7 @@ import pyotp
 import urllib.request
 import xml.etree.ElementTree as ET
 
-# 1. Page Configuration
+# 1. Page Configuration (NSE-like Wide Layout)
 st.set_page_config(layout="wide", page_title="QUANTUM-X Live Trading Terminal")
 
 try:
@@ -18,66 +18,87 @@ try:
 except ImportError:
     st.error("தயவுசெய்து உங்கள் requirements.txt கோப்பில் 'smartapi-python' சேர்க்கவும்.")
 
-# 🎨 PREMIUM TERMINAL STYLESHEET WITH HOME DROPDOWN AND TABS
+# 🎨 NSE INDIA PREMIUM THEME & INTERFACE STYLESHEET
 st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500;700&display=swap');
         
-        .stApp { background-color: #F8FAFC !important; color: #1E293B !important; }
-        * { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; }
+        /* Base Reset & Background */
+        .stApp { background-color: #F4F6F9 !important; color: #333333 !important; }
+        * { font-family: 'Inter', sans-serif; }
+        .block-container { padding-top: 0rem !important; padding-bottom: 1rem !important; padding-left: 2rem !important; padding-right: 2rem !important; }
         
-        h2 { font-weight: 700; letter-spacing: -0.5px; margin: 0 0 5px 0 !important; color: #0F172A !important; font-size: 24px !important; }
-        .mono-text { font-family: 'JetBrains Mono', monospace !important; }
+        /* NSE India Deep Navy Header Bar */
+        .nse-header-bar {
+            background: linear-gradient(90deg, #0c2340 0%, #1d3a60 100%);
+            padding: 15px 25px;
+            margin-left: -2rem;
+            margin-right: -2rem;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 4px solid #ffb81c;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .nse-brand { color: #FFFFFF !important; font-size: 22px !important; font-weight: 700; letter-spacing: -0.5px; }
+        .nse-brand span { color: #ffb81c; }
         
-        /* Premium Navigation Tabs Styling */
+        /* Dropdown custom alignment inside header area */
+        div[data-testid="stSelectbox"] label {
+            color: #ffb81c !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        
+        /* Premium Navigation Tabs (NSE Style) */
+        div[data-testid="stTabs"] { background-color: transparent; margin-bottom: 20px; }
         div[data-testid="stTabs"] button {
             font-size: 14px !important;
             font-weight: 600 !important;
-            color: #64748B !important;
-            padding: 10px 24px !important;
-            border-radius: 8px 8px 0px 0px !important;
-            transition: all 0.3s ease;
+            color: #4A5568 !important;
+            padding: 12px 28px !important;
+            background-color: #E2E8F0 !important;
+            border-radius: 4px 4px 0px 0px !important;
+            margin-right: 4px;
+            border: none !important;
+            transition: all 0.2s ease;
         }
         div[data-testid="stTabs"] button[aria-selected="true"] {
-            color: #2563EB !important;
-            background-color: #EFF6FF !important;
-            border-bottom: 3px solid #2563EB !important;
+            color: #FFFFFF !important;
+            background-color: #0c2340 !important;
+            border-bottom: 3px solid #ffb81c !important;
         }
         
-        /* Home Dropdown Layout Tweaks */
-        div[data-testid="stSelectbox"] label {
-            font-size: 11px !important;
-            font-weight: 700 !important;
-            color: #475569 !important;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
+        /* NSE Clean Metric Grid */
+        .nse-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .nse-card { background: #FFFFFF; padding: 18px; border-radius: 4px; border: 1px solid #D2D6DC; border-top: 3px solid #0c2340; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .nse-label { color: #6574CD; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .nse-value { color: #0c2340; font-size: 24px; font-weight: 700; font-family: 'Roboto Mono', monospace; }
         
-        /* Layout Grid Cards */
-        .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .metric-card { background: #FFFFFF; padding: 16px; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.05); }
-        .metric-label { color: #64748B; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px; }
-        .metric-value { color: #0F172A; font-size: 22px; font-weight: 700; }
+        /* Information Dashboard Windows */
+        .nse-panel { background: #FFFFFF; padding: 20px; border-radius: 4px; border: 1px solid #D2D6DC; box-shadow: 0 2px 4px rgba(0,0,0,0.02); height: 100%; }
+        .nse-panel-title { color: #0c2340; font-size: 14px; font-weight: 700; border-bottom: 2px solid #F4F6F9; padding-bottom: 10px; margin-bottom: 15px; display: block; letter-spacing: 0.3px; }
         
-        .info-box { background: #FFFFFF; padding: 20px; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.05); height: 100%; margin-bottom: 15px; }
-        .info-title { color: #1E40AF; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px; display: block; }
+        /* Corporate Tables (Pure NSE Style) */
+        .nse-table { width: 100%; border-collapse: collapse; font-size: 14px; background: #FFFFFF; margin-top: 5px; }
+        .nse-table th { background-color: #F8FAFC; color: #4A5568; text-align: left; padding: 12px 14px; font-size: 12px; font-weight: 700; border-bottom: 2px solid #E2E8F0; border-top: 1px solid #E2E8F0; }
+        .nse-table td { padding: 12px 14px; border-bottom: 1px solid #E2E8F0; color: #2D3748; }
+        .nse-table tr:hover { background-color: #F8FAFC; }
+        .mono-num { font-family: 'Roboto Mono', monospace !important; font-weight: 600; }
         
-        /* News Cards */
-        .premium-news-card { background: #FFFFFF; padding: 20px; border-radius: 12px; border: 1px solid #E2E8F0; margin-bottom: 16px; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.05); }
-        .news-badge { background: #EFF6FF; color: #2563EB; font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; display: inline-block; margin-bottom: 8px; }
-        .premium-news-title { font-size: 16px; font-weight: 700; color: #0F172A; text-decoration: none; display: block; margin-bottom: 6px; line-height: 1.4; }
-        .premium-news-meta { font-size: 12px; color: #64748B; font-weight: 500; }
+        /* Sidebar Configuration */
+        section[data-testid="stSidebar"] { background-color: #0c2340 !important; }
+        section[data-testid="stSidebar"] * { color: #FFFFFF !important; }
+        section[data-testid="stSidebar"] input { color: #333333 !important; background-color: #FFFFFF !important; }
         
-        /* Tables */
-        .quant-table { width: 100%; border-collapse: collapse; font-size: 14px; background: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #E2E8F0; margin-top: 15px; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.05); }
-        .quant-table th { background-color: #F1F5F9; color: #475569; text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; border-bottom: 1px solid #E2E8F0; }
-        .quant-table td { padding: 14px 16px; border-bottom: 1px solid #F1F5F9; color: #1E293B; }
-        
-        /* Sidebar Styling */
-        section[data-testid="stSidebar"] { background-color: #0F172A !important; border-right: 1px solid #1E293B; }
-        section[data-testid="stSidebar"] * { color: #E2E8F0 !important; }
-        section[data-testid="stSidebar"] input { color: #0F172A !important; background-color: #FFFFFF !important; border-radius: 6px !important; }
+        /* News Section cards */
+        .nse-news-box { background: #FFFFFF; padding: 16px; border-radius: 4px; border-left: 4px solid #0c2340; border-top: 1px solid #E2E8F0; border-right: 1px solid #E2E8F0; border-bottom: 1px solid #E2E8F0; margin-bottom: 12px; }
+        .nse-news-link { font-size: 15px; font-weight: 600; color: #1A365D; text-decoration: none; }
+        .nse-news-link:hover { color: #2B6CB0; text-decoration: underline; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -98,7 +119,7 @@ client_id = st.sidebar.text_input("CLIENT ID:", value=ANGEL_CLIENT_ID)
 password = st.sidebar.text_input("PIN/PASSWORD:", value=ANGEL_PASSWORD, type="password")
 totp_token = st.sidebar.text_input("TOTP TOKEN:", value=calculated_totp, type="password")
 
-# 📋 INTRADAY METALS WATCHLIST & TOKEN MAP DIRECT DEFINITION
+# 📋 INTRADAY METALS WATCHLIST & TOKEN MAP
 MY_STOCKS = ["SAIL", "VEDL", "HINDALCO", "NATIONALUM", "HINDCOPPER"]
 
 TOKEN_MAP = {
@@ -110,10 +131,10 @@ TOKEN_MAP = {
 }
 
 def get_fo_regime(price_change, oi_change):
-    if oi_change > 0 and price_change > 0: return "LONG BUILDUP (ஆரோக்கியமான வாங்குதல்)", "#10B981"
-    elif oi_change > 0 and price_change <= 0: return "SHORT BUILDUP (கனமான விற்பனை அழுத்தம்)", "#EF4444"
-    elif oi_change <= 0 and price_change <= 0: return "LONG UNWINDING (லாபப் பதிவு/பலவீனம்)", "#F59E0B"
-    else: return "SHORT COVERING (Short செட்டில்மென்ட் / மேல்நோக்கிய வேகம்)", "#3B82F6"
+    if oi_change > 0 and price_change > 0: return "LONG BUILDUP", "#10B981"
+    elif oi_change > 0 and price_change <= 0: return "SHORT BUILDUP", "#EF4444"
+    elif oi_change <= 0 and price_change <= 0: return "LONG UNWINDING", "#F59E0B"
+    else: return "SHORT COVERING", "#3B82F6"
 
 def calculate_pivots(H, L, C, O):
     P = (H + C + L + O) / 4
@@ -140,7 +161,7 @@ def fetch_stock_news(symbol):
             if " - " in title: title = title.split(" - ")[0]
             news_list.append({"title": title, "link": link, "date": pub_date, "source": source})
     except Exception:
-        news_list = [{"title": f"Analyzing market intelligence for {symbol}", "link": "#", "date": "Just now", "source": "System"}]
+        news_list = [{"title": f"Analyzing market intelligence for {symbol}", "link": "#", "date": "Just now", "source": "NSE"}]
     return news_list
 
 @st.cache_data(ttl=300)
@@ -170,24 +191,29 @@ def fetch_current_ltp(symbol, token, _api_key, _client_id, _password, _totp):
         pass
     return None
 
-# Layout Header Area
-header_col1, header_col2 = st.columns([2.5, 1])
+# 🏛️ GENERATE NSE INDIA TOP HEADER BAR
+st.markdown("""
+    <div class="nse-header-bar">
+        <div class="nse-brand">QUANTUM-X <span>LIVE MARKET TERMINAL</span></div>
+        <div style="width: 280px;" id="selectbox-placeholder"></div>
+    </div>
+""", unsafe_allow_html=True)
 
-with header_col1:
-    st.markdown("<h2 style='margin-top:10px;'>QUANTUM-X Live Trading Terminal</h2>", unsafe_allow_html=True)
-
-with header_col2:
-    selected_focus = st.selectbox("⚡ ACTIVE INSTANCE:", options=MY_STOCKS)
+# Overlay Streamlit widget cleanly side-by-side using columns layout
+header_spacer, selector_col = st.columns([3, 1])
+with selector_col:
+    # Placed in the top right exactly matching the layout position of NSE select elements
+    selected_focus = st.selectbox("📊 SELECT ACTIVE EQUITY INSTANCE", options=MY_STOCKS)
 
 ist_offset = timezone(timedelta(hours=5, minutes=30))
 today_str = datetime.now(ist_offset).strftime("%Y-%m-%d")
 active_token = TOKEN_MAP.get(selected_focus, "2963")
 
-# Global fetches
+# Global Data Fetching
 candle_data = fetch_historic_candles(selected_focus, active_token, today_str, api_key, client_id, password, totp_token)
 live_tick_price = fetch_current_ltp(selected_focus, active_token, api_key, client_id, password, totp_token)
 
-# Dataframe generation logic
+# Dataframe calculations
 if candle_data:
     df = pd.DataFrame(candle_data, columns=['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume'])
     df['OI'] = df['Volume'] * 2.4  
@@ -223,67 +249,65 @@ if candle_data:
 else:
     live_price, current_vwap, oi_difference, matrix_close, matrix_open, day_change, pct_change = 0, 0, 0, 0, 0, 0, 0
 
-# 🗺️ PREMIUM NAVIGATION MENU TABS
-tab_live, tab_fo, tab_news = st.tabs(["📈 Live Trading Terminal", "📊 F&O Strategy Matrix", "📰 News & Insights"])
+# 🗺️ NSE INDIA NAVIGATION TABS SYSTEM
+tab_live, tab_fo, tab_news = st.tabs(["Equity & Market Tracker", "Derivatives (F&O Matrix)", "Company Insights & News"])
 
-# ----------------- TAB 1: LIVE TRADING TERMINAL -----------------
+# ----------------- TAB 1: EQUITY LIVE MARKET -----------------
 with tab_live:
     if candle_data:
-        dc_color = "#10B981" if day_change >= 0 else "#EF4444"
+        dc_color = "#00B074" if day_change >= 0 else "#f44336"
         st.markdown(f"""
-        <div class="metric-grid" style="margin-top:10px;">
-            <div class="metric-card" style="border-left: 4px solid {dc_color};">
-                <div class="metric-label">LTP FEED (NSE)</div>
-                <div class="metric-value mono-text">₹ {live_price:.2f} <span style="color:{dc_color}; font-size:14px; font-weight:600;">{day_change:+.2f} ({pct_change:+.2f}%)</span></div>
+        <div class="nse-grid">
+            <div class="nse-card" style="border-top: 4px solid {dc_color};">
+                <div class="nse-label">LTP PRICE (INR)</div>
+                <div class="nse-value">₹ {live_price:.2f} <span style="color:{dc_color}; font-size:14px; font-weight:700;">{day_change:+.2f} ({pct_change:+.2f}%)</span></div>
             </div>
-            <div class="metric-card">
-                <div class="metric-label">VWAP Tracker</div>
-                <div class="metric-value mono-text" style="color:#2563EB;">{current_vwap:.2f}</div>
+            <div class="nse-card">
+                <div class="nse-label">INTRADAY VWAP</div>
+                <div class="nse-value" style="color:#0c2340;">₹ {current_vwap:.2f}</div>
             </div>
-            <div class="metric-card">
-                <div class="metric-label">Momentum RSI (14)</div>
-                <div class="metric-value mono-text" style="color:#D97706;">{df.iloc[-1]['RSI']:.2f}</div>
+            <div class="nse-card">
+                <div class="nse-label">MOMENTUM RSI (14)</div>
+                <div class="nse-value" style="color:#ffb81c;">{df.iloc[-1]['RSI']:.2f}</div>
             </div>
-            <div class="metric-card">
-                <div class="metric-label">EMA Cross (9/21)</div>
-                <div class="metric-value mono-text" style="color:#059669;">{df.iloc[-1]['EMA_9']:.1f}/{df.iloc[-1]['EMA_21']:.1f}</div>
+            <div class="nse-card">
+                <div class="nse-label">EMA CROSSOVER (9/21)</div>
+                <div class="nse-value" style="color:#4A5568;">{df.iloc[-1]['EMA_9']:.1f} / {df.iloc[-1]['EMA_21']:.1f}</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-        layout_col1, layout_col2 = st.columns([1.3, 1])
+        layout_col1, layout_col2 = st.columns([1.4, 1])
         with layout_col1:
-            # CHART REMOVED FROM HERE FOR CLEANER LOOK
-            st.markdown("<div><b>🎯 ALIGNED BREAKOUT MATRIX ENGINE</b></div>", unsafe_allow_html=True)
-            table_html = "<table class='quant-table'><thead><tr><th>PIVOT LEVEL</th><th>TARGET VALUE</th><th>REGIME ANALYSIS</th></tr></thead><tbody>"
+            st.markdown("<div class='nse-panel'><span class='nse-panel-title'>🎯 NSE PIVOT POINTS ELEMENT ENGINE</span>", unsafe_allow_html=True)
+            table_html = "<table class='nse-table'><thead><tr><th>PIVOT POINT IDENTIFIER</th><th>VALUE BOUNDS</th><th>TECHNICAL ANALYSIS PARAMETERS</th></tr></thead><tbody>"
             for lvl, value in levels.items():
-                text_color = "#EF4444" if "R" in lvl else ("#10B981" if "S" in lvl else "#2563EB")
-                table_html += f"<tr><td class='mono-text' style='color:{text_color}; font-weight:700;'>{lvl}</td><td class='mono-text' style='font-weight:600;'>&#8377; {value:.2f}</td><td style='color:#64748B;'>Intraday pivot boundary via SmartAPI</td></tr>"
-            table_html += "</tbody></table>"
+                text_color = "#f44336" if "R" in lvl else ("#00B074" if "S" in lvl else "#0c2340")
+                table_html += f"<tr><td style='color:{text_color}; font-weight:700;'>{lvl} LEVEL</td><td class='mono-num'>₹ {value:.2f}</td><td style='color:#718096;'>Standard Intraday Trading Boundary Pivot</td></tr>"
+            table_html += "</tbody></table></div>"
             st.markdown(table_html, unsafe_allow_html=True)
 
         with layout_col2:
             fo_label, fo_color = get_fo_regime(matrix_close - matrix_open, oi_difference)
             st.markdown(f"""
-            <div class="info-box">
-                <span class="info-title">⚡ CAPTURED RANGE MATRIX (09:15 - 09:30)</span>
-                <div style="font-size:14px; color:#334155; line-height:2;" class="mono-text">
-                    • 15M Range Open : <b>₹ {matrix_open:.2f}</b><br>
-                    • 15M Range High : <span style="color:#10B981;"><b>₹ {matrix_high:.2f}</b></span><br>
-                    • 15M Range Low  : <span style="color:#EF4444;"><b>₹ {matrix_low:.2f}</b></span><br>
-                    • 15M Range Close: <b>₹ {matrix_close:.2f}</b>
-                    <div style="border-top:1px dashed #E2E8F0; margin:10px 0;"></div>
-                    • F&O Momentum State: <span style="background:{fo_color}22; color:{fo_color}; padding:3px 8px; border-radius:4px; font-weight:700; font-size:12px;">{fo_label.split(' (')[0]}</span>
-                </div>
+            <div class="nse-panel">
+                <span class="nse-panel-title">⏱️ OPENING 15-MIN RANGE BREAKOUT STATISTICS</span>
+                <table class="nse-table" style="width:100%;">
+                    <tr><td>• Opening Interval Price (09:15)</td><td class="mono-num"><b>₹ {matrix_open:.2f}</b></td></tr>
+                    <tr><td>• Range Peak High Marker</td><td class="mono-num" style="color:#00B074;"><b>₹ {matrix_high:.2f}</b></td></tr>
+                    <tr><td>• Range Floor Low Marker</td><td class="mono-num" style="color:#f44336;"><b>₹ {matrix_low:.2f}</b></td></tr>
+                    <tr><td>• Range Closing Price (09:30)</td><td class="mono-num"><b>₹ {matrix_close:.2f}</b></td></tr>
+                    <tr><td>• Regime Momentum Evaluation</td><td><span style="background:{fo_color}22; color:{fo_color}; padding:4px 8px; border-radius:3px; font-weight:700; font-size:12px;">{fo_label}</span></td></tr>
+                </table>
             </div>
             """, unsafe_allow_html=True)
     else:
         st.info("🔄 தரவைச் சேகரிக்கிறது... உங்கள் ஏஞ்சல் ஒன் API-ஐச் சரிபார்க்கவும்.")
 
-# ----------------- TAB 2: F&O STRATEGY MATRIX -----------------
+# ----------------- TAB 2: F&O DERIVATIVES MATRIX -----------------
 with tab_fo:
     if candle_data:
-        st.markdown("<p style='color:#64748B; margin-top:10px;'>Futures Open Interest மற்றும் Option Chain-ன் முக்கியமான லெவல்களின் கூட்டு சேர்க்கை உத்தி (Combined Strategy Matrix).</p>", unsafe_allow_html=True)
+        st.markdown("<p style='color:#4A5568; margin-top:5px; font-size:14px;'>தேசிய பங்குச் சந்தையின் (NSE) உத்தியை அடிப்படையாகக் கொண்ட ஃபியூச்சர்ஸ் மற்றும் ஆப்ஷன்ஸ் கூட்டுத் தரவுத் தொகுப்பு.</p>", unsafe_allow_html=True)
         
         round_ltp = round(live_price / 10) * 10
         highest_call_oi_strike = round_ltp + 10
@@ -292,48 +316,48 @@ with tab_fo:
         fo_label, trend_color = get_fo_regime(live_price - day_open, oi_difference)
         
         if "LONG BUILDUP" in fo_label and live_price > current_vwap:
-            strategy_signal = "STRONG BULLISH BUY (கம்பீரமான வாங்குதல் சிக்னல்)"
-            signal_desc = f"விலை VWAP-க்கு மேலேயும், ஃபியூச்சர்ஸில் புதிய பையர்ஸ் (Long Buildup) உள்ளே வருவதால் மார்க்கெட் {highest_call_oi_strike} வரை செல்ல வாய்ப்புள்ளது."
-            sig_box_color = "#10B981"
+            strategy_signal = "STRONG BULLISH BUY SIGNAL"
+            signal_desc = f"விலை தற்போதைய VWAP நிலைக்கு மேலேயும், ஃபியூச்சர்ஸ் சந்தையில் 'Long Buildup' ஆதிக்கம் செலுத்துவதால், பங்கின் விலை {highest_call_oi_strike} ரெசிஸ்டன்ஸ் லெவல் வரை உயர வாய்ப்புள்ளது."
+            sig_box_color = "#00B074"
         elif "SHORT BUILDUP" in fo_label and live_price < current_vwap:
-            strategy_signal = "STRONG BEARISH SELL (கனமான விற்பனை சிக்னல்)"
-            signal_desc = f"விலை VWAP-க்கு கீழேயும், ஃபியூச்சர்ஸில் ஆக்ரோஷமான ஷார்ட்ஸ் (Short Buildup) விழுவதால் {highest_put_oi_strike} நோக்கி வீழ்ச்சியடையலாம்."
-            sig_box_color = "#EF4444"
+            strategy_signal = "STRONG BEARISH SELL SIGNAL"
+            signal_desc = f"விலை VWAP நிலைக்குக் கீழேயும், சந்தையில் ஆக்ரோஷமான 'Short Buildup' விற்பனை அழுத்தம் நிலவுவதால், பங்கின் விலை அடுத்த சப்போர்ட் லெவலான {highest_put_oi_strike} நோக்கி வீழ்ச்சியடையலாம்."
+            sig_box_color = "#f44336"
         else:
-            strategy_signal = "CONSOLIDATION NEUTRAL (சந்தேகத்திற்குரிய பக்கவாட்டு நகர்வு)"
-            signal_desc = "ஃபியூச்சர்ஸ் மற்றும் ஆப்ஷன்ஸ் தரவுகள் ஒன்றுக்கொன்று முரணாக உள்ளதால், பிரேக்அவுட் நடக்கும் வரை புதிய வர்த்தகத்தைத் தவிர்க்கவும்."
-            sig_box_color = "#F59E0B"
+            strategy_signal = "MARKET CONSOLIDATION (NEUTRAL)"
+            signal_desc = "டெரிவேட்டிவ் சந்தை மற்றும் ஆப்ஷன்ஸ் தரவுகள் தெளிவற்ற பக்கவாட்டு நகர்வை (Sideways) காட்டுவதால், பிரேக்அவுட் நிகழும் வரை புதிய வர்த்தகத்தைத் தவிர்க்கவும்."
+            sig_box_color = "#ffb81c"
 
         col_f1, col_f2 = st.columns(2)
         with col_f1:
             st.markdown(f"""
-            <div class="info-box" style="border-top: 4px solid #2563EB;">
-                <span class="info-title" style="color:#2563EB;">🔮 FUTURE CONTRACT OI METRICS</span>
-                <table style="width:100%; font-size:14px; line-height:2.2;" class="mono-text">
-                    <tr><td>• Futures Spot Price:</td><td><b>₹ {live_price:.2f}</b></td></tr>
-                    <tr><td>• Cumulative OI Change:</td><td style="color:#2563EB;"><b>{oi_difference:+,} Contracts</b></td></tr>
-                    <tr><td>• Intraday Trend Direction:</td><td><span style="color:{trend_color}; font-weight:700;">{fo_label}</span></td></tr>
+            <div class="nse-panel" style="border-top: 4px solid #0c2340;">
+                <span class="nse-panel-title">🔮 FUTURE OPEN INTEREST (OI) TRACKER</span>
+                <table class="nse-table">
+                    <tr><td>Futures Spot Price:</td><td class="mono-num"><b>₹ {live_price:.2f}</b></td></tr>
+                    <tr><td>Cumulative OI Change:</td><td class="mono-num" style="color:#0c2340;"><b>{oi_difference:+,} Contracts</b></td></tr>
+                    <tr><td>Intraday Open Trend:</td><td><span style="color:{trend_color}; font-weight:700;">{fo_label}</span></td></tr>
                 </table>
             </div>
             """, unsafe_allow_html=True)
             
         with col_f2:
             st.markdown(f"""
-            <div class="info-box" style="border-top: 4px solid #7C3AED;">
-                <span class="info-title" style="color:#7C3AED;">🎯 OPTION CHAIN OPEN INTEREST (OI) ANALYSIS</span>
-                <table style="width:100%; font-size:14px; line-height:2.2;" class="mono-text">
-                    <tr><td>• Max Call OI (Resistance):</td><td style="color:#EF4444;"><b>₹ {highest_call_oi_strike} Strike (உச்சகட்ட தடை)</b></td></tr>
-                    <tr><td>• Max Put OI (Support):</td><td style="color:#10B981;"><b>₹ {highest_put_oi_strike} Strike (உச்சகட்ட ஆதரவு)</b></td></tr>
-                    <tr><td>• PCR Indicator:</td><td><b>1.05 (நிலையான வேகம்)</b></td></tr>
+            <div class="nse-panel" style="border-top: 4px solid #ffb81c;">
+                <span class="nse-panel-title">🎯 OPTION CHAIN CONCENTRATION RADAR</span>
+                <table class="nse-table">
+                    <tr><td>Highest Call OI (Resistance Level):</td><td class="mono-num" style="color:#f44336;"><b>₹ {highest_call_oi_strike} Strike</b></td></tr>
+                    <tr><td>Highest Put OI (Support Level):</td><td class="mono-num" style="color:#00B074;"><b>₹ {highest_put_oi_strike} Strike</b></td></tr>
+                    <tr><td>Put-Call Ratio (PCR):</td><td class="mono-num"><b>1.05</b></td></tr>
                 </table>
             </div>
             """, unsafe_allow_html=True)
             
         st.markdown(f"""
-        <div class="info-box" style="border-left: 6px solid {sig_box_color}; background-color: #FFFFFF;">
-            <span class="info-title" style="color:{sig_box_color}; font-size: 14px;">⚡ QUANT REAL-TIME EXECUTION SIGNAL</span>
-            <div style="font-size: 20px; font-weight: 700; color: {sig_box_color}; margin-bottom: 8px;">{strategy_signal}</div>
-            <p style="color: #475569; font-size: 14px; line-height: 1.6;"><b>உத்தியின் விளக்கம்:</b> {signal_desc}</p>
+        <div class="nse-panel" style="border-left: 6px solid {sig_box_color}; margin-top:20px; background-color:#FFFFFF;">
+            <span class="nse-panel-title" style="color:{sig_box_color}; font-size:13px; font-weight:700;">⚡ QUANT SYSTEM STRATEGY ACTION MATRIX</span>
+            <div style="font-size: 20px; font-weight: 700; color: {sig_box_color}; margin-bottom: 6px;">{strategy_signal}</div>
+            <p style="color: #4A5568; font-size: 14px; line-height: 1.6;"><b>உத்தி விளக்கம் (Strategy Rules):</b> {signal_desc}</p>
         </div>
         """, unsafe_allow_html=True)
     else:
@@ -346,12 +370,12 @@ with tab_news:
     if live_news:
         for news in live_news:
             st.markdown(f"""
-            <div class="premium-news-card">
-                <span class="news-badge">{selected_focus} ANALYTICS</span>
-                <a class="premium-news-title" href="{news['link']}" target="_blank">{news['title']}</a>
-                <div class="premium-news-meta">
-                    <span>⚡ Source: <b>{news['source']}</b></span> &nbsp;•&nbsp; 
-                    <span>⏰ Published: {news['date']}</span>
+            <div class="nse-news-box">
+                <div style="font-size:11px; font-weight:700; color:#ffb81c; text-transform:uppercase; margin-bottom:4px;">NSE Corporate Flash</div>
+                <a class="nse-news-link" href="{news['link']}" target="_blank">{news['title']}</a>
+                <div style="font-size:12px; color:#718096; margin-top:6px; font-weight:500;">
+                    <span>📍 Feed: <b>{news['source']}</b></span> &nbsp;•&nbsp; 
+                    <span>⏱️ Broadcast Time: {news['date']}</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
