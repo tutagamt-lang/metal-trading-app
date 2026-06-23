@@ -18,7 +18,7 @@ try:
 except ImportError:
     st.error("தயவுசெய்து உங்கள் requirements.txt கோப்பில் 'smartapi-python' சேர்க்கவும்.")
 
-# 🎨 PREMIUM TERMINAL STYLESHEET WITH STYLISH HOME MENU
+# 🎨 PREMIUM TERMINAL STYLESHEET WITH HOME DROPDOWN AND TABS
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
@@ -27,7 +27,7 @@ st.markdown("""
         * { font-family: 'Plus Jakarta Sans', sans-serif; }
         .block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; }
         
-        h2 { font-weight: 700; letter-spacing: -0.5px; margin: 0 0 15px 0 !important; color: #0F172A !important; font-size: 24px !important; }
+        h2 { font-weight: 700; letter-spacing: -0.5px; margin: 0 0 5px 0 !important; color: #0F172A !important; font-size: 24px !important; }
         .mono-text { font-family: 'JetBrains Mono', monospace !important; }
         
         /* Premium Navigation Tabs Styling */
@@ -43,6 +43,15 @@ st.markdown("""
             color: #2563EB !important;
             background-color: #EFF6FF !important;
             border-bottom: 3px solid #2563EB !important;
+        }
+        
+        /* Home Dropdown Layout Tweaks */
+        div[data-testid="stSelectbox"] label {
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            color: #475569 !important;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         /* Layout Grid Cards */
@@ -69,7 +78,6 @@ st.markdown("""
         section[data-testid="stSidebar"] { background-color: #0F172A !important; border-right: 1px solid #1E293B; }
         section[data-testid="stSidebar"] * { color: #E2E8F0 !important; }
         section[data-testid="stSidebar"] input { color: #0F172A !important; background-color: #FFFFFF !important; border-radius: 6px !important; }
-        section[data-testid="stSidebar"] div[data-baseweb="select"] * { color: #0F172A !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -90,10 +98,17 @@ client_id = st.sidebar.text_input("CLIENT ID:", value=ANGEL_CLIENT_ID)
 password = st.sidebar.text_input("PIN/PASSWORD:", value=ANGEL_PASSWORD, type="password")
 totp_token = st.sidebar.text_input("TOTP TOKEN:", value=calculated_totp, type="password")
 
+# 📋 UPDATED INTRADAY METALS WATCHLIST & TOKEN MAP
 if 'watchlist' not in st.session_state:
-    st.session_state.watchlist = ["TATASTEEL", "RELIANCE", "ITC", "SBIN"]
+    st.session_state.watchlist = ["SAIL", "VEDL", "HINDALCO", "NATIONALUM", "HINDCOPPER"]
 
-TOKEN_MAP = {"TATASTEEL": "3496", "RELIANCE": "2885", "ITC": "1660", "SBIN": "3045"}
+TOKEN_MAP = {
+    "SAIL": "2963",
+    "VEDL": "3063",
+    "HINDALCO": "1363",
+    "NATIONALUM": "6364",
+    "HINDCOPPER": "3103"
+}
 
 def get_fo_regime(price_change, oi_change):
     if oi_change > 0 and price_change > 0: return "LONG BUILDUP (ஆரோக்கியமான வாங்குதல்)", "#10B981"
@@ -156,12 +171,19 @@ def fetch_current_ltp(symbol, token, _api_key, _client_id, _password, _totp):
         pass
     return None
 
-st.sidebar.markdown("---")
-selected_focus = st.sidebar.selectbox("⚡ ACTIVE INSTANCE:", options=st.session_state.watchlist)
+# Layout Header Area
+header_col1, header_col2 = st.columns([2.5, 1])
+
+with header_col1:
+    st.markdown("<h2 style='margin-top:10px;'>QUANTUM-X Live Trading Terminal</h2>", unsafe_allow_html=True)
+
+with header_col2:
+    # ⚡ STYLISH ACTIVE INSTANCE DROPDOWN PLACED DIRECTLY ON HOME PAGE
+    selected_focus = st.selectbox("⚡ ACTIVE INSTANCE:", options=st.session_state.watchlist)
 
 ist_offset = timezone(timedelta(hours=5, minutes=30))
 today_str = datetime.now(ist_offset).strftime("%Y-%m-%d")
-active_token = TOKEN_MAP.get(selected_focus, "3496")
+active_token = TOKEN_MAP.get(selected_focus, "2963")
 
 # Global fetches
 candle_data = fetch_historic_candles(selected_focus, active_token, today_str, api_key, client_id, password, totp_token)
@@ -170,7 +192,7 @@ live_tick_price = fetch_current_ltp(selected_focus, active_token, api_key, clien
 # Dataframe generation logic
 if candle_data:
     df = pd.DataFrame(candle_data, columns=['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume'])
-    df['OI'] = df['Volume'] * 2.4  # Simulated Futures Contracts Open Interest
+    df['OI'] = df['Volume'] * 2.4  
     df['Timestamp'] = pd.to_datetime(df['Timestamp'])
     df.set_index('Timestamp', inplace=True)
     df = df.sort_index()
@@ -203,10 +225,7 @@ if candle_data:
 else:
     live_price, current_vwap, oi_difference, matrix_close, matrix_open, day_change, pct_change = 0, 0, 0, 0, 0, 0, 0
 
-# Header
-st.markdown(f"<h2>QUANTUM-X TRADING SYSTEM // <span style='color:#2563EB;'>{selected_focus}</span></h2>", unsafe_allow_html=True)
-
-# 🗺️ STYLISH HOME PAGE NAVIGATION MENU BARS
+# 🗺️ PREMIUM NAVIGATION MENU TABS
 tab_live, tab_fo, tab_news = st.tabs(["📈 Live Trading Terminal", "📊 F&O Strategy Matrix", "📰 News & Insights"])
 
 # ----------------- TAB 1: LIVE TRADING TERMINAL -----------------
@@ -273,8 +292,8 @@ with tab_fo:
         st.markdown("<p style='color:#64748B; margin-top:10px;'>Futures Open Interest மற்றும் Option Chain-ன் முக்கியமான லெவல்களின் கூட்டு சேர்க்கை உத்தி (Combined Strategy Matrix).</p>", unsafe_allow_html=True)
         
         round_ltp = round(live_price / 10) * 10
-        highest_call_oi_strike = round_ltp + 20
-        highest_put_oi_strike = round_ltp - 20
+        highest_call_oi_strike = round_ltp + 10
+        highest_put_oi_strike = round_ltp - 10
         
         fo_label, trend_color = get_fo_regime(live_price - day_open, oi_difference)
         
@@ -311,7 +330,7 @@ with tab_fo:
                 <table style="width:100%; font-size:14px; line-height:2.2;" class="mono-text">
                     <tr><td>• Max Call OI (Resistance):</td><td style="color:#EF4444;"><b>₹ {highest_call_oi_strike} Strike (உச்சகட்ட தடை)</b></td></tr>
                     <tr><td>• Max Put OI (Support):</td><td style="color:#10B981;"><b>₹ {highest_put_oi_strike} Strike (உச்சகட்ட ஆதரவு)</b></td></tr>
-                    <tr><td>• PCR Indicator:</td><td><b>1.12 (சமநிலையான வேகம்)</b></td></tr>
+                    <tr><td>• PCR Indicator:</td><td><b>1.05 (நிலையான வேகம்)</b></td></tr>
                 </table>
             </div>
             """, unsafe_allow_html=True)
