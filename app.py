@@ -243,9 +243,3 @@ if len(df) >= 1:
         table_html += f"<tr><td style='color: {text_color} !important; font-weight: bold;'>{lvl}</td><td>&#8377; {value:.2f}</td><td>PIVOT LEVEL BASED ON SMARTAPI 15M RANGE</td></tr>"
     table_html += "</tbody></table>"
     st.markdown(table_html, unsafe_allow_html=True)
-
-    try:
-        time.sleep(60)
-        st.rerun()
-    except Exception:
-        pass
